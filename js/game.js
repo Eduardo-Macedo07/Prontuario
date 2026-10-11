@@ -332,26 +332,26 @@
   // speed é uma fração da velocidade base do personagem: os inimigos andam
   // um pouco mais devagar que você (o lobisomem só passa disso no bote).
   const ENEMY_TYPES = {
-    skeleton: { name: 'Esqueleto', r: 12, hp: 16, speed: 0.58, dmg: 8, xp: 1, color: '#e8e2cf' },
-    ghost: { name: 'Ceifador', r: 11, hp: 11, speed: 0.66, dmg: 6, xp: 1, color: '#7fd8ff' },
-    mummy: { name: 'Múmia', r: 14, hp: 42, speed: 0.42, dmg: 12, xp: 2, color: '#d8c9a3' },
-    werewolf: { name: 'Lobisomem', r: 15, hp: 36, speed: 0.55, dmg: 14, xp: 2, color: '#8a7a6a' },
-    skelknight: { name: 'Cavaleiro Esqueleto', r: 17, hp: 120, speed: 0.46, dmg: 20, xp: 6, color: '#9aa6b4' },
-    robo: { name: 'Robô Destruidor', r: 42, hp: 1700, speed: 0.4, dmg: 34, xp: 60, color: '#c3ccd8', boss: true },
-    boss: { name: 'Rei Ogro', r: 40, hp: 1600, speed: 0.45, dmg: 35, xp: 60, color: '#c02060', boss: true },
-    lich: { name: 'Lich', r: 34, hp: 1250, speed: 0.4, dmg: 30, xp: 60, color: '#4fc7b8', boss: true },
+    skeleton: { name: 'Esqueleto', r: 12, hp: 16, speed: 0.45, dmg: 8, xp: 1, color: '#e8e2cf' },
+    ghost: { name: 'Ceifador', r: 11, hp: 11, speed: 0.5, dmg: 6, xp: 1, color: '#7fd8ff' },
+    mummy: { name: 'Múmia', r: 14, hp: 42, speed: 0.33, dmg: 12, xp: 2, color: '#d8c9a3' },
+    werewolf: { name: 'Lobisomem', r: 15, hp: 36, speed: 0.42, dmg: 14, xp: 2, color: '#8a7a6a' },
+    skelknight: { name: 'Cavaleiro Esqueleto', r: 17, hp: 120, speed: 0.36, dmg: 20, xp: 6, color: '#9aa6b4' },
+    robo: { name: 'Robô Destruidor', r: 42, hp: 1700, speed: 0.32, dmg: 34, xp: 60, color: '#c3ccd8', boss: true },
+    boss: { name: 'Rei Ogro', r: 40, hp: 1600, speed: 0.36, dmg: 35, xp: 60, color: '#c02060', boss: true },
+    lich: { name: 'Lich', r: 34, hp: 1250, speed: 0.32, dmg: 30, xp: 60, color: '#4fc7b8', boss: true },
   };
   const BOSS_ORDER = ['robo', 'boss', 'lich'];
 
-  const MAX_ENEMIES = 320;
-  const FIRST_SWARM = 60;
+  const MAX_ENEMIES = 220;
+  const FIRST_SWARM = 75;
 
-  // Inimigos por segundo: 0,5 até a primeira horda; depois cresce devagar e vai acelerando.
-  // Ex.: 1 min = 0,6 · 2 min = 1,75 · 3 min = 3,4 · 5 min = 8,2 · 10 min = 29
+  // Inimigos por segundo: 1 a cada 3 s até a primeira horda; depois cresce devagar.
+  // Ex.: 2 min = 0,8 · 3 min = 1,6 · 5 min = 4 · 10 min = 14
   function spawnRate(t) {
-    if (t < FIRST_SWARM) return 0.5;
+    if (t < FIRST_SWARM) return 0.33;
     const m = (t - FIRST_SWARM) / 60;
-    return 0.6 + m * 0.9 + m * m * 0.25;
+    return 0.4 + m * 0.5 + m * m * 0.12;
   }
   const BOSS_INTERVAL = 180;
 
@@ -1197,7 +1197,8 @@
 
   function spawnPoint() {
     const a = rand(0, TAU);
-    const d = Math.hypot(W, H) / 2 + 40;
+    // nasce bem fora da tela, para dar tempo de ver chegando
+    const d = Math.hypot(W, H) / 2 + 110;
     return { x: player.x + Math.cos(a) * d, y: player.y + Math.sin(a) * d };
   }
 
@@ -1208,8 +1209,8 @@
     const base = CHARACTERS[player.char].speed;
     const e = {
       type, x, y, r: T.r, hp, maxHp: hp,
-      // fica sempre abaixo de 80% da velocidade base do personagem
-      speed: base * Math.min(0.8, T.speed * (1 + Math.min(time / 600, 0.1))),
+      // fica sempre abaixo de 60% da velocidade base do personagem
+      speed: base * Math.min(0.6, T.speed * (1 + Math.min(time / 600, 0.1))),
       dmg: T.dmg * (1 + (time / 240) * 0.3),
       xp: T.xp, color: T.color, boss: !!T.boss,
       flash: 0, kbx: 0, kby: 0, orbitCd: 0, phase: rand(0, TAU), summonT: 3, dead: false,
@@ -1242,7 +1243,7 @@
     if (time >= nextSwarm) {
       // Enxame: um anel de inimigos fechando em volta do jogador.
       nextSwarm += 50;
-      const n = 12 + Math.floor(time / 12);
+      const n = 8 + Math.floor(time / 15);
       const d = Math.hypot(W, H) / 2 + 20;
       const type = time > 100 ? 'werewolf' : 'ghost';
       for (let i = 0; i < n && enemies.length < MAX_ENEMIES + 40; i++) {
@@ -1357,7 +1358,7 @@
       let vy = dy * e.speed;
       if (e.type === 'ghost') {
         // flutua em zigue-zague
-        const w = Math.sin(time * 3 + e.phase) * 45;
+        const w = Math.sin(time * 3 + e.phase) * 22;
         vx += -dy * w;
         vy += dx * w;
       }
@@ -1366,20 +1367,20 @@
         e.lungeCd -= dt;
         if (e.dashT > 0) {
           e.dashT -= dt;
-          vx = e.dashX * e.speed * 2.8;
-          vy = e.dashY * e.speed * 2.8;
+          vx = e.dashX * e.speed * 2.4;
+          vy = e.dashY * e.speed * 2.4;
         } else if (e.windup > 0) {
           e.windup -= dt;
           vx = 0;
           vy = 0;
           if (e.windup <= 0) {
-            e.dashT = 0.32;
+            e.dashT = 0.26;
             e.dashX = dx;
             e.dashY = dy;
             smoke(e.x, e.y + 8, 2, '#8a7a64');
           }
         } else if (e.lungeCd <= 0 && d < 260) {
-          e.windup = 0.45;
+          e.windup = 0.65;
           Sound.play('growl');
           e.lungeCd = rand(2.5, 4);
         }
@@ -1423,7 +1424,8 @@
       e.orbitCd -= dt;
       e.phase += dt;
 
-      if (d < e.r + player.r && player.invuln <= 0 && state === 'playing') hurtPlayer(e.dmg);
+      // a área de dano é um pouco menor que o desenho, para dar para passar raspando
+      if (d < (e.r + player.r) * 0.75 && player.invuln <= 0 && state === 'playing') hurtPlayer(e.dmg);
     }
     separateEnemies();
   }
