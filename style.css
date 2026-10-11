@@ -97,6 +97,13 @@ body.touch .pc-only { display: none; }
 .slot .pips i.on { background: var(--gold); box-shadow: 0 0 4px var(--gold); }
 .slot:not(.weapon) .pips i.on { background: #8fd3a0; box-shadow: 0 0 4px #8fd3a0; }
 
+#stagebar {
+  position: absolute; top: 62px; left: 50%; transform: translateX(-50%); white-space: nowrap;
+  font-weight: 900; font-size: 13px; color: #d8d0ec; text-shadow: 0 2px 0 #000;
+  padding: 2px 12px; border-radius: 12px; background: rgba(15,12,25,.6);
+}
+#stagebar.alert { color: #ff7a8a; animation: pulse 0.8s ease-in-out infinite alternate; }
+@keyframes pulse { to { color: #ffd36b; } }
 #timer {
   position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
   font-family: var(--title); font-weight: 900; font-size: 34px; letter-spacing: 2px;
@@ -226,8 +233,8 @@ button.secondary {
 .card .desc { font-size: 14px; color: #e8e0d0; line-height: 1.4; padding: 0 12px; }
 .card .key { margin: 12px 0 12px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
 
-.card.char { width: 262px; overflow: hidden; }
-.card.char .portrait { display: block; width: 100%; height: 214px; object-fit: cover; border-bottom: 2px solid #3d3556; }
+.card.char { width: 168px; overflow: hidden; }
+.card.char .portrait { display: block; width: 100%; height: 146px; object-fit: cover; border-bottom: 2px solid #3d3556; }
 .card.char .ctitle { margin-top: 10px; font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; font-weight: 900; }
 .card.char.selected {
   border-color: var(--accent);
@@ -313,6 +320,7 @@ button.secondary {
   .slot { width: 28px; height: 31px; border-radius: 6px; }
   .slot img { width: 22px; height: 22px; }
   #timer { font-size: 22px; top: 12px; }
+  #stagebar { top: 42px; font-size: 10px; padding: 1px 8px; }
   #topright { top: 12px; gap: 6px; right: max(8px, env(safe-area-inset-right)); }
   #pauseBtn { width: 38px; height: 38px; }
   #banner { font-size: 20px; padding: 0 10px; }
@@ -321,7 +329,8 @@ button.secondary {
 
 /* Celular em pé: o cronômetro desce para não ficar em cima da barra de vida */
 @media (max-width: 520px) {
-  #timer { top: auto; bottom: max(14px, env(safe-area-inset-bottom)); }
+  #timer { top: auto; bottom: max(30px, calc(env(safe-area-inset-bottom) + 16px)); }
+  #stagebar { top: auto; bottom: max(10px, env(safe-area-inset-bottom)); }
 }
 
 /* ============================================================
@@ -375,7 +384,7 @@ button.buy.tokbuy { background: linear-gradient(#d8b0ff, #8a4ad8); color: #1a0a2
 button.danger { background: linear-gradient(#ff7a7a, #c0303a); color: #fff; box-shadow: 0 4px 0 #6a1018, 0 6px 14px rgba(0,0,0,.5); }
 button:disabled { filter: grayscale(.8) brightness(.6); cursor: not-allowed; transform: none; }
 
-#charlist { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+#charlist { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 .card.char.locked { filter: saturate(.4); }
 .card.char.locked .name { color: #8a82a0; }
 .lockbadge {
@@ -457,7 +466,11 @@ button.buy img { width: 24px; height: 24px; }
   #homeArt { max-width: 420px; }
   button.big { font-size: 20px; padding: 11px; }
   .coinbadge { font-size: 14px; padding: 4px 10px; top: 8px; right: 8px; }
-  #charlist { gap: 8px; flex-wrap: nowrap; }
+  #charlist { gap: 8px; }
+  .card.char { flex: 0 1 calc(33% - 6px); }
+  #stagelist { gap: 8px; }
+  .card.stage { width: 100%; }
+  .card.stage .preview { height: 90px; }
   .card.shopitem { width: calc(50% - 6px); }
   .shopicon { width: 60px; height: 60px; }
   .shopicon img { width: 44px; height: 44px; }
@@ -479,3 +492,25 @@ button.buy img { width: 24px; height: 24px; }
   .homebtns { grid-column: 2; grid-row: 2; }
   .homebox .controls { display: none; }
 }
+
+/* ============================================================
+   Escolha de fase
+   ============================================================ */
+#stagelist { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.card.stage { width: 290px; overflow: hidden; padding: 0 0 12px; cursor: pointer; }
+.card.stage .preview { position: relative; height: 150px; overflow: hidden; border-bottom: 2px solid #3d3556; }
+.card.stage .preview > img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.card.stage .lockbadge { top: 30px; }
+.card.stage.locked .preview > img { filter: grayscale(.8) brightness(.45); }
+.card.stage.selected { border-color: var(--accent); box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 60%, transparent); }
+.card.stage .name { margin-top: 10px; color: var(--accent); }
+.card.stage .desc { padding: 0 12px; }
+.card.stage .desc.boss { margin-top: 4px; color: #ffb0b8; }
+.diffs { display: flex; gap: 6px; padding: 10px 12px 0; }
+button.diffbtn {
+  flex: 1; margin: 0; padding: 7px 2px; font-size: 12px; border-radius: 10px;
+  background: #1c1730; color: var(--dc); border: 2px solid color-mix(in srgb, var(--dc) 50%, #1c1730); box-shadow: none;
+}
+button.diffbtn.on { background: var(--dc); color: #120e1c; border-color: #fff; }
+h2.victory { color: #ffd36b; }
+.card .desc .extras { margin-top: 6px; display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: #9fe8ff; font-weight: 800; }

@@ -18,6 +18,22 @@ mas as moedas ganhas ficam para comprar personagens e espaços na Loja.
 
 Todas as armas atacam e miram sozinhas.
 
+## Fases e dificuldades
+
+Escolha a fase antes do personagem. Cada fase dura **10 minutos**: nesse momento chega o **chefão final**,
+e derrotá-lo conclui a fase (enquanto ele vive, a horda fica ainda mais intensa). A vida e o dano dos
+inimigos crescem com o tempo (aos 10 minutos têm cerca de 8x a vida do começo).
+
+| Fase | Inimigos | Chefão final |
+| --- | --- | --- |
+| **Cemitério Sombrio** (floresta) | Esqueletos, múmias, ceifadores, lobisomens, cavaleiros | Ceifador Ancestral: 5 ondas de alma em leque e invoca ceifadores |
+| **Vulcão Ardente** (lava) | Slime flamejante (pode deixar o chão em chamas), esqueleto negro (rápido), bombardeiro (para perto de você e explode: saia do círculo), golem de cinzas | Titã de Magma: chuva de meteoros marcados e 3 faixas de fogo |
+| **Picos Gelados** (neve) | Iaque das neves (investida), abominável (arremessa bolas de neve), troll gelado (regenera), guarda cristalino (armadura, atira cristais) | Rainha do Gelo: estrela de 6 faixas de gelo e estacas caindo em volta de você |
+
+Cada fase tem 3 dificuldades: **Normal**, **Difícil** (1,6x vida, 1,35x dano, mais inimigos, 1,6x moedas) e
+**Pesadelo** (2,5x vida, 1,75x dano, 2,4x moedas). Vencer uma dificuldade libera a seguinte; vencer o Normal
+libera a próxima fase.
+
 ## Progressão
 
 - **Espaços:** cada partida começa com 3 espaços de arma (a inicial + 2) e 2 de passiva.
@@ -25,6 +41,8 @@ Todas as armas atacam e miram sozinhas.
 - **Subir de nível:** armas e passivas aparecem misturadas e aleatórias. Cada arma tem **10 níveis** e cada
   passiva 5 (Projéteis, 3). A **raridade da carta multiplica o bônus** daquele nível:
   Comum 1×, Raro 1,67×, Épico 2,67×, Lendário 3,83× (ex.: Chance de Crítico +6% / +10% / +16% / +23%).
+  Cartas de **arma** raras ainda trazem **bônus extras** de outros atributos da arma: Raro +1, Épico +2,
+  Lendário +3.
   Projéteis usa 1 / 1,5 / 2 / 4, e as frações somam até virar um projétil inteiro.
 - **Sorte:** aumenta a chance das raridades altas (sorte 0: 82% comum e 0,5% lendário; sorte 5: 48% comum
   e 6% lendário) e às vezes dá uma 4ª opção.
@@ -39,6 +57,8 @@ Todas as armas atacam e miram sozinhas.
 | --- | --- | --- |
 | Maníaco | 250 | — |
 | Golem de Pedra | 400 | Derrotar 1 chefão |
+| Mercenário | 450 | Alcançar o nível 12 |
+| Berserker | 650 | Concluir o Cemitério |
 | Espaço de arma (4º) | 200 | Sobreviver 5 minutos |
 | Espaço de arma (5º) | 600 | Derrotar 3 chefões no total |
 | Espaço de passiva (3º) | 150 | Alcançar o nível 15 |
@@ -63,12 +83,15 @@ armas e passivas que começam bloqueadas.
 | Trinca de Chefões: 3 chefões numa partida | 3 |
 | Lendário: escolher uma carta lendária | 1 |
 | Mestre de Armas: levar uma arma ao nível 10 | 2 |
+| Concluir o Cemitério / o Vulcão / os Picos Gelados | 3 / 3 / 4 |
+| Concluir qualquer fase no Pesadelo | 5 |
 
 | Bloqueado | Custo |
 | --- | --- |
 | Raio em Cadeia, Bola de Fogo (armas) | 3 cada |
 | Bumerangue (arma) | 4 |
 | Chuva de Meteoros (arma) | 5 |
+| Bombardeio (arma) | 4 |
 | Projéteis (passiva) | 4 |
 | Dano Crítico, Vampirismo (passivas) | 3 cada |
 | Sabedoria (passiva) | 2 |
@@ -96,6 +119,8 @@ Todos andam um pouco mais devagar que o seu personagem.
 | **Rei Gelado** (mago, padrão) | Equilibrado, começa com Estilhaço de Gelo | +1 de Sorte a cada chefão derrotado |
 | **Maníaco** (bobo da corte) | Muito rápido e frágil, começa com Facas | +1% de crítico a cada nível |
 | **Golem de Pedra** | Muita vida e armadura, lento, começa com Tremor | Mais dano quanto menor a vida (até +120%) |
+| **Mercenário** | Ágil, começa com a Metralhadora (balas que ricocheteiam) | +10% de dano a cada chefão derrotado |
+| **Berserker** (bárbaro) | Resistente e lento, começa com o Espadão (giro de dano altíssimo) | Cada nível aumenta em 5% toda a cura |
 
 ## Passivas
 
@@ -108,7 +133,7 @@ Sabedoria.
 Estilhaço de Gelo, Arco Caçador (flechas teleguiadas que perfuram), Facas (teleguiadas), Raio em Cadeia
 (ricocheteia), Bola de Fogo (explosão em área), Lâminas Orbitais (reduzem o dano recebido), Aura Sagrada e
 Tremor de Pedra. Liberadas com moedas de desafio: Bumerangue (vai e volta atravessando tudo) e Chuva de
-Meteoros.
+Meteoros. Também: Metralhadora, Espadão e Bombardeio (este liberado com moedas de desafio).
 
 ## Mapa
 

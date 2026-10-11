@@ -28,6 +28,7 @@
       </div>
     </div>
     <div id="timer">00:00</div>
+    <div id="stagebar"></div>
     <div id="topright">
       <div class="pill"><span class="coin-ico"></span><span id="runcoins">0</span></div>
       <div class="pill"><span class="skull">☠</span><span id="kills">0</span></div>
@@ -55,6 +56,19 @@
         <li class="touch-only">Toque e arraste em qualquer lugar para mover · ataques automáticos</li>
         <li>Fique numa <b class="fire">fogueira</b> para escolher uma bênção · num <b class="blood">altar</b> para invocar um chefão</li>
       </ul>
+    </div>
+  </div>
+
+  <!-- Escolha de fase -->
+  <div id="stages" class="overlay hidden">
+    <div class="panel wide">
+      <h2>Escolha a fase</h2>
+      <p class="subtitle">Sobreviva 10 minutos e derrote o chefão final. Cada vitória libera a próxima dificuldade e a próxima fase.</p>
+      <div id="stagelist"></div>
+      <div class="btnrow">
+        <button id="stagesBack" class="secondary">Voltar</button>
+        <button id="stagesNext">Escolher personagem</button>
+      </div>
     </div>
   </div>
 
@@ -125,9 +139,10 @@
 
   <div id="gameover" class="overlay hidden">
     <div class="panel">
-      <h2 class="danger">Você morreu</h2>
+      <h2 id="resultTitle" class="danger">Você morreu</h2>
       <div id="stats"></div>
       <button id="restartBtn">Jogar de novo (R)</button>
+      <button id="stagesBtn" class="secondary">Escolher fase</button>
       <button id="menuBtn" class="secondary">Menu inicial</button>
     </div>
   </div>

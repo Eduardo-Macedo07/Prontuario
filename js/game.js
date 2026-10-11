@@ -67,9 +67,12 @@
   function defaultSave() {
     return {
       coins: 0,
-      chars: { mago: true, maniaco: false, golem: false },
+      chars: { mago: true, maniaco: false, golem: false, mercenario: false, berserker: false },
       bought: {},
       char: 'mago',
+      stage: 'cemiterio', // fase escolhida
+      diff: 0, // dificuldade escolhida (0 Normal, 1 Difícil, 2 Pesadelo)
+      stages: {}, // por fase: quantas dificuldades já foram concluídas
       tokens: 0, // moedas de desafio
       challenges: {}, // desafios concluídos
       unlocks: {}, // armas e passivas liberadas com moedas de desafio
@@ -142,6 +145,22 @@
       desc: 'Extremamente resistente, mas lento. Começa com o Tremor.',
       passive: 'Causa mais dano quanto menor a vida (até +120%).',
     },
+    mercenario: {
+      name: 'Mercenário', title: 'O soldado da fortuna', r: 14,
+      hp: 95, speed: 200, armor: 0, regen: 0, crit: 0.08, luck: 0,
+      weapon: 'metralhadora', theme: ['#3a4a22', '#0e1208'], accent: '#ffd36b',
+      bars: { vida: 0.4, velocidade: 0.7, defesa: 0.25 },
+      desc: 'Rajadas sem parar. Começa com a Metralhadora.',
+      passive: 'Ganha +10% de dano a cada chefão derrotado.',
+    },
+    berserker: {
+      name: 'Berserker', title: 'O bárbaro', r: 16,
+      hp: 190, speed: 160, armor: 2, regen: 0.4, crit: 0.05, luck: 0,
+      weapon: 'espadao', theme: ['#5a1a10', '#140504'], accent: '#ff6a3a',
+      bars: { vida: 0.85, velocidade: 0.4, defesa: 0.7 },
+      desc: 'Resistente, lento e devastador. Começa com o Espadão.',
+      passive: 'Cada nível aumenta em 5% toda a cura recebida.',
+    },
   };
 
   // ============================================================
@@ -150,6 +169,8 @@
   const SHOP = [
     { id: 'maniaco', kind: 'char', name: 'Maníaco', price: 250, desc: 'Desbloqueia o bobo da corte psicopata.' },
     { id: 'golem', kind: 'char', name: 'Golem de Pedra', price: 400, desc: 'Desbloqueia o colosso de pedra.', req: { type: 'bosses', n: 1, text: 'Derrote 1 chefão' } },
+    { id: 'mercenario', kind: 'char', name: 'Mercenário', price: 450, desc: 'Desbloqueia o soldado da metralhadora.', req: { type: 'level', n: 12, text: 'Alcance o nível 12' } },
+    { id: 'berserker', kind: 'char', name: 'Berserker', price: 650, desc: 'Desbloqueia o bárbaro do espadão.', req: { type: 'stage', id: 'cemiterio', text: 'Conclua o Cemitério' } },
     { id: 'wslot1', kind: 'wslot', name: 'Espaço de arma', price: 200, desc: '+1 espaço de arma (4 no total).', req: { type: 'time', n: 300, text: 'Sobreviva 5 minutos' } },
     { id: 'wslot2', kind: 'wslot', name: 'Espaço de arma', price: 600, desc: '+1 espaço de arma (5 no total).', req: { type: 'bosses', n: 3, text: 'Derrote 3 chefões no total' }, needs: 'wslot1' },
     { id: 'pslot1', kind: 'pslot', name: 'Espaço de passiva', price: 150, desc: '+1 espaço de passiva (3 no total).', req: { type: 'level', n: 15, text: 'Alcance o nível 15' } },
@@ -169,6 +190,7 @@
     if (r.type === 'time') return st.bestTime >= r.n;
     if (r.type === 'bosses') return st.bosses >= r.n;
     if (r.type === 'level') return st.bestLevel >= r.n;
+    if (r.type === 'stage') return (save.stages[r.id] || 0) >= 1;
     return true;
   }
 
@@ -176,6 +198,7 @@
     const st = save.stats;
     if (r.type === 'time') return `${fmtTime(Math.min(st.bestTime, r.n))} / ${fmtTime(r.n)}`;
     if (r.type === 'bosses') return `${Math.min(st.bosses, r.n)} / ${r.n}`;
+    if (r.type === 'stage') return 'pendente';
     return `${Math.min(st.bestLevel, r.n)} / ${r.n}`;
   }
 
@@ -203,6 +226,10 @@
     { id: 'trinca', name: 'Trinca de Chefões', desc: 'Derrote 3 chefões numa só partida', reward: 3 },
     { id: 'lenda', name: 'Lendário', desc: 'Escolha uma carta lendária', reward: 1 },
     { id: 'mestre', name: 'Mestre de Armas', desc: 'Leve uma arma ao nível 10', reward: 2 },
+    { id: 'cemiterio', name: 'Senhor do Cemitério', desc: 'Conclua o Cemitério Sombrio', reward: 3 },
+    { id: 'vulcao', name: 'Coração de Magma', desc: 'Conclua o Vulcão Ardente', reward: 3 },
+    { id: 'neve', name: 'Inverno Eterno', desc: 'Conclua os Picos Gelados', reward: 4 },
+    { id: 'pesadelo', name: 'Pesadelo Vencido', desc: 'Conclua qualquer fase no Pesadelo', reward: 5 },
   ];
 
   function completeChallenge(id) {
@@ -276,6 +303,24 @@
       desc: 'Onda de choque que fere e empurra os inimigos.',
       base: { dmg: 22, cd: 3.2, area: 125, knock: 300, count: 1 },
       ups: [[['dmg', 7]], [['cd', 0.1]], [['area', 25]], [['dmg', 8]], [['knock', 120]], [['count', 1]], [['dmg', 10]], [['cd', 0.1]], [['area', 30]]],
+    },
+    metralhadora: {
+      name: 'Metralhadora', color: '#ffd36b', max: 10, unit: ['bala', 'balas'],
+      desc: 'Rajadas rápidas; as balas ricocheteiam para outros inimigos.',
+      base: { dmg: 5, cd: 0.17, count: 1, bounces: 1 },
+      ups: [[['dmg', 1.5]], [['bounces', 1]], [['cd', 0.08]], [['count', 1]], [['dmg', 2]], [['bounces', 1]], [['cd', 0.08]], [['dmg', 2.5]], [['count', 1], ['bounces', 1]]],
+    },
+    espadao: {
+      name: 'Espadão', color: '#ff8a5a', max: 10, unit: ['giro', 'giros'],
+      desc: 'Gira o espadão em círculo, com dano enorme e empurrão.',
+      base: { dmg: 38, cd: 2.0, area: 100, knock: 260, count: 1 },
+      ups: [[['dmg', 12]], [['area', 15]], [['cd', 0.1]], [['dmg', 14]], [['knock', 120]], [['count', 1]], [['area', 20]], [['dmg', 18]], [['cd', 0.1]]],
+    },
+    bombardeio: {
+      name: 'Bombardeio', color: '#ff7a1a', max: 10, unit: ['bomba', 'bombas'], lock: 4,
+      desc: 'Uma fileira de bombas cai explodindo sobre os inimigos.',
+      base: { dmg: 28, cd: 3.6, count: 4, area: 55 },
+      ups: [[['count', 1]], [['dmg', 9]], [['area', 10]], [['cd', 0.1]], [['count', 2]], [['dmg', 12]], [['area', 12]], [['cd', 0.1]], [['count', 2]]],
     },
     bumerangue: {
       name: 'Bumerangue', color: '#b07aff', max: 10, unit: ['bumerangue', 'bumerangues'], lock: 4,
@@ -400,11 +445,79 @@
     mummy: { name: 'Múmia', r: 14, hp: 42, speed: 0.33, dmg: 12, xp: 2, color: '#d8c9a3' },
     werewolf: { name: 'Lobisomem', r: 15, hp: 36, speed: 0.42, dmg: 14, xp: 2, color: '#8a7a6a' },
     skelknight: { name: 'Cavaleiro Esqueleto', r: 17, hp: 120, speed: 0.36, dmg: 20, xp: 6, color: '#9aa6b4' },
+    // Vulcão
+    fireslime: { name: 'Slime Flamejante', r: 12, hp: 14, speed: 0.45, dmg: 8, xp: 1, color: '#ff7a2a' },
+    blackskel: { name: 'Esqueleto Negro', r: 12, hp: 26, speed: 0.55, dmg: 12, xp: 2, color: '#4a4250' },
+    bomber: { name: 'Bombardeiro', r: 12, hp: 12, speed: 0.52, dmg: 6, xp: 2, color: '#c8402a' },
+    ashgolem: { name: 'Golem de Cinzas', r: 18, hp: 130, speed: 0.32, dmg: 20, xp: 6, color: '#5a524e' },
+    // Neve
+    yak: { name: 'Iaque das Neves', r: 13, hp: 15, speed: 0.45, dmg: 8, xp: 1, color: '#6a4a32' },
+    yeti: { name: 'Abominável', r: 15, hp: 40, speed: 0.38, dmg: 13, xp: 2, color: '#eef4fa' },
+    icetroll: { name: 'Troll Gelado', r: 18, hp: 140, speed: 0.32, dmg: 20, xp: 6, color: '#6a9ac0' },
+    crystalguard: { name: 'Guarda Cristalino', r: 15, hp: 60, speed: 0.36, dmg: 14, xp: 3, color: '#9ad8ff', armor: 0.5 },
+    // Chefões
     robo: { name: 'Robô Destruidor', r: 42, hp: 1100, speed: 0.32, dmg: 34, xp: 60, color: '#c3ccd8', boss: true },
     boss: { name: 'Rei Ogro', r: 40, hp: 1000, speed: 0.36, dmg: 35, xp: 60, color: '#c02060', boss: true },
     lich: { name: 'Lich', r: 34, hp: 850, speed: 0.32, dmg: 30, xp: 60, color: '#4fc7b8', boss: true },
+    // Chefões finais (aparecem aos 10 minutos)
+    ceifador: { name: 'Ceifador Ancestral', r: 46, hp: 1800, speed: 0.34, dmg: 34, xp: 120, color: '#c77dff', boss: true, final: true },
+    titan: { name: 'Titã de Magma', r: 50, hp: 2000, speed: 0.3, dmg: 38, xp: 120, color: '#ff6a1a', boss: true, final: true },
+    rainha: { name: 'Rainha do Gelo', r: 40, hp: 1700, speed: 0.34, dmg: 32, xp: 120, color: '#9af0ff', boss: true, final: true },
   };
-  const BOSS_ORDER = ['robo', 'boss', 'lich'];
+  // ============================================================
+  // Fases e dificuldades
+  // ============================================================
+  const STAGE_TIME = 600; // aos 10 minutos chega o chefão final
+  const STAGES = {
+    cemiterio: {
+      name: 'Cemitério Sombrio', biome: 'grass', accent: '#8fd3a0', final: 'ceifador',
+      desc: 'Floresta com túmulos. Esqueletos, múmias, ceifadores e lobisomens.',
+      bosses: ['robo', 'boss', 'lich'], fodder: 'skeleton', swarm: ['ghost', 'werewolf'],
+      pick(t, r) {
+        if (t > 120 && r < 0.08) return 'skelknight';
+        if (t > 60 && r < 0.28) return 'werewolf';
+        if (t > 25 && r < 0.48) return 'mummy';
+        if (r < 0.7) return 'skeleton';
+        return 'ghost';
+      },
+    },
+    vulcao: {
+      name: 'Vulcão Ardente', biome: 'lava', accent: '#ff7a2a', final: 'titan',
+      desc: 'Chão de lava. Slimes flamejantes, esqueletos negros, bombardeiros e golens de cinza.',
+      bosses: ['boss', 'robo', 'lich'], fodder: 'fireslime', swarm: ['fireslime', 'blackskel'],
+      pick(t, r) {
+        if (t > 120 && r < 0.09) return 'ashgolem';
+        if (t > 40 && r < 0.26) return 'bomber';
+        if (t > 20 && r < 0.5) return 'blackskel';
+        return 'fireslime';
+      },
+    },
+    neve: {
+      name: 'Picos Gelados', biome: 'snow', accent: '#9af0ff', final: 'rainha',
+      desc: 'Neve e gelo. Iaques, abomináveis, trolls gelados e guardas cristalinos.',
+      bosses: ['lich', 'boss', 'robo'], fodder: 'yak', swarm: ['yak', 'yeti'],
+      pick(t, r) {
+        if (t > 120 && r < 0.09) return 'icetroll';
+        if (t > 60 && r < 0.24) return 'crystalguard';
+        if (t > 25 && r < 0.45) return 'yeti';
+        return 'yak';
+      },
+    },
+  };
+  const STAGE_IDS = Object.keys(STAGES);
+
+  const DIFFS = [
+    { name: 'Normal', hp: 1, dmg: 1, spawn: 1, coins: 1, color: '#8fd3a0' },
+    { name: 'Difícil', hp: 1.6, dmg: 1.35, spawn: 1.25, coins: 1.6, color: '#ffb347' },
+    { name: 'Pesadelo', hp: 2.5, dmg: 1.75, spawn: 1.5, coins: 2.4, color: '#ff4f6a' },
+  ];
+
+  // A primeira fase está sempre liberada; as outras, depois de concluir a anterior.
+  const stageUnlocked = (id) => {
+    const i = STAGE_IDS.indexOf(id);
+    return i === 0 || (save.stages[STAGE_IDS[i - 1]] || 0) >= 1;
+  };
+  const diffUnlocked = (id, d) => stageUnlocked(id) && (save.stages[id] || 0) >= d;
 
   const MAX_ENEMIES = 220;
   const FIRST_SWARM = 75;
@@ -438,6 +551,9 @@
   let strikes;
   let lanes; // ataques dos chefões em faixa (onda do Ogro, fogo do Lich)
   let meteors;
+  let eshots; // projéteis dos inimigos (bolas de neve, cristais)
+  let epools; // chão em chamas deixado pelos slimes
+  let spins; // giros do espadão
   let run; // dados da partida usados pelos desafios
   let structures;
   let weapons;
@@ -472,12 +588,18 @@
       speed: C.speed, regen: C.regen, armor: C.armor,
       magnet: 90, dmgMul: 1, cdMul: 1, areaMul: 1, extraProj: 0,
       xpMul: 1, coinMul: 1,
-      crit: C.crit, luck: C.luck, critMul: 2, lifesteal: 0,
+      crit: C.crit, luck: C.luck, critMul: 2, lifesteal: 0, healMul: 1,
       xp: 0, level: 1, xpNext: xpForLevel(1),
       invuln: 0, facing: 1, dirX: 1, dirY: 0, moving: false, anim: 0,
       bossKills: 0,
     };
-    run = { lastHurt: 0, bestHitless: 0, eliteKills: 0, spawned: 0, tokens: 0, checkT: 0 };
+    run = {
+      lastHurt: 0, bestHitless: 0, eliteKills: 0, spawned: 0, tokens: 0, checkT: 0,
+      stage: STAGES[save.stage] ? save.stage : 'cemiterio', diff: save.diff || 0,
+      finalSpawned: false, victory: false, victoryT: 0,
+    };
+    if (!diffUnlocked(run.stage, run.diff)) { run.stage = 'cemiterio'; run.diff = 0; }
+    Art.setBiome(STAGES[run.stage].biome);
     enemies = [];
     projectiles = [];
     pickups = [];
@@ -490,6 +612,9 @@
     strikes = [];
     lanes = [];
     meteors = [];
+    eshots = [];
+    epools = [];
+    spins = [];
     structures = [];
     weapons = {};
     passiveLevels = {};
@@ -519,7 +644,9 @@
 
   // ---------- Atributos efetivos (com a passiva de cada personagem) ----------
   const golemRage = () => (player.char === 'golem' ? 1 - player.hp / player.maxHp : 0);
-  const effDmgMul = () => player.dmgMul * (player.char === 'golem' ? 1 + golemRage() * 1.2 : 1);
+  const effDmgMul = () => player.dmgMul
+    * (player.char === 'golem' ? 1 + golemRage() * 1.2 : 1)
+    * (player.char === 'mercenario' ? 1 + player.bossKills * 0.1 : 1);
   const effCd = () => player.cdMul;
   const effSpeed = () => player.speed;
   const effLuck = () => player.luck;
@@ -613,10 +740,13 @@
 
   function onKey(k) {
     if (state === 'home') {
+      if (k === 'enter' || k === ' ') setState('stages');
+    } else if (state === 'stages') {
       if (k === 'enter' || k === ' ') setState('chars');
+      else if (k === 'escape') setState('home');
     } else if (state === 'chars') {
       if (k === 'enter' || k === ' ') startGame();
-      else if (k === 'escape') setState('home');
+      else if (k === 'escape') setState('stages');
       const ids = Object.keys(CHARACTERS);
       const n = Number(k);
       if (n >= 1 && n <= ids.length) selectChar(ids[n - 1]);
@@ -631,7 +761,7 @@
   // ============================================================
   // Telas
   // ============================================================
-  const OVERLAYS = { home: 'home', chars: 'chars', shop: 'shop', challenges: 'challenges', settings: 'settings', paused: 'pause', levelup: 'levelup', dead: 'gameover' };
+  const OVERLAYS = { home: 'home', stages: 'stages', chars: 'chars', shop: 'shop', challenges: 'challenges', settings: 'settings', paused: 'pause', levelup: 'levelup', dead: 'gameover' };
 
   function setState(s) {
     state = s;
@@ -642,6 +772,7 @@
     if (s === 'home') renderHome();
     if (s === 'challenges') renderChallenges();
     if (s === 'chars') renderChars();
+    if (s === 'stages') renderStages();
     if (s === 'shop') renderShop();
     if (s === 'settings') renderSettings();
     if (s === 'paused') renderStats();
@@ -679,6 +810,52 @@
       if (save.chars[id]) Art.drawHero(g, id, xs[i], y, s, t + i, i === 2 ? -1 : 1, { rage: 0.5 + Math.sin(t * 2) * 0.5 });
       else Art.drawHeroSilhouette(g, id, xs[i], y, s, t + i);
     });
+  }
+
+  // ---------- Escolha de fase e dificuldade ----------
+  function renderStages() {
+    const box = $('stagelist');
+    box.innerHTML = '';
+    for (const id of STAGE_IDS) {
+      const S = STAGES[id];
+      const open = stageUnlocked(id);
+      const done = save.stages[id] || 0;
+      const card = document.createElement('div');
+      card.className = 'card stage' + (save.stage === id ? ' selected' : '') + (open ? '' : ' locked');
+      card.style.setProperty('--accent', S.accent);
+      const diffs = DIFFS.map((D, d) => {
+        const ok = diffUnlocked(id, d);
+        const on = save.stage === id && save.diff === d;
+        return `<button class="diffbtn ${on ? 'on' : ''}" data-d="${d}" style="--dc:${D.color}" ${ok ? '' : 'disabled'}>${ok ? '' : '🔒 '}${D.name}${done > d ? ' ✔' : ''}</button>`;
+      }).join('');
+      const prev = STAGE_IDS[STAGE_IDS.indexOf(id) - 1];
+      card.innerHTML = `
+        <div class="preview"><img src="${Art.stagePreview(S.biome)}" alt="">${open ? '' : `<div class="lockbadge"><img src="${Art.icon('lock')}" alt=""><span>Conclua ${STAGES[prev].name}</span></div>`}</div>
+        <div class="name">${S.name}</div>
+        <div class="desc">${S.desc}</div>
+        <div class="desc boss">Chefão final: <b>${ENEMY_TYPES[S.final].name}</b></div>
+        <div class="diffs">${diffs}</div>`;
+      card.querySelectorAll('.diffbtn').forEach((b) => b.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        selectStage(id, Number(b.dataset.d));
+      }));
+      card.addEventListener('click', () => selectStage(id, save.stage === id ? save.diff : 0));
+      box.appendChild(card);
+    }
+  }
+
+  function selectStage(id, d) {
+    if (!diffUnlocked(id, d)) {
+      Sound.play('denied');
+      toast(stageUnlocked(id) ? 'Conclua a dificuldade anterior primeiro' : 'Conclua a fase anterior primeiro');
+      return;
+    }
+    Sound.play('click');
+    save.stage = id;
+    save.diff = d;
+    persist();
+    resetWorld();
+    renderStages();
   }
 
   // ---------- Escolha de personagem com retratos animados ----------
@@ -966,6 +1143,12 @@
       [`Chefões (${player.bossKills})`, player.bossKills * 25],
       [`Abates (${kills})`, Math.floor(kills / 25)],
     ];
+    if (run.victory) parts.push(['Fase concluída', 150 * (run.diff + 1)]);
+    const D = DIFFS[run.diff];
+    if (D.coins > 1) {
+      const sum = parts.reduce((a, [, v]) => a + v, 0);
+      parts.push([`Bônus ${D.name} (x${fmtNum(D.coins)})`, Math.round(sum * (D.coins - 1))]);
+    }
     const total = parts.reduce((a, [, v]) => a + v, 0);
     const st = save.stats;
     const newRecord = time > st.bestTime;
@@ -984,14 +1167,42 @@
     return { parts, total, newRecord, tokens: run.tokens };
   }
 
+  // Venceu o chefão final: libera a próxima dificuldade e a próxima fase.
+  function stageClear() {
+    const prev = save.stages[run.stage] || 0;
+    save.stages[run.stage] = Math.max(prev, run.diff + 1);
+    completeChallenge(run.stage);
+    if (run.diff === 2) completeChallenge('pesadelo');
+    persist();
+    Sound.play('levelup');
+    showResult(true, prev < run.diff + 1);
+  }
+
   function gameOver() {
     Sound.play('death');
+    showResult(false, false);
+  }
+
+  function showResult(won, firstClear) {
     const { parts, total, newRecord, tokens } = endRun();
+    const idx = STAGE_IDS.indexOf(run.stage);
+    let unlockMsg = '';
+    if (won && firstClear) {
+      const msgs = [];
+      if (run.diff < 2) msgs.push(`Dificuldade ${DIFFS[run.diff + 1].name} liberada`);
+      if (run.diff === 0 && STAGE_IDS[idx + 1]) msgs.push(`Nova fase: ${STAGES[STAGE_IDS[idx + 1]].name}`);
+      unlockMsg = msgs.map((m) => `<p class="new">${m}!</p>`).join('');
+    }
+    $('resultTitle').textContent = won ? 'Fase concluída!' : 'Você morreu';
+    $('resultTitle').className = won ? 'victory' : 'danger';
     $('stats').innerHTML = `
+      <div><span>Fase</span><b>${STAGES[run.stage].name} · ${DIFFS[run.diff].name}</b></div>`
+      + `
       <div><span>Personagem</span><b>${CHARACTERS[player.char].name}</b></div>
       <div><span>Tempo sobrevivido</span><b>${fmtTime(time)}</b></div>
       <div><span>Nível alcançado</span><b>${player.level}</b></div>
       ${newRecord ? '<p class="new">Novo recorde!</p>' : ''}
+      ${unlockMsg}
       <h3 class="earnhead">Moedas ganhas</h3>
       ${parts.map(([k, v]) => `<div><span>${k}</span><b>+${v}</b></div>`).join('')}
       <div class="total"><span>Total</span><b><img src="${Art.icon('coin')}" alt="">+${total}</b></div>
@@ -1009,12 +1220,14 @@
     setState('home');
   }
 
-  $('homePlay').addEventListener('click', () => setState('chars'));
+  $('homePlay').addEventListener('click', () => setState('stages'));
+  $('stagesBack').addEventListener('click', () => setState('home'));
+  $('stagesNext').addEventListener('click', () => setState('chars'));
   $('homeShop').addEventListener('click', () => setState('shop'));
   $('homeChal').addEventListener('click', () => setState('challenges'));
   $('chalBack').addEventListener('click', () => setState('home'));
   $('homeSettings').addEventListener('click', () => { settingsReturn = 'home'; setState('settings'); });
-  $('charsBack').addEventListener('click', () => setState('home'));
+  $('charsBack').addEventListener('click', () => setState('stages'));
   $('charsPlay').addEventListener('click', startGame);
   $('shopBack').addEventListener('click', () => setState('home'));
   $('settingsBack').addEventListener('click', () => setState(settingsReturn));
@@ -1028,6 +1241,7 @@
     renderSettings();
   });
   $('restartBtn').addEventListener('click', startGame);
+  $('stagesBtn').addEventListener('click', () => { resetWorld(); setState('stages'); });
   $('resumeBtn').addEventListener('click', () => setState('playing'));
   $('pauseSettings').addEventListener('click', () => { settingsReturn = 'paused'; setState('settings'); });
   $('pauseBtn').addEventListener('click', () => { if (state === 'playing') setState('paused'); });
@@ -1066,10 +1280,24 @@
   }
 
   // Arma nova ou um nível a mais, com o bônus multiplicado pela raridade.
-  function addWeapon(id, rarity) {
+  // Bônus extras de uma carta de arma: Raro 1, Épico 2, Lendário 3,
+  // sorteados entre as outras melhorias da arma (valor de um nível comum).
+  function weaponExtras(id, lv, rarity) {
+    const def = WEAPONS[id];
+    const main = lv > 0 ? def.ups[lv - 1].map(([st]) => st) : [];
+    const pool = [];
+    for (const up of def.ups) {
+      for (const [st, v] of up) {
+        if (!main.includes(st) && !pool.some(([p]) => p === st)) pool.push([st, v]);
+      }
+    }
+    return shuffle(pool).slice(0, rarity);
+  }
+
+  function addWeapon(id, rarity, extras) {
     const def = WEAPONS[id];
     const mult = RARITY[rarity || 0].mult;
-    const w = weapons[id];
+    let w = weapons[id];
     if (w) {
       if (w.level >= def.max) return;
       for (const [stat, v] of def.ups[w.level - 1]) applyStat(w.s, stat, v * mult);
@@ -1079,8 +1307,9 @@
       // arma nova de raridade alta já começa com mais dano
       const s = Object.assign({ cdMul: 1 }, def.base);
       s.dmg *= 1 + (mult - 1) * 0.3;
-      weapons[id] = { level: 1, timer: 0.3, angle: 0, blades: [], s };
+      w = weapons[id] = { level: 1, timer: 0.3, angle: 0, blades: [], s };
     }
+    for (const [stat, v] of extras || []) applyStat(w.s, stat, v);
   }
 
   function weaponUpText(id, lv, mult) {
@@ -1109,7 +1338,10 @@
     }
     const count = 3 + (Math.random() < effLuck() * 0.08 ? 1 : 0);
     const picks = shuffle(pool).slice(0, count);
-    for (const c of picks) c.rarity = rollRarity(isChest ? 1 : 0);
+    for (const c of picks) {
+      c.rarity = rollRarity(isChest ? 1 : 0);
+      if (c.kind === 'weapon') c.extras = weaponExtras(c.id, c.lv, c.rarity);
+    }
     if (picks.length === 0) {
       picks.push({ kind: 'heal', id: 'heal', rarity: 0 });
       picks.push({ kind: 'gold', id: 'coin', rarity: 0 });
@@ -1153,6 +1385,9 @@
         } else {
           tag = `Arma · nível ${c.lv + 1}/${def.max}`;
           desc = `<b>${weaponUpText(c.id, c.lv, mult)}</b>`;
+        }
+        if (c.extras && c.extras.length) {
+          desc += `<div class="extras">${c.extras.map(([st, v]) => `<span>+ ${statText(def, st, v)}</span>`).join('')}</div>`;
         }
       } else if (c.kind === 'passive') {
         const def = PASSIVES[c.id];
@@ -1198,7 +1433,7 @@
     const c = currentChoices[i];
     if (!c) return;
     if ((c.kind === 'weapon' || c.kind === 'passive') && c.rarity === 3) completeChallenge('lenda');
-    if (c.kind === 'weapon') addWeapon(c.id, c.rarity);
+    if (c.kind === 'weapon') addWeapon(c.id, c.rarity, c.extras);
     else if (c.kind === 'passive') {
       passiveLevels[c.id] = (passiveLevels[c.id] || 0) + 1;
       PASSIVES[c.id].apply(passiveValue(c.id, c.rarity));
@@ -1225,11 +1460,12 @@
       pendingLevels++;
       levelFx = 1;
       if (player.char === 'maniaco') player.crit += 0.01;
+      if (player.char === 'berserker') player.healMul += 0.05;
     }
   }
 
   function heal(v) {
-    player.hp = Math.min(player.maxHp, player.hp + v);
+    player.hp = Math.min(player.maxHp, player.hp + v * player.healMul);
   }
 
   // ============================================================
@@ -1356,12 +1592,7 @@
   // Inimigos
   // ============================================================
   function pickEnemyType() {
-    const r = Math.random();
-    if (time > 120 && r < 0.08) return 'skelknight';
-    if (time > 60 && r < 0.28) return 'werewolf';
-    if (time > 25 && r < 0.48) return 'mummy';
-    if (r < 0.7) return 'skeleton';
-    return 'ghost';
+    return STAGES[run.stage].pick(time, Math.random());
   }
 
   function spawnPoint() {
@@ -1374,17 +1605,21 @@
   function spawnEnemy(type, x, y, hpMul) {
     const T = ENEMY_TYPES[type];
     if (x === undefined) ({ x, y } = spawnPoint());
-    const hp = T.hp * (1 + (time / 60) * 0.45) * (hpMul || 1);
+    // Fica mais forte com o tempo (10 min = 8x a vida) e com a dificuldade.
+    const D = DIFFS[run.diff];
+    const m = time / 60;
+    const hp = T.hp * (1 + m * 0.5 + m * m * 0.02) * D.hp * (hpMul || 1);
     const base = CHARACTERS[player.char].speed;
     const e = {
       type, x, y, r: T.r, hp, maxHp: hp,
       // fica sempre abaixo de 60% da velocidade base do personagem
       speed: base * Math.min(0.6, T.speed * (1 + Math.min(time / 600, 0.1))),
-      dmg: T.dmg * (1 + (time / 240) * 0.3),
-      xp: T.xp, color: T.color, boss: !!T.boss,
+      dmg: T.dmg * (1 + m * 0.1) * D.dmg,
+      xp: T.xp, color: T.color, boss: !!T.boss, final: !!T.final, armor: T.armor || 1,
       flash: 0, kbx: 0, kby: 0, orbitCd: 0, phase: rand(0, TAU), summonT: 3, dead: false,
       lungeCd: rand(1, 3), windup: 0, dashT: 0, dashX: 0, dashY: 0, missileT: 2.5,
       slamT: 2.5, slamWind: 0, fireT: 3, bornAt: time, elite: false,
+      fuse: 0, throwT: rand(2, 5), waveT: 3, starT: 2.5, rainT: 4,
     };
     enemies.push(e);
     return e;
@@ -1404,7 +1639,8 @@
 
   function spawnBoss(x, y, extraMul) {
     bossesSpawned++;
-    const type = BOSS_ORDER[(bossesSpawned - 1) % BOSS_ORDER.length];
+    const order = STAGES[run.stage].bosses;
+    const type = order[(bossesSpawned - 1) % order.length];
     // Cada chefão seguinte é mais forte que o anterior.
     const mul = (1 + (bossesSpawned - 1) * 0.5) * (extraMul || 1);
     const e = spawnEnemy(type, x, y, mul);
@@ -1416,7 +1652,8 @@
 
   function updateSpawning(dt) {
     // Começo tranquilo (pouquinhos até a primeira horda), depois acelera aos poucos.
-    const rate = spawnRate(time);
+    // depois dos 10 minutos, enquanto o chefão final vive, a horda aperta
+    const rate = spawnRate(time) * DIFFS[run.diff].spawn * (time > STAGE_TIME ? 1.6 : 1);
     spawnAcc += rate * dt;
     while (spawnAcc >= 1) {
       spawnAcc -= 1;
@@ -1432,7 +1669,8 @@
       nextSwarm += 50;
       const n = 8 + Math.floor(time / 15);
       const d = Math.hypot(W, H) / 2 + 20;
-      const type = time > 100 ? 'werewolf' : 'ghost';
+      const sw = STAGES[run.stage].swarm;
+      const type = time > 100 ? sw[1] : sw[0];
       for (let i = 0; i < n && enemies.length < MAX_ENEMIES + 40; i++) {
         const a = (i / n) * TAU;
         spawnEnemy(type, player.x + Math.cos(a) * d, player.y + Math.sin(a) * d);
@@ -1441,7 +1679,18 @@
       Sound.play('swarm');
     }
 
-    if (time >= nextBoss) {
+    if (!run.finalSpawned && time >= STAGE_TIME) {
+      run.finalSpawned = true;
+      const p = spawnPoint();
+      const e = spawnEnemy(STAGES[run.stage].final, p.x, p.y);
+      e.bornAt = time;
+      smoke(p.x, p.y, 16, '#2a1a24');
+      Sound.play('boss');
+      showBanner(`${ENEMY_TYPES[e.type].name} chegou! Derrote-o para vencer.`, '#ff4f6a');
+      shake = 12;
+    }
+
+    if (time >= nextBoss && time < STAGE_TIME - 20) {
       nextBoss += BOSS_INTERVAL;
       const p = spawnPoint();
       spawnBoss(p.x, p.y);
@@ -1451,7 +1700,7 @@
 
   function damageEnemy(e, base, kx, ky) {
     if (e.dead) return;
-    let dmg = base * effDmgMul();
+    let dmg = base * effDmgMul() * e.armor;
     const crit = Math.random() < player.crit;
     if (crit) dmg *= player.critMul;
     dmg = Math.max(1, Math.round(dmg));
@@ -1488,6 +1737,12 @@
       pickups.push({ kind: 'chest', x: e.x, y: e.y });
       pickups.push({ kind: 'heart', x: e.x + 34, y: e.y, v: 50 });
       player.bossKills++;
+      if (player.char === 'mercenario') addText(player.x, player.y - 50, '+10% de dano', '#ffd36b', true);
+      if (e.final) {
+        run.victory = true;
+        run.victoryT = 2.2;
+        player.invuln = 99;
+      }
       const fight = time - e.bornAt;
       if (e.type === 'boss' && fight < 30) completeChallenge('ogro');
       if (e.type === 'lich' && fight < 40) completeChallenge('lich');
@@ -1499,7 +1754,7 @@
         player.luck += 1;
         addText(player.x, player.y - 50, '+1 Sorte', '#5fe8ff', true);
       }
-      showBanner('Chefão derrotado! Pegue o baú.', '#ffd36b');
+      showBanner(e.final ? 'Fase concluída!' : 'Chefão derrotado! Pegue o baú.', '#ffd36b');
     } else if (e.elite) {
       run.eliteKills++;
       dropXp(e.x, e.y, e.xp);
@@ -1510,6 +1765,7 @@
       shake = Math.max(shake, 5);
     } else {
       dropXp(e.x, e.y, e.xp);
+      if (e.type === 'fireslime' && Math.random() < 0.35) epools.push({ x: e.x, y: e.y, r: 28, life: 2.6, dmg: e.dmg * 0.7 });
       const luck = 1 + effLuck() * 0.1;
       if (Math.random() < 0.012 * (1 + effLuck() * 0.25)) pickups.push({ kind: 'heart', x: e.x, y: e.y, v: 25 });
       else if (Math.random() < 0.05 * luck) pickups.push({ kind: 'coin', x: e.x + rand(-8, 8), y: e.y + rand(-8, 8), v: coinValue() });
@@ -1544,6 +1800,135 @@
     }
   }
 
+  // Explosão de inimigo (bombardeiro): fere o jogador, não os outros inimigos.
+  function enemyBlast(x, y, r, dmg) {
+    Sound.play('explosion');
+    explosions.push({ x, y, r, life: 0.4 });
+    sparks(x, y, '#ffb347', 16, 320);
+    smoke(x, y, 5, '#4a4040');
+    shake = Math.max(shake, 5);
+    if (Math.hypot(player.x - x, player.y - y) < r + player.r * 0.5 && player.invuln <= 0 && state === 'playing') hurtPlayer(dmg);
+  }
+
+  function enemyShot(e, kind, speed, r, dmg) {
+    const a = Math.atan2(player.y - e.y, player.x - e.x);
+    eshots.push({ kind, x: e.x, y: e.y - e.r * 0.4, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, r, dmg, life: 3 });
+  }
+
+  // Faixas em leque saindo do inimigo, apontadas para o jogador.
+  function laneFan(e, kind, offsets, o) {
+    const base = Math.atan2(player.y - e.y, player.x - e.x);
+    for (const off of offsets) {
+      lanes.push(Object.assign({ kind, x: e.x, y: e.y, a: base + off, len: 640, w: 60, t: 1.1, max: 1.1, pos: 0, burn: 1.4, dmg: e.dmg, hit: false }, o));
+    }
+  }
+
+  // Comportamentos especiais. Devolve true quando o inimigo deve ficar parado neste quadro.
+  const ENEMY_BEHAVIOR = {
+    bomber(e, dt, d) {
+      if (e.fuse > 0) {
+        e.fuse -= dt;
+        if (Math.floor(e.fuse * 12) % 2 === 0) e.flash = 0.05;
+        if (e.fuse <= 0) {
+          enemyBlast(e.x, e.y, 78, e.dmg * 3);
+          e.dead = true;
+        }
+        return true;
+      }
+      if (d < 70) {
+        e.fuse = 0.9;
+        strikes.push({ x: e.x, y: e.y, r: 78, t: 0.9, max: 0.9, dmg: 0, owner: e, mark: true });
+        Sound.play('whistle');
+      }
+      return false;
+    },
+    yeti(e, dt, d) {
+      e.throwT -= dt;
+      if (e.throwT <= 0 && d < 420) {
+        e.throwT = rand(4.5, 7);
+        enemyShot(e, 'snow', 250, 9, e.dmg);
+      }
+      return false;
+    },
+    crystalguard(e, dt, d) {
+      e.throwT -= dt;
+      if (e.throwT <= 0 && d < 380) {
+        e.throwT = rand(3.5, 6);
+        enemyShot(e, 'shard', 330, 6, e.dmg * 0.8);
+        sparks(e.x, e.y - e.r, '#9af0ff', 6, 160);
+      }
+      return false;
+    },
+    icetroll(e, dt) {
+      // regenera a vida aos poucos
+      e.hp = Math.min(e.maxHp, e.hp + e.maxHp * 0.02 * dt);
+      return false;
+    },
+    ceifador(e, dt) {
+      const angry = e.hp < e.maxHp * 0.5 ? 0.7 : 1;
+      e.waveT -= dt;
+      if (e.waveT <= 0) {
+        // cinco ondas de alma em leque
+        e.waveT = 4.6 * angry;
+        laneFan(e, 'wave', [-0.8, -0.4, 0, 0.4, 0.8], { len: 700, w: 56, col: '200,120,255', dmg: e.dmg });
+        Sound.play('warn');
+      }
+      e.summonT -= dt;
+      if (e.summonT <= 0) {
+        e.summonT = 7;
+        for (let i = 0; i < 5 && enemies.length < MAX_ENEMIES + 60; i++) {
+          const a = (i / 5) * TAU;
+          spawnEnemy('ghost', e.x + Math.cos(a) * 70, e.y + Math.sin(a) * 70);
+        }
+        sparks(e.x, e.y - 30, '#c77dff', 20, 240);
+      }
+      return false;
+    },
+    titan(e, dt) {
+      const angry = e.hp < e.maxHp * 0.5 ? 0.7 : 1;
+      e.rainT -= dt;
+      if (e.rainT <= 0) {
+        // chuva de meteoros marcados em volta do jogador
+        e.rainT = 3.8 * angry;
+        for (let i = 0; i < 7; i++) {
+          const tx = player.x + (i === 0 ? 0 : rand(-220, 220));
+          const ty = player.y + (i === 0 ? 0 : rand(-170, 170));
+          strikes.push({ x: tx, y: ty, r: 60, t: 1.5 + i * 0.07, max: 1.5 + i * 0.07, dmg: e.dmg * 0.9, look: 'rock' });
+        }
+        Sound.play('warn');
+      }
+      e.fireT -= dt;
+      if (e.fireT <= 0) {
+        e.fireT = 5.5 * angry;
+        laneFan(e, 'fire', [-0.55, 0, 0.55], { len: 760, w: 58, t: 1.3, max: 1.3, burn: 1.6, tint: 'lava', dmg: e.dmg * 0.8 });
+      }
+      return false;
+    },
+    rainha(e, dt) {
+      const angry = e.hp < e.maxHp * 0.5 ? 0.75 : 1;
+      e.starT -= dt;
+      if (e.starT <= 0) {
+        // estrela de gelo: seis faixas, fique entre elas
+        e.starT = 4.4 * angry;
+        const off = [];
+        for (let i = 0; i < 6; i++) off.push((i / 6) * TAU);
+        laneFan(e, 'fire', off, { len: 820, w: 54, t: 1.3, max: 1.3, burn: 1.4, tint: 'ice', dmg: e.dmg * 0.8 });
+        Sound.play('warn');
+      }
+      e.rainT -= dt;
+      if (e.rainT <= 0) {
+        // estacas de gelo caindo num círculo em volta do jogador
+        e.rainT = 5.5 * angry;
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * TAU + rand(0, 0.5);
+          strikes.push({ x: player.x + Math.cos(a) * 110, y: player.y + Math.sin(a) * 85, r: 55, t: 1.4, max: 1.4, dmg: e.dmg * 0.8, look: 'ice' });
+        }
+        strikes.push({ x: player.x, y: player.y, r: 55, t: 1.9, max: 1.9, dmg: e.dmg * 0.8, look: 'ice' });
+      }
+      return false;
+    },
+  };
+
   function updateEnemies(dt) {
     const farLimit = Math.hypot(W, H) * 0.85;
     for (const e of enemies) {
@@ -1568,7 +1953,7 @@
         vx += -dy * w;
         vy += dx * w;
       }
-      if (e.type === 'werewolf') {
+      if (e.type === 'werewolf' || e.type === 'yak') {
         // Agacha (aviso) e dá um bote rápido na direção do jogador.
         e.lungeCd -= dt;
         if (e.dashT > 0) {
@@ -1585,11 +1970,15 @@
             e.dashY = dy;
             smoke(e.x, e.y + 8, 2, '#8a7a64');
           }
-        } else if (e.lungeCd <= 0 && d < 260) {
-          e.windup = 0.65;
+        } else if (e.lungeCd <= 0 && d < (e.type === 'yak' ? 210 : 260)) {
+          e.windup = e.type === 'yak' ? 0.55 : 0.65;
           Sound.play('growl');
           e.lungeCd = rand(2.5, 4);
         }
+      }
+      if (ENEMY_BEHAVIOR[e.type]) {
+        const stop = ENEMY_BEHAVIOR[e.type](e, dt, d, dx, dy);
+        if (stop) { vx = 0; vy = 0; }
       }
       if (e.type === 'boss') {
         // Rei Ogro: para, marca uma faixa no chão e solta uma onda de choque por ela.
@@ -1650,7 +2039,7 @@
           e.summonT = 6;
           for (let i = 0; i < 3 && enemies.length < MAX_ENEMIES + 60; i++) {
             const a = (i / 3) * TAU;
-            spawnEnemy('skeleton', e.x + Math.cos(a) * 60, e.y + Math.sin(a) * 60);
+            spawnEnemy(STAGES[run.stage].fodder, e.x + Math.cos(a) * 60, e.y + Math.sin(a) * 60);
             smoke(e.x + Math.cos(a) * 60, e.y + Math.sin(a) * 60, 3, '#2a4a50');
           }
           sparks(e.x, e.y - 20, '#4fe0d0', 20, 220);
@@ -1913,8 +2302,61 @@
     },
   };
 
-  // (continuação) armas liberadas com moedas de desafio
+  // (continuação) armas novas
   Object.assign(WEAPON_UPDATE, {
+    metralhadora(w, dt) {
+      w.timer -= dt;
+      if (w.timer > 0) return;
+      const target = nearestEnemy(player.x, player.y, null, 520);
+      if (!target) { w.timer = 0.1; return; }
+      w.timer = cooldown(w);
+      Sound.play('knife');
+      const n = shots(w);
+      const base = Math.atan2(target.y - player.y, target.x - player.x);
+      for (let i = 0; i < n; i++) {
+        const a = base + (i - (n - 1) / 2) * 0.12 + rand(-0.06, 0.06);
+        projectiles.push({
+          kind: 'bullet', x: player.x + Math.cos(base) * 14, y: player.y - 14,
+          vx: Math.cos(a) * 760, vy: Math.sin(a) * 760, speed: 760,
+          r: 4, dmg: w.s.dmg, pierce: 0, bounces: Math.floor(w.s.bounces + 1e-9), life: 0.9, hit: new Set(),
+        });
+      }
+      fx({ kind: 'dot', add: true, x: player.x + Math.cos(base) * 20, y: player.y - 14 + Math.sin(base) * 20, life: 0.06, color: '#ffe08a', size: 6 });
+    },
+
+    espadao(w, dt) {
+      w.timer -= dt;
+      if (w.timer > 0) return;
+      if (!nearestEnemy(player.x, player.y, null, w.s.area * player.areaMul + 60)) { w.timer = 0.1; return; }
+      w.timer = cooldown(w);
+      Sound.play('knife');
+      const n = shots(w);
+      for (let i = 0; i < n; i++) {
+        spins.push({ t: 0, dur: 0.36, delay: i * 0.4, a0: rand(0, TAU), r: w.s.area * player.areaMul, dmg: w.s.dmg, knock: w.s.knock, hit: new Set() });
+      }
+      shake = Math.max(shake, 3);
+    },
+
+    bombardeio(w, dt) {
+      w.timer -= dt;
+      if (w.timer > 0) return;
+      const options = enemiesOnScreen();
+      if (!options.length) { w.timer = 0.1; return; }
+      w.timer = cooldown(w);
+      Sound.play('whistle');
+      // fileira de bombas atravessando o alvo
+      const t = pick(options);
+      const a = Math.atan2(t.y - player.y, t.x - player.x) + Math.PI / 2 + rand(-0.4, 0.4);
+      const n = shots(w);
+      const radius = w.s.area * player.areaMul;
+      const step = radius * 1.1;
+      for (let i = 0; i < n; i++) {
+        const o = (i - (n - 1) / 2) * step;
+        const fall = 0.55 + i * 0.09;
+        meteors.push({ x: t.x + Math.cos(a) * o, y: t.y + Math.sin(a) * o, r: radius, t: fall, max: fall, dmg: w.s.dmg, bomb: true });
+      }
+    },
+
     bumerangue(w, dt) {
       w.timer -= dt;
       if (w.timer > 0) return;
@@ -2056,6 +2498,19 @@
         if (dx * dx + dy * dy < rr * rr) {
           p.hit.add(e);
           damageEnemy(e, p.dmg, p.vx * 0.3, p.vy * 0.3);
+          if (p.kind === 'bullet' && p.bounces > 0) {
+            // ricocheteia para o inimigo mais próximo que ainda não levou essa bala
+            const next = nearestEnemy(e.x, e.y, p.hit, 260);
+            if (next) {
+              p.bounces--;
+              const a = Math.atan2(next.y - p.y, next.x - p.x);
+              p.vx = Math.cos(a) * p.speed;
+              p.vy = Math.sin(a) * p.speed;
+              p.life = 0.6;
+              sparks(p.x, p.y, '#ffe08a', 3, 160);
+              break;
+            }
+          }
           if (p.pierce <= 0) { p.life = 0; break; }
           p.pierce--;
         }
@@ -2107,15 +2562,26 @@
 
   function updateStrikes(dt) {
     for (const s of strikes) {
+      if (s.mark) {
+        // só o aviso do bombardeiro: some quando ele explode ou morre
+        s.t -= dt;
+        if (s.owner.dead) s.t = 0;
+        continue;
+      }
       s.t -= dt;
-      if (s.t <= 0.45 && !s.whistled) {
+      if (s.t <= 0.45 && !s.whistled && s.look !== 'ice') {
         s.whistled = true;
         Sound.play('whistle');
       }
       if (s.t > 0) continue;
-      Sound.play('explosion');
-      explosions.push({ x: s.x, y: s.y, r: s.r, life: 0.4 });
-      sparks(s.x, s.y, '#ffb347', 16, 340);
+      Sound.play(s.look === 'ice' ? 'ice' : 'explosion');
+      if (s.look === 'ice') {
+        sparks(s.x, s.y, '#bff4ff', 18, 300);
+        ringFx(s.x, s.y, s.r, '#bff4ff');
+      } else {
+        explosions.push({ x: s.x, y: s.y, r: s.r, life: 0.4 });
+        sparks(s.x, s.y, '#ffb347', 16, 340);
+      }
       smoke(s.x, s.y, 6, '#4a4040');
       shake = Math.max(shake, 6);
       const d = Math.hypot(player.x - s.x, player.y - s.y);
@@ -2166,12 +2632,64 @@
         if (Math.random() < dt * (lowQuality ? 15 : 45)) {
           const s = rand(0, L.len);
           const off = rand(-L.w / 2, L.w / 2);
-          fx({ kind: 'dot', add: true, x: L.x + ca * s - sa * off, y: L.y + sa * s + ca * off, vy: rand(-90, -40), life: rand(0.3, 0.6), color: Math.random() < 0.5 ? '#ff8a2a' : '#7fffd0', size: rand(2, 4), drag: 0.96 });
+          fx({ kind: 'dot', add: true, x: L.x + ca * s - sa * off, y: L.y + sa * s + ca * off, vy: rand(-90, -40), life: rand(0.3, 0.6), color: Math.random() < 0.5 ? '#ff8a2a' : LANE_COLORS[L.tint || 'lich'].spark, size: rand(2, 4), drag: 0.96 });
         }
         if (L.burn <= 0) L.done = true;
       }
     }
     lanes = lanes.filter((L) => !L.done);
+  }
+
+  function updateEnemyHazards(dt) {
+    const canHit = () => player.invuln <= 0 && state === 'playing';
+    for (const b of eshots) {
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+      b.life -= dt;
+      if (Math.random() < 0.4) fx({ kind: 'dot', add: true, x: b.x, y: b.y, vx: rand(-10, 10), vy: rand(-10, 10), life: 0.25, color: b.kind === 'snow' ? '#ffffff' : '#9af0ff', size: rand(1.5, 2.5) });
+      const rr = b.r + player.r * 0.6;
+      if ((b.x - player.x) ** 2 + (b.y - (player.y - 12)) ** 2 < rr * rr && canHit()) {
+        hurtPlayer(b.dmg);
+        sparks(b.x, b.y, '#ffffff', 8, 160);
+        b.life = 0;
+      }
+    }
+    eshots = eshots.filter((b) => b.life > 0);
+    for (const p of epools) {
+      p.life -= dt;
+      if (Math.hypot(player.x - p.x, (player.y - p.y) / 0.6) < p.r + player.r * 0.4 && canHit()) hurtPlayer(p.dmg);
+    }
+    epools = epools.filter((p) => p.life > 0);
+  }
+
+  // Giro do espadão: a lâmina dá uma volta completa e acerta quem estiver no caminho.
+  function updateSpins(dt) {
+    for (const sp of spins) {
+      if (sp.delay > 0) {
+        sp.delay -= dt;
+        if (sp.delay <= 0) Sound.play('knife');
+        continue;
+      }
+      const prev = sp.t / sp.dur;
+      sp.t += dt;
+      const cur = Math.min(1, sp.t / sp.dur);
+      for (const e of enemies) {
+        if (e.dead || sp.hit.has(e)) continue;
+        const dx = e.x - player.x;
+        const dy = e.y - (player.y - 10);
+        const d = Math.hypot(dx, dy) || 1;
+        if (d > sp.r + e.r) continue;
+        // ângulo do inimigo medido a partir do começo do giro (0 a 1)
+        let rel = (Math.atan2(dy, dx) - sp.a0) / TAU;
+        rel -= Math.floor(rel);
+        if (rel >= prev - 0.02 && rel <= cur + 0.02) {
+          sp.hit.add(e);
+          damageEnemy(e, sp.dmg, (dx / d) * sp.knock, (dy / d) * sp.knock);
+        }
+      }
+      if (cur >= 1) sp.done = true;
+    }
+    spins = spins.filter((sp) => !sp.done);
   }
 
   // Meteoros da arma Chuva de Meteoros: caem um pouco depois de marcados.
@@ -2266,10 +2784,7 @@
     player.invuln -= dt;
     heal(effRegen() * dt);
     updateTrail(dt);
-    // vagalumes de ambiente
-    if (!lowQuality && Math.random() < dt * 4) {
-      fx({ kind: 'dot', add: true, x: player.x + rand(-W / 2, W / 2), y: player.y + rand(-H / 2, H / 2), vx: rand(-14, 14), vy: rand(-14, 14), life: rand(2, 4), color: '#d8ff7a', size: rand(1.2, 2.2), drag: 1 });
-    }
+    updateAmbient(dt);
 
     updateSpawning(dt);
     updateStructures(dt);
@@ -2281,9 +2796,15 @@
     updateStrikes(dt);
     updateLanes(dt);
     updateMeteors(dt);
+    updateEnemyHazards(dt);
+    updateSpins(dt);
     enemies = enemies.filter((e) => !e.dead);
     if (state !== 'playing') return; // morreu durante este quadro
     updatePickups(dt);
+    if (run.victory) {
+      run.victoryT -= dt;
+      if (run.victoryT <= 0) { stageClear(); return; }
+    }
     run.checkT -= dt;
     if (run.checkT <= 0) {
       run.checkT = 0.5;
@@ -2292,6 +2813,21 @@
 
     if (pendingLevels > 0 || pendingChests > 0 || pendingShrines > 0) openChoices();
     updateMusic();
+  }
+
+  // Partículas de ambiente de cada mapa: vagalumes, brasas subindo ou neve caindo.
+  function updateAmbient(dt) {
+    if (lowQuality) return;
+    const b = STAGES[run.stage].biome;
+    const x = player.x + rand(-W / 2, W / 2);
+    const y = player.y + rand(-H / 2, H / 2);
+    if (b === 'grass' && Math.random() < dt * 4) {
+      fx({ kind: 'dot', add: true, x, y, vx: rand(-14, 14), vy: rand(-14, 14), life: rand(2, 4), color: '#d8ff7a', size: rand(1.2, 2.2), drag: 1 });
+    } else if (b === 'lava' && Math.random() < dt * 10) {
+      fx({ kind: 'dot', add: true, x, y, vx: rand(-20, 20), vy: rand(-60, -25), life: rand(1.5, 3), color: Math.random() < 0.5 ? '#ff7a1a' : '#ffb347', size: rand(1.2, 2.6), drag: 1 });
+    } else if (b === 'snow' && Math.random() < dt * 22) {
+      fx({ kind: 'dot', x, y: player.y - H / 2 + rand(-40, H * 0.6), vx: rand(-30, -5), vy: rand(30, 60), life: rand(2.5, 4.5), color: '#ffffff', size: rand(1.4, 3), drag: 1 });
+    }
   }
 
   // Rastros do personagem: poeira ao andar e efeitos próprios de cada um.
@@ -2525,6 +3061,18 @@
       Art.glow(ctx, p.x, p.y, 30, '#ff6a1a', 0.8);
       Art.ball(ctx, p.x, p.y, 7.5, '#ffa040', 0, false);
       Art.glow(ctx, p.x, p.y, 9, '#fff3c0', 1);
+    } else if (p.kind === 'bullet') {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(a);
+      ctx.strokeStyle = 'rgba(255,220,120,0.45)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-22, 0);
+      ctx.lineTo(0, 0);
+      ctx.stroke();
+      Art.poly(ctx, [6, 0, 1, -2.5, -5, -2.5, -5, 2.5, 1, 2.5], '#ffd36b', 1.1);
+      ctx.restore();
     } else if (p.kind === 'boomerang') {
       Art.glow(ctx, p.x, p.y, 26, '#b07aff', 0.45);
       ctx.save();
@@ -2618,8 +3166,17 @@
     ctx.globalCompositeOperation = 'source-over';
   }
 
+  // Cores das faixas de fogo: tele = aviso, burn = chão queimando, outer/inner = chamas.
+  const LANE_COLORS = {
+    lich: { tele: '80,255,200', burn: '40,220,170', edge: '150,255,220', outer: '#22c8a0', inner: '#d8fff0', spark: '#7fffd0' },
+    lava: { tele: '255,140,40', burn: '255,90,20', edge: '255,200,120', outer: '#ff5a1a', inner: '#ffe08a', spark: '#ffb347' },
+    ice: { tele: '130,210,255', burn: '90,170,240', edge: '220,245,255', outer: '#5ab8ff', inner: '#f0fbff', spark: '#d8f6ff' },
+  };
+
   function drawLaneGround(L) {
     const fire = L.kind === 'fire';
+    const LC = LANE_COLORS[L.tint || 'lich'];
+    const wc = L.col || '255,60,60';
     ctx.save();
     ctx.translate(L.x, L.y);
     ctx.rotate(L.a);
@@ -2628,18 +3185,18 @@
       // aviso: a faixa vai enchendo até o golpe
       const k = 1 - L.t / L.max;
       const pulse = 0.5 + Math.sin(time * 18) * 0.5;
-      ctx.fillStyle = fire ? `rgba(80,255,200,${0.07 + k * 0.12})` : `rgba(255,40,50,${0.08 + k * 0.12})`;
+      ctx.fillStyle = fire ? `rgba(${LC.tele},${0.07 + k * 0.12})` : `rgba(${wc},${0.08 + k * 0.12})`;
       ctx.fillRect(0, -hw, L.len, L.w);
-      ctx.fillStyle = fire ? `rgba(80,255,200,${0.16 + k * 0.14})` : `rgba(255,60,60,${0.18 + k * 0.16})`;
+      ctx.fillStyle = fire ? `rgba(${LC.tele},${0.16 + k * 0.14})` : `rgba(${wc},${0.18 + k * 0.16})`;
       ctx.fillRect(0, -hw, L.len * k, L.w);
-      ctx.strokeStyle = fire ? `rgba(120,255,210,${0.5 + pulse * 0.4})` : `rgba(255,80,80,${0.5 + pulse * 0.4})`;
+      ctx.strokeStyle = fire ? `rgba(${LC.edge},${0.5 + pulse * 0.4})` : `rgba(${wc},${0.5 + pulse * 0.4})`;
       ctx.lineWidth = 3;
       ctx.setLineDash([16, 10]);
       ctx.strokeRect(0, -hw, L.len, L.w);
       ctx.setLineDash([]);
       if (!fire) {
         // setas mostrando a direção da onda
-        ctx.strokeStyle = `rgba(255,120,120,${0.4 + pulse * 0.4})`;
+        ctx.strokeStyle = `rgba(${wc},${0.4 + pulse * 0.4})`;
         ctx.lineWidth = 4;
         for (let x = 40; x < L.len; x += 70) {
           ctx.beginPath();
@@ -2654,16 +3211,16 @@
       const k = clamp(1 - L.pos / L.len, 0, 1);
       ctx.fillStyle = `rgba(70,50,35,${0.35 * k + 0.1})`;
       ctx.fillRect(0, -hw * 0.7, Math.min(L.pos, L.len), hw * 1.4);
-      ctx.fillStyle = 'rgba(230,200,150,0.85)';
+      ctx.fillStyle = L.col ? `rgba(${L.col},0.85)` : 'rgba(230,200,150,0.85)';
       ctx.fillRect(Math.min(L.pos, L.len) - 14, -hw, 14, L.w);
       ctx.restore();
-      Art.glow(ctx, L.x + Math.cos(L.a) * L.pos, L.y + Math.sin(L.a) * L.pos, L.w, '#ffcf8a', 0.5);
+      Art.glow(ctx, L.x + Math.cos(L.a) * L.pos, L.y + Math.sin(L.a) * L.pos, L.w, L.col ? '#c77dff' : '#ffcf8a', 0.5);
       return;
     } else {
       const k = clamp(L.burn / 1.5, 0, 1);
-      ctx.fillStyle = `rgba(40,220,170,${0.25 * k})`;
+      ctx.fillStyle = `rgba(${LC.burn},${0.25 * k})`;
       ctx.fillRect(0, -hw, L.len, L.w);
-      ctx.strokeStyle = `rgba(150,255,220,${0.6 * k})`;
+      ctx.strokeStyle = `rgba(${LC.edge},${0.6 * k})`;
       ctx.lineWidth = 2;
       ctx.strokeRect(0, -hw, L.len, L.w);
     }
@@ -2671,6 +3228,7 @@
   }
 
   function drawLaneFire(L) {
+    const LC = LANE_COLORS[L.tint || 'lich'];
     const ca = Math.cos(L.a);
     const sa = Math.sin(L.a);
     const k = clamp(L.burn / 0.3, 0, 1);
@@ -2680,7 +3238,7 @@
       const x = L.x + ca * s - sa * off;
       const y = L.y + sa * s + ca * off;
       const h = (26 + Math.sin(time * 9 + i) * 8) * k;
-      Art.flame(ctx, x, y, 11, h, Math.sin(time * 6 + i) * 3, '#22c8a0', '#d8fff0');
+      Art.flame(ctx, x, y, 11, h, Math.sin(time * 6 + i) * 3, LC.outer, LC.inner);
     }
   }
 
@@ -2747,14 +3305,16 @@
     for (const s of strikes) {
       const k = 1 - s.t / s.max;
       const pulse = 0.5 + Math.sin(time * 18) * 0.5;
+      const sc = s.look === 'ice' ? '120,200,255' : s.mark ? '255,140,40' : '255,40,50';
+      if (s.mark) { s.x = s.owner.x; s.y = s.owner.y; }
       ctx.save();
       ctx.translate(s.x, s.y);
       ctx.scale(1, 0.7);
-      ctx.fillStyle = `rgba(255,40,50,${0.12 + k * 0.25})`;
+      ctx.fillStyle = `rgba(${sc},${0.12 + k * 0.25})`;
       ctx.beginPath();
       ctx.arc(0, 0, s.r * k, 0, TAU);
       ctx.fill();
-      ctx.strokeStyle = `rgba(255,70,70,${0.6 + pulse * 0.4})`;
+      ctx.strokeStyle = `rgba(${sc},${0.6 + pulse * 0.4})`;
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.arc(0, 0, s.r, 0, TAU);
@@ -2764,6 +3324,16 @@
       ctx.moveTo(0, -12); ctx.lineTo(0, 12);
       ctx.stroke();
       ctx.restore();
+    }
+
+    // chão em chamas dos slimes
+    for (const p of epools) {
+      const k = clamp(p.life / 0.6, 0, 1);
+      Art.glow(ctx, p.x, p.y, p.r * 1.8, '#ff5a1a', 0.55 * k);
+      ctx.fillStyle = `rgba(255,120,30,${0.3 * k})`;
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, p.r, p.r * 0.6, 0, 0, TAU);
+      ctx.fill();
     }
 
     // faixas marcadas pelos chefões (onda do Ogro e fogo do Lich)
@@ -2852,9 +3422,21 @@
 
     // mísseis do robô caindo
     for (const s of strikes) {
-      if (s.t > 0.45) continue;
+      if (s.t > 0.45 || s.mark) continue;
       const k = s.t / 0.45;
       const my = s.y - k * 520;
+      if (s.look === 'rock') {
+        const mx = s.x + k * 200;
+        Art.flame(ctx, mx + 8, my - 12, 11, 40, 0, '#ff7a1a', '#ffe08a');
+        Art.glow(ctx, mx, my, 32, '#ff6a1a', 0.7);
+        Art.ball(ctx, mx, my, 12, '#6a4a3a', 1.8, false);
+        continue;
+      }
+      if (s.look === 'ice') {
+        Art.glow(ctx, s.x, my - 14, 24, '#9af0ff', 0.7);
+        Art.poly(ctx, [s.x - 7, my - 34, s.x + 7, my - 34, s.x, my + 6], Art.lin(ctx, s.x - 7, 0, s.x + 7, 0, '#ffffff', '#5aa8e0'), 1.5);
+        continue;
+      }
       Art.glow(ctx, s.x, my - 14, 26, '#ff8a2a', 0.8);
       Art.poly(ctx, [s.x - 5, my - 30, s.x + 5, my - 30, s.x + 5, my - 6, s.x, my + 4, s.x - 5, my - 6], Art.lin(ctx, s.x - 5, 0, s.x + 5, 0, '#e2e6ea', '#7c8590'), 1.5);
       Art.poly(ctx, [s.x - 5, my - 10, s.x + 5, my - 10, s.x, my + 4], '#ff4a3a', 1.2);
@@ -2866,9 +3448,57 @@
       const k = m.t / m.max;
       const mx = m.x + k * 260;
       const my = m.y - k * 520;
+      if (m.bomb) {
+        // bomba caindo reto
+        const by = m.y - k * 480;
+        Art.oval(ctx, m.x, by - 8, 5.5, 11, '#4a5260', 1.6);
+        Art.poly(ctx, [m.x - 5.5, by - 17, m.x + 5.5, by - 17, m.x + 3, by - 24, m.x - 3, by - 24], '#c02a2a', 1.3);
+        continue;
+      }
       Art.flame(ctx, mx + 10, my - 14, 10, 34 + k * 20, 0, '#ff7a1a', '#ffe08a');
       Art.glow(ctx, mx, my, 30, '#ff7a1a', 0.7);
       Art.ball(ctx, mx, my, 10, '#7a4a32', 1.6, false);
+    }
+
+    // chamas das poças dos slimes
+    for (const p of epools) {
+      const k = clamp(p.life / 0.6, 0, 1);
+      for (let i = 0; i < 3; i++) Art.flame(ctx, p.x + (i - 1) * p.r * 0.55, p.y + (i === 1 ? -3 : 3), 7, (16 + Math.sin(time * 10 + i * 2) * 5) * k, 0, '#ff5a1a', '#ffe08a');
+    }
+
+    // projéteis dos inimigos
+    for (const b of eshots) {
+      if (b.kind === 'snow') {
+        Art.glow(ctx, b.x, b.y, 18, '#ffffff', 0.4);
+        Art.ball(ctx, b.x, b.y, b.r, '#f4f8fc', 1.6);
+      } else {
+        Art.glow(ctx, b.x, b.y, 16, '#9af0ff', 0.7);
+        ctx.save();
+        ctx.translate(b.x, b.y);
+        ctx.rotate(Math.atan2(b.vy, b.vx));
+        Art.poly(ctx, [12, 0, -4, -5, -8, 0, -4, 5], Art.lin(ctx, -8, 0, 12, 0, '#5aa8e0', '#ffffff'), 1.3);
+        ctx.restore();
+      }
+    }
+
+    // giro do espadão
+    for (const sp of spins) {
+      if (sp.delay > 0) continue;
+      const k = sp.t / sp.dur;
+      const a = sp.a0 + k * TAU;
+      ctx.save();
+      ctx.translate(player.x, player.y - 10);
+      ctx.strokeStyle = `rgba(255,200,160,${0.35 * (1 - k * 0.5)})`;
+      ctx.lineWidth = sp.r * 0.35;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(0, 0, sp.r * 0.7, a - 1.6, a);
+      ctx.stroke();
+      ctx.rotate(a);
+      Art.poly(ctx, [10, -5, sp.r, -4, sp.r + 14, 0, sp.r, 4, 10, 5], Art.lin(ctx, 0, -5, 0, 5, '#ffffff', '#8a94a0'), 2);
+      Art.poly(ctx, [6, -11, 11, -11, 11, 11, 6, 11], '#6a4a2a', 1.5);
+      Art.poly(ctx, [-8, -3, 6, -3, 6, 3, -8, 3], '#3a2418', 1.3);
+      ctx.restore();
     }
 
     // labaredas do Lich
@@ -3007,6 +3637,10 @@
     $('hpghost').style.width = (100 * Math.max(hpGhost, player.hp / player.maxHp)) + '%';
     $('hptext').textContent = Math.ceil(player.hp) + ' / ' + player.maxHp;
     $('timer').textContent = fmtTime(time);
+    const left = STAGE_TIME - time;
+    const sb = run.victory ? 'Vitória!' : run.finalSpawned ? 'Derrote o chefão final!' : `Chefão final em ${fmtTime(Math.max(0, left))}`;
+    if ($('stagebar').textContent !== sb) $('stagebar').textContent = sb;
+    $('stagebar').classList.toggle('alert', run.finalSpawned || left < 30);
     $('kills').textContent = kills;
     $('runcoins').textContent = Math.round(runCoins);
 
@@ -3096,6 +3730,9 @@
     get lowQuality() { return lowQuality; },
     get zoom() { return zoom; },
     gainXp, startGame, addWeapon, spawnBoss, spawnEnemy, spawnElite, selectChar, persist, rollRarity,
-    completeChallenge, checkChallenges, buildChoices,
+    completeChallenge, checkChallenges, buildChoices, selectStage,
+    get eshots() { return eshots; },
+    get strikes() { return strikes; },
+    setTime(v) { time = v; },
   };
 })();
