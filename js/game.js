@@ -30,6 +30,8 @@
   const rand = (a, b) => a + Math.random() * (b - a);
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const FONT = '"Nunito", "Segoe UI", sans-serif';
+  const TITLE_FONT = '"Cinzel", Georgia, serif';
 
   function shuffle(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
@@ -43,14 +45,6 @@
     const m = Math.floor(s / 60);
     const ss = Math.floor(s % 60);
     return String(m).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
-  }
-
-  // Hash determinístico para decorar o chão sempre do mesmo jeito.
-  function hash(x, y) {
-    let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263)) | 0;
-    h = Math.imul(h ^ (h >>> 13), 1274126177);
-    h ^= h >>> 16;
-    return (h >>> 0) / 4294967296;
   }
 
   // ============================================================
@@ -97,23 +91,26 @@
   // ============================================================
   const CHARACTERS = {
     mago: {
-      name: 'Mago', icon: '✦', r: 14,
+      name: 'Rei Gelado', title: 'O mago', r: 14,
       hp: 100, speed: 190, armor: 0, regen: 0, crit: 0.05, luck: 0,
-      weapon: 'missil',
-      desc: 'Equilibrado. Começa com o Míssil Arcano.',
+      weapon: 'missil', theme: ['#1d3a66', '#07101f'], accent: '#5fe8ff',
+      bars: { vida: 0.45, velocidade: 0.6, defesa: 0.3 },
+      desc: 'Equilibrado. Começa com o Estilhaço de Gelo.',
       passive: 'Ganha +1 de Sorte a cada chefão derrotado.',
     },
     maniaco: {
-      name: 'Maníaco', icon: '☠', r: 13,
+      name: 'Maníaco', title: 'O bobo da corte', r: 13,
       hp: 75, speed: 255, armor: 0, regen: 0, crit: 0.1, luck: 0,
-      weapon: 'facas',
+      weapon: 'facas', theme: ['#5a1430', '#14060c'], accent: '#ff4f6a',
+      bars: { vida: 0.3, velocidade: 1, defesa: 0.15 },
       desc: 'Muito ágil e frágil. Começa com as Facas.',
       passive: 'Ganha +1% de chance de crítico a cada nível.',
     },
     golem: {
-      name: 'Golem de Pedra', icon: '⛰', r: 18,
+      name: 'Golem de Pedra', title: 'O colosso', r: 18,
       hp: 240, speed: 135, armor: 3, regen: 0.5, crit: 0.05, luck: 0,
-      weapon: 'tremor',
+      weapon: 'tremor', theme: ['#5a2a10', '#140a05'], accent: '#ff8a2a',
+      bars: { vida: 1, velocidade: 0.3, defesa: 0.9 },
       desc: 'Extremamente resistente, mas lento. Começa com o Tremor.',
       passive: 'Causa mais dano quanto menor a vida (até +120%).',
     },
@@ -126,7 +123,7 @@
 
   const WEAPONS = {
     missil: {
-      name: 'Míssil Arcano', icon: '✦', max: 6,
+      name: 'Estilhaço de Gelo', color: '#5fe8ff', max: 6,
       desc: [
         'Dispara no inimigo mais próximo.',
         '+1 projétil.',
@@ -137,7 +134,7 @@
       ],
     },
     arco: {
-      name: 'Arco Caçador', icon: '➶', max: 6,
+      name: 'Arco Caçador', color: '#d69a52', max: 6,
       desc: [
         'Flechas teleguiadas que perfuram e seguem para o inimigo de trás.',
         '+1 flecha.',
@@ -148,7 +145,7 @@
       ],
     },
     facas: {
-      name: 'Facas', icon: '†', max: 6,
+      name: 'Facas', color: '#d8e0ea', max: 6,
       desc: [
         'Arremessa facas na direção em que você anda.',
         '+1 faca.',
@@ -159,7 +156,7 @@
       ],
     },
     raio: {
-      name: 'Raio em Cadeia', icon: 'ϟ', max: 6,
+      name: 'Raio em Cadeia', color: '#ffd23f', max: 6,
       desc: [
         'Raio que ricocheteia entre 3 inimigos.',
         '+1 ricochete.',
@@ -170,7 +167,7 @@
       ],
     },
     fogo: {
-      name: 'Bola de Fogo', icon: '☄', max: 6,
+      name: 'Bola de Fogo', color: '#ff7a1a', max: 6,
       desc: [
         'Bola de fogo que explode em área.',
         '+Raio da explosão.',
@@ -181,7 +178,7 @@
       ],
     },
     laminas: {
-      name: 'Lâminas Orbitais', icon: '⚙', max: 6,
+      name: 'Lâminas Orbitais', color: '#c9d6e6', max: 6,
       desc: [
         'Lâminas giram ao seu redor e reduzem 6% do dano recebido.',
         '+6% de redução de dano.',
@@ -192,7 +189,7 @@
       ],
     },
     aura: {
-      name: 'Aura Sagrada', icon: '☀', max: 6,
+      name: 'Aura Sagrada', color: '#ffe27a', max: 6,
       desc: [
         'Campo que fere inimigos próximos.',
         '+Raio.',
@@ -203,7 +200,7 @@
       ],
     },
     tremor: {
-      name: 'Tremor de Pedra', icon: '◍', max: 6,
+      name: 'Tremor de Pedra', color: '#c8a878', max: 6,
       desc: [
         'Onda de choque que fere e empurra os inimigos.',
         '+Dano.',
@@ -219,28 +216,28 @@
   // Passivas
   // ============================================================
   const PASSIVES = {
-    vigor: { name: 'Vitalidade', icon: '❤', max: 5, desc: '+20 de vida máxima e cura 20.', apply: () => { player.maxHp += 20; heal(20); } },
-    boots: { name: 'Botas Ágeis', icon: '»', max: 5, desc: '+10% de velocidade.', apply: () => { player.speed *= 1.1; } },
-    might: { name: 'Força', icon: '⚔', max: 5, desc: '+15% de dano.', apply: () => { player.dmgMul += 0.15; } },
-    haste: { name: 'Pressa', icon: '⧗', max: 5, desc: 'Armas recarregam 8% mais rápido.', apply: () => { player.cdMul *= 0.92; } },
-    magnet: { name: 'Ímã', icon: '◉', max: 5, desc: '+35% de alcance para coletar XP.', apply: () => { player.magnet *= 1.35; } },
-    regen: { name: 'Regeneração', icon: '✚', max: 5, desc: '+0,6 de vida por segundo.', apply: () => { player.regen += 0.6; } },
-    armor: { name: 'Armadura', icon: '⛨', max: 5, desc: '-1 de dano recebido por golpe.', apply: () => { player.armor += 1; } },
-    multi: { name: 'Projéteis', icon: '⁂', max: 3, desc: '+1 projétil, flecha, faca, lâmina, raio e bola de fogo.', apply: () => { player.extraProj += 1; } },
-    precisao: { name: 'Precisão', icon: '◈', max: 5, desc: '+6% de chance de dano crítico (dano x2).', apply: () => { player.crit += 0.06; } },
-    area: { name: 'Área de Acerto', icon: '◎', max: 5, desc: '+12% de área (aura, explosões, lâminas, ondas).', apply: () => { player.areaMul += 0.12; } },
-    sorte: { name: 'Sorte', icon: '☘', max: 5, desc: '+1 de Sorte: recompensas raras, mais opções e mais itens.', apply: () => { player.luck += 1; } },
+    vigor: { name: 'Vitalidade', max: 5, desc: '+20 de vida máxima e cura 20.', apply: () => { player.maxHp += 20; heal(20); } },
+    boots: { name: 'Botas Ágeis', max: 5, desc: '+10% de velocidade.', apply: () => { player.speed *= 1.1; } },
+    might: { name: 'Força', max: 5, desc: '+15% de dano.', apply: () => { player.dmgMul += 0.15; } },
+    haste: { name: 'Pressa', max: 5, desc: 'Armas recarregam 8% mais rápido.', apply: () => { player.cdMul *= 0.92; } },
+    magnet: { name: 'Ímã', max: 5, desc: '+35% de alcance para coletar XP.', apply: () => { player.magnet *= 1.35; } },
+    regen: { name: 'Regeneração', max: 5, desc: '+0,6 de vida por segundo.', apply: () => { player.regen += 0.6; } },
+    armor: { name: 'Armadura', max: 5, desc: '-1 de dano recebido por golpe.', apply: () => { player.armor += 1; } },
+    multi: { name: 'Projéteis', max: 3, desc: '+1 projétil, flecha, faca, lâmina, raio e bola de fogo.', apply: () => { player.extraProj += 1; } },
+    precisao: { name: 'Precisão', max: 5, desc: '+6% de chance de dano crítico (dano x2).', apply: () => { player.crit += 0.06; } },
+    area: { name: 'Área de Acerto', max: 5, desc: '+12% de área (aura, explosões, lâminas, ondas).', apply: () => { player.areaMul += 0.12; } },
+    sorte: { name: 'Sorte', max: 5, desc: '+1 de Sorte: recompensas raras, mais opções e mais itens.', apply: () => { player.luck += 1; } },
   };
 
   // ============================================================
-  // Totens (buffs temporários)
+  // Fogueiras (buffs temporários)
   // ============================================================
   const TOTEMS = {
-    furia: { name: 'Totem da Fúria', color: '#ff5a3c', desc: '+40% de dano', dur: 30 },
-    vento: { name: 'Totem do Vento', color: '#7fe0ff', desc: '+30% de velocidade e recarga', dur: 30 },
-    vida: { name: 'Totem da Vida', color: '#6bff8a', desc: 'Cura 40% e regenera 4/s', dur: 20 },
-    ima: { name: 'Totem do Ímã', color: '#5fd3ff', desc: 'Puxa todo o XP do mapa', dur: 0 },
-    sorte: { name: 'Totem da Sorte', color: '#ffd36b', desc: '+3 de Sorte', dur: 45 },
+    furia: { name: 'Fogueira da Fúria', color: '#ff4a2a', desc: '+40% de dano', dur: 30 },
+    vento: { name: 'Fogueira do Vento', color: '#4fd8ff', desc: '+30% de velocidade e recarga', dur: 30 },
+    vida: { name: 'Fogueira da Vida', color: '#4fff7a', desc: 'Cura 40% e regenera 4/s', dur: 20 },
+    ima: { name: 'Fogueira do Ímã', color: '#5a8cff', desc: 'Puxa todo o XP do mapa', dur: 0 },
+    sorte: { name: 'Fogueira da Sorte', color: '#ffc83a', desc: '+3 de Sorte', dur: 45 },
   };
 
   // ============================================================
@@ -286,6 +283,10 @@
   let pendingChests;
   let structTimer;
   let shake;
+  let hurtFlash;
+  let levelFx;
+  let trailT;
+  let hpGhost;
   let loadoutKey = '';
   let buffsKey = '';
   let currentChoices = [];
@@ -326,6 +327,10 @@
     pendingChests = 0;
     structTimer = 0;
     shake = 0;
+    hurtFlash = 0;
+    levelFx = 0;
+    trailT = 0;
+    hpGhost = 1;
     loadoutKey = '';
     buffsKey = '';
   }
@@ -336,11 +341,12 @@
 
   // ---------- Atributos efetivos (com buffs e passivas de personagem) ----------
   const buffOn = (id) => (player.buffs[id] || 0) > 0;
+  const golemRage = () => (player.char === 'golem' ? 1 - player.hp / player.maxHp : 0);
 
   function effDmgMul() {
     let m = player.dmgMul;
     if (buffOn('furia')) m *= 1.4;
-    if (player.char === 'golem') m *= 1 + (1 - player.hp / player.maxHp) * 1.2;
+    if (player.char === 'golem') m *= 1 + golemRage() * 1.2;
     return m;
   }
   const effCd = () => player.cdMul * (buffOn('vento') ? 0.77 : 1);
@@ -350,7 +356,7 @@
   const bladeReduction = () => (weapons.laminas ? 0.06 * weapons.laminas.level : 0);
 
   // ============================================================
-  // Entrada (teclado)
+  // Entrada (teclado e mouse)
   // ============================================================
   const keys = new Set();
 
@@ -392,6 +398,10 @@
     if (s === 'paused') renderStats();
   }
 
+  // ---------- Menu com retratos animados ----------
+  let portraits = [];
+  let hoverChar = null;
+
   function renderMenu() {
     const b = loadBest();
     $('best').textContent = b.time > 0
@@ -399,20 +409,61 @@
       : '';
     const box = $('chars');
     box.innerHTML = '';
+    portraits = [];
     Object.keys(CHARACTERS).forEach((id, i) => {
       const C = CHARACTERS[id];
       const card = document.createElement('div');
       card.className = 'card char' + (id === selectedChar ? ' selected' : '');
+      card.style.setProperty('--accent', C.accent);
+      const bars = Object.entries(C.bars).map(([k, v]) =>
+        `<div class="stat"><span>${k}</span><div class="sbar"><i style="width:${v * 100}%"></i></div></div>`).join('');
       card.innerHTML = `
-        <div class="icon">${C.icon}</div>
+        <canvas class="portrait" width="440" height="360"></canvas>
+        <div class="ctitle">${C.title}</div>
         <div class="name">${C.name}</div>
-        <div class="tag">Vida ${C.hp} · Velocidade ${C.speed}${C.armor ? ' · Armadura ' + C.armor : ''}</div>
+        <div class="stats">${bars}</div>
         <div class="desc">${C.desc}</div>
         <div class="desc passive">${C.passive}</div>
-        <div class="key">Tecla ${i + 1}</div>`;
+        <div class="key">Clique ou tecla ${i + 1}</div>`;
       card.addEventListener('click', () => selectChar(id));
+      card.addEventListener('dblclick', () => { selectChar(id); startGame(); });
+      card.addEventListener('mouseenter', () => { hoverChar = id; });
+      card.addEventListener('mouseleave', () => { if (hoverChar === id) hoverChar = null; });
       box.appendChild(card);
+      portraits.push({ id, c: card.querySelector('canvas') });
     });
+  }
+
+  function drawPortraits(t) {
+    for (const p of portraits) {
+      const g = p.c.getContext('2d');
+      const C = CHARACTERS[p.id];
+      const w = p.c.width;
+      const h = p.c.height;
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      const bg = g.createRadialGradient(w / 2, h * 0.55, 10, w / 2, h * 0.55, w * 0.7);
+      bg.addColorStop(0, C.theme[0]);
+      bg.addColorStop(1, C.theme[1]);
+      g.fillStyle = bg;
+      g.fillRect(0, 0, w, h);
+      // partículas de ambiente de cada personagem
+      for (let i = 0; i < 18; i++) {
+        const seed = i * 97.13;
+        const life = (t * 0.25 + (seed % 1)) % 1;
+        const x = (seed * 37) % w;
+        const y = p.id === 'mago' ? life * h : h - life * h;
+        const r = 2 + (i % 3);
+        Art.glow(g, x + Math.sin(t + i) * 10, y, r * 4, C.accent, 0.5 * (1 - Math.abs(life - 0.5) * 2));
+      }
+      g.fillStyle = 'rgba(0,0,0,0.35)';
+      g.beginPath();
+      g.ellipse(w / 2, h * 0.86, w * 0.3, h * 0.07, 0, 0, TAU);
+      g.fill();
+      Art.glow(g, w / 2, h * 0.86, w * 0.35, C.accent, 0.25);
+      const hovered = hoverChar === p.id;
+      const s = p.id === 'golem' ? 4.6 : 5.6;
+      Art.drawHero(g, p.id, w / 2, h * 0.86, s, t, 1, { moving: hovered, rage: p.id === 'golem' ? 0.5 + Math.sin(t * 2) * 0.5 : 0 });
+    }
   }
 
   function selectChar(id) {
@@ -445,7 +496,7 @@
   function startGame() {
     resetWorld();
     addWeapon(CHARACTERS[selectedChar].weapon, 1);
-    // Um totem perto do início para o jogador descobrir a mecânica.
+    // Uma fogueira perto do início para o jogador descobrir a mecânica.
     spawnStructure('totem', 380);
     setState('playing');
   }
@@ -454,9 +505,11 @@
     const el = $('banner');
     el.textContent = text;
     el.style.color = color || '#ff5c8a';
+    el.classList.remove('show');
+    void el.offsetWidth; // reinicia a animação
     el.classList.add('show');
     clearTimeout(bannerTimer);
-    bannerTimer = setTimeout(() => el.classList.remove('show'), 2500);
+    bannerTimer = setTimeout(() => el.classList.remove('show'), 2600);
   }
 
   function gameOver() {
@@ -464,18 +517,20 @@
     const newRecord = time > best.time;
     if (newRecord) saveBest({ time, level: player.level, kills });
     $('stats').innerHTML = `
-      <div>Personagem: <b>${CHARACTERS[player.char].name}</b></div>
-      <div>Tempo sobrevivido: <b>${fmtTime(time)}</b>${newRecord ? ' <span class="new">Novo recorde!</span>' : ''}</div>
-      <div>Nível alcançado: <b>${player.level}</b></div>
-      <div>Inimigos derrotados: <b>${kills}</b></div>
-      <div>Chefões derrotados: <b>${player.bossKills}</b></div>
-      <div>Recorde: <b>${fmtTime(Math.max(time, best.time))}</b></div>`;
+      <div><span>Personagem</span><b>${CHARACTERS[player.char].name}</b></div>
+      <div><span>Tempo sobrevivido</span><b>${fmtTime(time)}</b></div>
+      <div><span>Nível alcançado</span><b>${player.level}</b></div>
+      <div><span>Inimigos derrotados</span><b>${kills}</b></div>
+      <div><span>Chefões derrotados</span><b>${player.bossKills}</b></div>
+      <div><span>Recorde</span><b>${fmtTime(Math.max(time, best.time))}</b></div>
+      ${newRecord ? '<p class="new">Novo recorde!</p>' : ''}`;
     setState('dead');
   }
 
   $('playBtn').addEventListener('click', startGame);
   $('restartBtn').addEventListener('click', startGame);
   $('resumeBtn').addEventListener('click', () => setState('playing'));
+  $('pauseBtn').addEventListener('click', () => { if (state === 'playing') setState('paused'); });
   $('quitBtn').addEventListener('click', () => { resetWorld(); setState('menu'); });
   $('menuBtn').addEventListener('click', () => { resetWorld(); setState('menu'); });
 
@@ -523,7 +578,7 @@
       c.rarity = rollRarity(isChest ? 2 : 1);
       c.gain = Math.min(c.rarity, max - c.lv);
     }
-    if (picks.length === 0) picks.push({ kind: 'heal', rarity: 1, gain: 1 });
+    if (picks.length === 0) picks.push({ kind: 'heal', id: 'heal', rarity: 1, gain: 1 });
     return picks;
   }
 
@@ -532,36 +587,39 @@
     currentChoices = buildChoices(isChest);
     currentChoices.isChest = isChest;
     $('choiceTitle').textContent = isChest ? 'Baú do tesouro!' : 'Subiu de nível!';
-    $('choiceSub').textContent = isChest ? 'Recompensas raras garantidas' : 'Escolha uma recompensa';
+    $('choiceSub').textContent = isChest ? 'Recompensas raras garantidas' : 'Escolha uma recompensa com o mouse ou o teclado';
     const cards = $('cards');
     cards.innerHTML = '';
     currentChoices.forEach((c, i) => {
-      let icon;
       let name;
       let tag;
       let desc;
+      let color;
       if (c.kind === 'weapon') {
         const def = WEAPONS[c.id];
-        icon = def.icon; name = def.name; desc = def.desc[c.lv];
-        tag = c.lv === 0 ? 'NOVA ARMA' : `Arma · nível ${c.lv + c.gain}`;
+        name = def.name; desc = def.desc[c.lv]; color = def.color;
+        tag = c.lv === 0 ? 'Nova arma' : `Arma · nível ${c.lv + c.gain}`;
       } else if (c.kind === 'passive') {
         const def = PASSIVES[c.id];
-        icon = def.icon; name = def.name; desc = def.desc;
-        tag = c.lv === 0 ? 'NOVA PASSIVA' : `Passiva · nível ${c.lv + c.gain}`;
+        name = def.name; desc = def.desc; color = '#8fd3a0';
+        tag = c.lv === 0 ? 'Nova passiva' : `Passiva · nível ${c.lv + c.gain}`;
       } else {
-        icon = '❤'; name = 'Poção'; tag = 'Consumível'; desc = 'Recupera 40 de vida.';
+        name = 'Poção'; tag = 'Consumível'; desc = 'Recupera 40 de vida.'; color = '#ff4f6a';
       }
       const rar = RARITY[c.rarity];
       const bonus = c.gain > 1 ? `<div class="bonus">${rar.name}: +${c.gain} níveis de uma vez!</div>` : '';
       const card = document.createElement('div');
-      card.className = 'card ' + rar.cls;
+      card.className = 'card reward ' + rar.cls;
+      card.style.setProperty('--accent', color);
+      card.style.animationDelay = (i * 0.07) + 's';
       card.innerHTML = `
-        <div class="icon">${icon}</div>
+        ${c.rarity > 1 ? `<div class="ribbon">${rar.name}</div>` : ''}
+        <div class="medal"><img src="${Art.icon(c.id)}" alt=""></div>
         <div class="name">${name}</div>
         <div class="tag">${tag}</div>
         <div class="desc">${desc}</div>
         ${bonus}
-        <div class="key">Tecla ${i + 1}</div>`;
+        <div class="key">Clique ou tecla ${i + 1}</div>`;
       card.addEventListener('click', () => choose(i));
       cards.appendChild(card);
     });
@@ -581,6 +639,7 @@
     } else heal(40);
     if (currentChoices.isChest) pendingChests--;
     else pendingLevels--;
+    sparks(player.x, player.y - 15, '#ffd36b', 16, 260);
     if (pendingLevels > 0 || pendingChests > 0) openChoices();
     else setState('playing');
   }
@@ -592,6 +651,7 @@
       player.level++;
       player.xpNext = xpForLevel(player.level);
       pendingLevels++;
+      levelFx = 1;
       if (player.char === 'maniaco') player.crit += 0.01;
     }
   }
@@ -601,24 +661,52 @@
   }
 
   // ============================================================
-  // Efeitos visuais
+  // Partículas e efeitos
   // ============================================================
-  function addText(x, y, txt, color, big) {
-    if (texts.length > 160) texts.shift();
-    texts.push({ x: x + rand(-6, 6), y, txt, color, big: !!big, life: 0.7 });
+  const MAX_PARTICLES = 900;
+
+  function fx(o) {
+    if (particles.length >= MAX_PARTICLES) return;
+    o.max = o.life;
+    if (o.vx === undefined) o.vx = 0;
+    if (o.vy === undefined) o.vy = 0;
+    if (o.drag === undefined) o.drag = 0.9;
+    particles.push(o);
   }
 
   function burst(x, y, color, n, speed) {
-    if (particles.length > 600) return;
     for (let i = 0; i < n; i++) {
       const a = rand(0, TAU);
       const s = rand(speed * 0.3, speed);
-      particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: rand(0.3, 0.6), max: 0.6, color, size: rand(2, 4) });
+      fx({ kind: 'dot', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: rand(0.3, 0.6), color, size: rand(2, 4.5) });
     }
   }
 
+  function sparks(x, y, color, n, speed) {
+    for (let i = 0; i < n; i++) {
+      const a = rand(0, TAU);
+      const s = rand(speed * 0.4, speed);
+      fx({ kind: 'spark', add: true, x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: rand(0.15, 0.35), color, size: rand(1.5, 2.5), drag: 0.85 });
+    }
+  }
+
+  function smoke(x, y, n, color) {
+    for (let i = 0; i < n; i++) {
+      fx({ kind: 'smoke', x: x + rand(-6, 6), y: y + rand(-6, 6), vx: rand(-20, 20), vy: rand(-40, -10), life: rand(0.5, 0.9), color: color || '#9a948c', size: rand(5, 9), grow: 14, drag: 0.95 });
+    }
+  }
+
+  function ringFx(x, y, r, color) {
+    fx({ kind: 'ring', add: true, x, y, life: 0.3, color, size: r * 0.4, grow: r * 3, drag: 1 });
+  }
+
+  function addText(x, y, txt, color, big) {
+    if (texts.length > 160) texts.shift();
+    texts.push({ x: x + rand(-8, 8), y, txt, color, big: !!big, life: 0.75, vx: rand(-15, 15) });
+  }
+
   // ============================================================
-  // Estruturas: totens e altares de invocação
+  // Estruturas: fogueiras e altares de invocação
   // ============================================================
   function spawnStructure(kind, distance) {
     for (let attempt = 0; attempt < 10; attempt++) {
@@ -649,8 +737,19 @@
     }
 
     for (const s of structures) {
+      const near = Math.abs(s.x - player.x) < W / 2 + 100 && Math.abs(s.y - player.y) < H / 2 + 100;
+      // brasas e fumaça só para o que está na tela
+      if (near) {
+        if (s.kind === 'totem' && !s.used && Math.random() < dt * 14) {
+          fx({ kind: 'dot', add: true, x: s.x + rand(-10, 10), y: s.y - rand(5, 25), vx: rand(-15, 15), vy: rand(-70, -35), life: rand(0.6, 1.2), color: TOTEMS[s.type].color, size: rand(1.5, 3), drag: 0.98 });
+        } else if (s.kind === 'totem' && s.used && Math.random() < dt * 3) {
+          smoke(s.x, s.y - 10, 1, '#6a6460');
+        } else if (s.kind === 'altar' && !s.used && Math.random() < dt * 10) {
+          fx({ kind: 'dot', add: true, x: s.x + rand(-50, 50), y: s.y + rand(-20, 20), vx: 0, vy: rand(-50, -25), life: rand(0.6, 1.1), color: '#ff3355', size: rand(1.5, 3), drag: 0.99 });
+        }
+      }
       if (s.used) {
-        s.fade -= dt * 0.5;
+        s.fade -= dt * 0.08;
         continue;
       }
       const inside = Math.hypot(s.x - player.x, s.y - player.y) < s.r;
@@ -665,7 +764,9 @@
 
   function activateTotem(s) {
     const T = TOTEMS[s.type];
-    burst(s.x, s.y - 30, T.color, 30, 220);
+    sparks(s.x, s.y - 30, T.color, 40, 320);
+    ringFx(s.x, s.y, 80, T.color);
+    smoke(s.x, s.y - 20, 6, '#7a746e');
     showBanner(`${T.name}: ${T.desc}`, T.color);
     if (s.type === 'vida') heal(player.maxHp * 0.4);
     if (s.type === 'ima') {
@@ -675,8 +776,10 @@
   }
 
   function activateAltar(s) {
-    burst(s.x, s.y, '#ff3355', 50, 280);
-    shake = 10;
+    sparks(s.x, s.y, '#ff3355', 60, 380);
+    ringFx(s.x, s.y, 140, '#ff3355');
+    smoke(s.x, s.y, 10, '#3a2028');
+    shake = 12;
     spawnBoss(s.x + rand(-40, 40), s.y - 90, 1.3);
     showBanner('Você invocou um chefão!', '#ff3355');
   }
@@ -718,7 +821,9 @@
     const type = bossesSpawned % 2 === 0 ? 'lich' : 'boss';
     // Cada chefão seguinte é mais forte que o anterior.
     const mul = (1 + (bossesSpawned - 1) * 0.5) * (extraMul || 1);
-    return spawnEnemy(type, x, y, mul);
+    const e = spawnEnemy(type, x, y, mul);
+    smoke(x, y, 12, '#2a1a24');
+    return e;
   }
 
   function updateSpawning(dt) {
@@ -757,28 +862,32 @@
     if (crit) dmg *= 2;
     dmg = Math.max(1, Math.round(dmg));
     e.hp -= dmg;
-    e.flash = 0.12;
+    e.flash = 0.1;
     if (!e.boss) {
       e.kbx += kx || 0;
       e.kby += ky || 0;
     }
-    addText(e.x, e.y - e.r, dmg, crit ? '#ffd23f' : '#ffffff', crit);
+    if (Math.random() < 0.5) sparks(e.x, e.y, crit ? '#ffd23f' : '#ffffff', crit ? 5 : 2, 180);
+    addText(e.x, e.y - e.r, crit ? dmg + '!' : dmg, crit ? '#ffd23f' : '#ffffff', crit);
     if (e.hp <= 0) killEnemy(e);
   }
 
   function killEnemy(e) {
     e.dead = true;
     kills++;
-    burst(e.x, e.y, e.color, e.boss ? 40 : 8, e.boss ? 260 : 140);
+    burst(e.x, e.y, e.color, e.boss ? 40 : 7, e.boss ? 280 : 150);
+    ringFx(e.x, e.y, e.r * 1.4, '#ffffff');
+    smoke(e.x, e.y, e.boss ? 14 : 1);
     if (e.boss) {
       for (let i = 0; i < 12; i++) dropXp(e.x + rand(-50, 50), e.y + rand(-50, 50), 5);
       pickups.push({ kind: 'chest', x: e.x, y: e.y });
-      pickups.push({ kind: 'heart', x: e.x + 30, y: e.y, v: 50 });
+      pickups.push({ kind: 'heart', x: e.x + 34, y: e.y, v: 50 });
       player.bossKills++;
-      shake = 10;
+      shake = 14;
+      sparks(e.x, e.y, '#ffd36b', 50, 420);
       if (player.char === 'mago') {
         player.luck += 1;
-        addText(player.x, player.y - 40, '+1 Sorte', '#ffd36b', true);
+        addText(player.x, player.y - 50, '+1 Sorte', '#5fe8ff', true);
       }
       showBanner('Chefão derrotado! Pegue o baú.', '#ffd36b');
     } else {
@@ -800,11 +909,14 @@
     const dmg = Math.max(1, Math.round((amount - player.armor) * (1 - bladeReduction())));
     player.hp -= dmg;
     player.invuln = 0.6;
-    shake = Math.max(shake, 6);
-    addText(player.x, player.y - 24, dmg, '#ff5555', true);
+    shake = Math.max(shake, 7);
+    hurtFlash = 1;
+    sparks(player.x, player.y - 15, '#ff4444', 8, 220);
+    addText(player.x, player.y - 40, '-' + dmg, '#ff5555', true);
     if (player.hp <= 0) {
       player.hp = 0;
-      burst(player.x, player.y, '#4aa3ff', 30, 220);
+      burst(player.x, player.y, CHARACTERS[player.char].accent, 40, 260);
+      smoke(player.x, player.y, 10);
       gameOver();
     }
   }
@@ -840,8 +952,9 @@
           for (let i = 0; i < 4 && enemies.length < MAX_ENEMIES + 60; i++) {
             const a = (i / 4) * TAU;
             spawnEnemy('skeleton', e.x + Math.cos(a) * 60, e.y + Math.sin(a) * 60);
+            smoke(e.x + Math.cos(a) * 60, e.y + Math.sin(a) * 60, 3, '#2a4a50');
           }
-          burst(e.x, e.y, '#4fc7b8', 20, 180);
+          sparks(e.x, e.y - 20, '#4fe0d0', 20, 220);
         }
       }
       e.x += (vx + e.kbx) * dt;
@@ -949,7 +1062,7 @@
       for (let i = 0; i < n; i++) {
         const a = base + (i - (n - 1) / 2) * 0.16;
         projectiles.push({
-          kind: 'missil', x: player.x, y: player.y,
+          kind: 'missil', x: player.x, y: player.y - 14,
           vx: Math.cos(a) * 430, vy: Math.sin(a) * 430,
           r: 6, dmg, pierce: lv >= 5 ? 2 : 0, life: 1.4, hit: new Set(),
         });
@@ -977,7 +1090,7 @@
         const t = targets[i % targets.length];
         const a = Math.atan2(t.y - player.y, t.x - player.x) + rand(-0.5, 0.5);
         projectiles.push({
-          kind: 'arrow', x: player.x, y: player.y, speed: 560,
+          kind: 'arrow', x: player.x, y: player.y - 12, speed: 560,
           vx: Math.cos(a) * 560, vy: Math.sin(a) * 560,
           r: 5, dmg, pierce, life: 2, hit: new Set(), target: t, turn: 9,
         });
@@ -994,7 +1107,7 @@
       for (let i = 0; i < n; i++) {
         const a = base + (i - (n - 1) / 2) * 0.12 + rand(-0.04, 0.04);
         projectiles.push({
-          kind: 'knife', x: player.x, y: player.y,
+          kind: 'knife', x: player.x, y: player.y - 12,
           vx: Math.cos(a) * 620, vy: Math.sin(a) * 620,
           r: 5, dmg, pierce: lv >= 5 ? 1 : 0, life: 0.7, hit: new Set(),
         });
@@ -1029,7 +1142,7 @@
         const t = pick(options);
         const a = Math.atan2(t.y - player.y, t.x - player.x);
         projectiles.push({
-          kind: 'fireball', x: player.x, y: player.y,
+          kind: 'fireball', x: player.x, y: player.y - 14,
           vx: Math.cos(a) * 380, vy: Math.sin(a) * 380,
           r: 8, dmg, pierce: 0, life: 1.6, hit: new Set(),
           tx: t.x, ty: t.y, radius, burn: lv >= 6,
@@ -1044,10 +1157,11 @@
       const dmg = 5 + 2 * lv + (lv >= 4 ? 5 : 0);
       const br = 10 * Math.sqrt(player.areaMul);
       w.angle += speed * dt;
+      w.radius = radius;
       w.blades = [];
       for (let i = 0; i < n; i++) {
         const a = w.angle + (i / n) * TAU;
-        w.blades.push({ x: player.x + Math.cos(a) * radius, y: player.y + Math.sin(a) * radius, a, r: br });
+        w.blades.push({ x: player.x + Math.cos(a) * radius, y: player.y - 10 + Math.sin(a) * radius, a, r: br });
       }
       for (const e of enemies) {
         if (e.dead || e.orbitCd > 0) continue;
@@ -1086,7 +1200,11 @@
       };
       rings.push(ring);
       if (lv >= 6) rings.push({ ...ring, hit: new Set(), delay: 0.35 });
-      shake = Math.max(shake, 2);
+      shake = Math.max(shake, 4);
+      for (let i = 0; i < 10; i++) {
+        const a = rand(0, TAU);
+        fx({ kind: 'rock', x: player.x, y: player.y, vx: Math.cos(a) * rand(120, 260), vy: Math.sin(a) * rand(120, 260), life: rand(0.35, 0.6), color: '#8a7a64', size: rand(2.5, 4.5) });
+      }
     },
   };
 
@@ -1108,6 +1226,7 @@
       pts.push({ x: cur.x, y: cur.y });
       hit.add(cur);
       damageEnemy(cur, d, 0, 0);
+      sparks(cur.x, cur.y, '#bfe8ff', 4, 220);
       d *= 0.9;
       cur = nearestEnemy(cur.x, cur.y, hit, range);
     }
@@ -1116,10 +1235,11 @@
 
   function explode(x, y, radius, dmg, burn) {
     areaDamage(x, y, radius, dmg, 220);
-    explosions.push({ x, y, r: radius, life: 0.35 });
-    burst(x, y, '#ff8a2a', 14, 200);
+    explosions.push({ x, y, r: radius, life: 0.4 });
+    sparks(x, y, '#ffb347', 14, 320);
+    smoke(x, y, 5, '#5a4a40');
     if (burn) hazards.push({ x, y, r: radius * 0.8, life: 2.5, tick: 0, dmg: Math.round(dmg * 0.15) });
-    shake = Math.max(shake, 3);
+    shake = Math.max(shake, 4);
   }
 
   function steer(p, target, dt) {
@@ -1145,6 +1265,10 @@
       p.y += p.vy * dt;
       p.life -= dt;
 
+      if (p.kind === 'missil' && Math.random() < 0.5) {
+        fx({ kind: 'dot', add: true, x: p.x, y: p.y, vx: rand(-15, 15), vy: rand(-15, 15), life: 0.25, color: '#7fe8ff', size: rand(1.5, 3) });
+      }
+
       if (p.kind === 'fireball') {
         const reached = Math.hypot(p.tx - p.x, p.ty - p.y) < 14;
         let touched = reached || p.life <= 0;
@@ -1158,8 +1282,8 @@
         if (touched) {
           explode(p.x, p.y, p.radius, p.dmg, p.burn);
           p.life = 0;
-        } else if (Math.random() < 0.6) {
-          particles.push({ x: p.x, y: p.y, vx: rand(-20, 20), vy: rand(-20, 20), life: 0.3, max: 0.3, color: '#ffb347', size: rand(3, 5) });
+        } else {
+          fx({ kind: 'dot', add: true, x: p.x + rand(-4, 4), y: p.y + rand(-4, 4), vx: -p.vx * 0.1 + rand(-20, 20), vy: -p.vy * 0.1 + rand(-20, 20), life: 0.3, color: Math.random() < 0.5 ? '#ff7a1a' : '#ffd36b', size: rand(2.5, 5) });
         }
         continue;
       }
@@ -1213,6 +1337,11 @@
         h.tick = 0.4;
         areaDamage(h.x, h.y, h.r, h.dmg, 0);
       }
+      if (Math.random() < dt * 20) {
+        const a = rand(0, TAU);
+        const d = rand(0, h.r);
+        fx({ kind: 'dot', add: true, x: h.x + Math.cos(a) * d, y: h.y + Math.sin(a) * d * 0.6, vy: rand(-60, -30), life: rand(0.3, 0.6), color: '#ff8a2a', size: rand(2, 4), drag: 0.97 });
+      }
     }
     hazards = hazards.filter((h) => h.life > 0);
   }
@@ -1238,11 +1367,17 @@
       const reach = player.r + (p.kind === 'chest' ? 18 : 8);
       if (d2 < reach * reach) {
         p.taken = true;
-        if (p.kind === 'xp') gainXp(p.v);
-        else if (p.kind === 'chest') pendingChests++;
-        else {
+        if (p.kind === 'xp') {
+          gainXp(p.v);
+          if (Math.random() < 0.3) sparks(player.x, player.y - 10, '#7fe0ff', 2, 120);
+        } else if (p.kind === 'chest') {
+          pendingChests++;
+          sparks(p.x, p.y, '#ffd36b', 40, 360);
+          ringFx(p.x, p.y, 70, '#ffd36b');
+        } else {
           heal(p.v);
-          addText(player.x, player.y - 30, '+' + p.v, '#6bff8a', true);
+          sparks(player.x, player.y - 15, '#6bff8a', 12, 200);
+          addText(player.x, player.y - 40, '+' + p.v, '#6bff8a', true);
         }
       }
     }
@@ -1270,10 +1405,11 @@
       player.y += player.dirY * effSpeed() * dt;
       if (mx !== 0) player.facing = Math.sign(mx);
     }
-    player.anim += dt * (player.moving ? 10 : 3);
+    player.anim += dt;
     player.invuln -= dt;
     heal(effRegen() * dt);
     for (const id in player.buffs) player.buffs[id] = Math.max(0, player.buffs[id] - dt);
+    updateTrail(dt);
 
     updateSpawning(dt);
     updateStructures(dt);
@@ -1285,22 +1421,43 @@
     enemies = enemies.filter((e) => !e.dead);
     if (state !== 'playing') return; // morreu durante este quadro
     updatePickups(dt);
-    updateEffects(dt);
 
     if (pendingLevels > 0 || pendingChests > 0) openChoices();
   }
 
+  // Rastros do personagem: poeira ao andar e efeitos próprios de cada um.
+  function updateTrail(dt) {
+    trailT -= dt;
+    if (trailT > 0) return;
+    trailT = 0.07;
+    const px = player.x;
+    const py = player.y;
+    if (player.moving && Math.random() < 0.6) {
+      fx({ kind: 'smoke', x: px + rand(-6, 6), y: py - 2, vx: -player.dirX * 20, vy: rand(-15, -5), life: 0.45, color: '#b8a888', size: player.char === 'golem' ? 6 : 3.5, grow: 10, drag: 0.92 });
+    }
+    if (player.char === 'mago' && Math.random() < 0.7) {
+      fx({ kind: 'dot', add: true, x: px + rand(-14, 14), y: py - rand(0, 30), vx: rand(-10, 10), vy: rand(10, 25), life: rand(0.5, 0.9), color: '#9ff0ff', size: rand(1.2, 2.4), drag: 0.98 });
+    } else if (player.char === 'maniaco' && Math.random() < 0.5) {
+      fx({ kind: 'spark', add: true, x: px + player.facing * 17, y: py - 20, vx: rand(-60, 60), vy: rand(-80, -20), life: 0.25, color: '#ffb020', size: 1.5, drag: 0.9 });
+    } else if (player.char === 'golem' && golemRage() > 0.3 && Math.random() < golemRage()) {
+      fx({ kind: 'dot', add: true, x: px + rand(-12, 12), y: py - rand(5, 30), vy: rand(-50, -20), life: rand(0.4, 0.8), color: '#ff7a1a', size: rand(1.5, 3), drag: 0.97 });
+    }
+  }
+
   function updateEffects(dt) {
     for (const p of particles) {
+      const k = Math.pow(p.drag, dt * 60);
+      p.vx *= k;
+      p.vy *= k;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.vx *= 0.92;
-      p.vy *= 0.92;
+      if (p.grow) p.size += p.grow * dt;
       p.life -= dt;
     }
     particles = particles.filter((p) => p.life > 0);
     for (const t of texts) {
-      t.y -= 40 * dt;
+      t.y -= 45 * dt;
+      t.x += t.vx * dt;
       t.life -= dt;
     }
     texts = texts.filter((t) => t.life > 0);
@@ -1309,151 +1466,105 @@
     for (const x of explosions) x.life -= dt;
     explosions = explosions.filter((x) => x.life > 0);
     shake = Math.max(0, shake - dt * 30);
+    hurtFlash = Math.max(0, hurtFlash - dt * 3);
+    levelFx = Math.max(0, levelFx - dt * 1.5);
+    hpGhost += (player.hp / player.maxHp - hpGhost) * Math.min(1, dt * 3);
   }
 
   // ============================================================
   // Desenho
   // ============================================================
-  const TILE = 64;
+  function drawPlayer() {
+    const p = player;
+    ctx.save();
+    if (p.invuln > 0 && Math.floor(p.invuln * 20) % 2 === 0) ctx.globalAlpha = 0.45;
+    if (buffOn('furia')) Art.glow(ctx, p.x, p.y - 15, 40, '#ff4a2a', 0.35);
+    if (buffOn('vento')) Art.glow(ctx, p.x, p.y - 15, 40, '#4fd8ff', 0.3);
+    Art.drawHero(ctx, p.char, p.x, p.y, 1.15, p.anim, p.facing, { moving: p.moving, rage: golemRage() });
+    ctx.restore();
+    const bw = 36;
+    const by = p.y + 8;
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(p.x - bw / 2 - 1.5, by - 1.5, bw + 3, 7);
+    ctx.fillStyle = '#e04040';
+    ctx.fillRect(p.x - bw / 2, by, bw * (p.hp / p.maxHp), 4);
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.fillRect(p.x - bw / 2, by, bw * (p.hp / p.maxHp), 1.5);
+  }
 
-  function drawGround(camX, camY) {
-    const x0 = Math.floor(camX / TILE) - 1;
-    const y0 = Math.floor(camY / TILE) - 1;
-    const x1 = Math.floor((camX + W) / TILE) + 1;
-    const y1 = Math.floor((camY + H) / TILE) + 1;
-    for (let tx = x0; tx <= x1; tx++) {
-      for (let ty = y0; ty <= y1; ty++) {
-        const h = hash(tx, ty);
-        const px = tx * TILE;
-        const py = ty * TILE;
-        ctx.fillStyle = (tx + ty) & 1 ? '#2f5d34' : '#2d5932';
-        ctx.fillRect(px, py, TILE, TILE);
-        if (h > 0.9) {
-          ctx.strokeStyle = '#3f7a45';
-          ctx.lineWidth = 2;
-          const gx = px + 16 + h * 30;
-          const gy = py + 40;
-          ctx.beginPath();
-          ctx.moveTo(gx - 5, gy); ctx.lineTo(gx - 7, gy - 9);
-          ctx.moveTo(gx, gy); ctx.lineTo(gx, gy - 12);
-          ctx.moveTo(gx + 5, gy); ctx.lineTo(gx + 7, gy - 9);
-          ctx.stroke();
-        } else if (h > 0.87) {
-          ctx.fillStyle = '#5d6b64';
-          ctx.beginPath();
-          ctx.ellipse(px + 32, py + 34, 9, 6, 0, 0, TAU);
-          ctx.fill();
-          ctx.fillStyle = '#7d8b84';
-          ctx.beginPath();
-          ctx.ellipse(px + 30, py + 32, 5, 3, 0, 0, TAU);
-          ctx.fill();
-        } else if (h > 0.84) {
-          ctx.fillStyle = h > 0.855 ? '#f2d14b' : '#e9758f';
-          ctx.beginPath();
-          ctx.arc(px + 20 + h * 20, py + 20, 3, 0, TAU);
-          ctx.fill();
-        }
+  function drawEnemyFull(e) {
+    Art.drawEnemy(ctx, e, player.x >= e.x ? 1 : -1);
+    if (e.boss || e.type === 'brute') {
+      const bw = e.r * 2;
+      const y = e.y + e.r + 8;
+      ctx.fillStyle = 'rgba(0,0,0,0.75)';
+      ctx.fillRect(e.x - bw / 2 - 1.5, y - 1.5, bw + 3, 8);
+      ctx.fillStyle = e.boss ? '#ff4f8b' : '#ff9b4f';
+      ctx.fillRect(e.x - bw / 2, y, bw * clamp(e.hp / e.maxHp, 0, 1), 5);
+      if (e.boss) {
+        ctx.font = `700 13px ${TITLE_FONT}`;
+        ctx.textAlign = 'center';
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#000';
+        ctx.strokeText(ENEMY_TYPES[e.type].name, e.x, y + 22);
+        ctx.fillStyle = '#ffd36b';
+        ctx.fillText(ENEMY_TYPES[e.type].name, e.x, y + 22);
       }
     }
   }
 
-  function shadow(x, y, r) {
-    ctx.fillStyle = 'rgba(0,0,0,0.25)';
-    ctx.beginPath();
-    ctx.ellipse(x, y + r * 0.85, r * 0.9, r * 0.35, 0, 0, TAU);
-    ctx.fill();
+  function drawStructureLabel(s) {
+    const d = Math.hypot(s.x - player.x, s.y - player.y);
+    if (s.used || d > 240) return;
+    const label = s.kind === 'totem' ? TOTEMS[s.type].name : 'Altar de Invocação';
+    const sub = s.kind === 'totem' ? TOTEMS[s.type].desc : 'Invoca um chefão';
+    const color = s.kind === 'totem' ? TOTEMS[s.type].color : '#ff3355';
+    const y = s.y - (s.kind === 'totem' ? 100 : 64);
+    ctx.globalAlpha = clamp((240 - d) / 80, 0, 1);
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#000';
+    ctx.font = `700 14px ${TITLE_FONT}`;
+    ctx.strokeText(label, s.x, y);
+    ctx.fillStyle = color;
+    ctx.fillText(label, s.x, y);
+    ctx.font = `700 11px ${FONT}`;
+    ctx.strokeText(sub, s.x, y + 15);
+    ctx.fillStyle = '#fff';
+    ctx.fillText(sub, s.x, y + 15);
+    ctx.globalAlpha = 1;
   }
 
-  function drawStructure(s) {
+  function drawStructureGround(s) {
     ctx.globalAlpha = clamp(s.fade, 0, 1);
     if (s.kind === 'totem') {
-      const T = TOTEMS[s.type];
-      const color = s.used ? '#777' : T.color;
-      // círculo de ativação
-      ctx.strokeStyle = color;
+      const color = TOTEMS[s.type].color;
+      // círculo de ativação no chão
+      ctx.strokeStyle = s.used ? 'rgba(120,120,120,0.4)' : Art.rgba(color, 0.55);
       ctx.lineWidth = 2;
-      ctx.setLineDash([8, 6]);
+      ctx.setLineDash([10, 8]);
+      ctx.lineDashOffset = -time * 20;
       ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, TAU);
+      ctx.ellipse(s.x, s.y, s.r, s.r * 0.6, 0, 0, TAU);
       ctx.stroke();
       ctx.setLineDash([]);
-      // pilar
-      shadow(s.x, s.y - 4, 16);
-      ctx.fillStyle = s.used ? '#4d4b52' : '#6d6a75';
-      ctx.fillRect(s.x - 12, s.y - 44, 24, 48);
-      ctx.fillStyle = s.used ? '#3d3b42' : '#5a5762';
-      ctx.fillRect(s.x - 16, s.y - 48, 32, 8);
-      ctx.fillRect(s.x - 16, s.y, 32, 6);
-      // gema brilhante
-      const glow = s.used ? 0 : 0.35 + Math.sin(time * 4) * 0.15;
-      if (glow) {
-        ctx.fillStyle = T.color;
-        ctx.globalAlpha = glow * clamp(s.fade, 0, 1);
-        ctx.beginPath();
-        ctx.arc(s.x, s.y - 62, 18, 0, TAU);
-        ctx.fill();
-        ctx.globalAlpha = clamp(s.fade, 0, 1);
-      }
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.moveTo(s.x, s.y - 74);
-      ctx.lineTo(s.x + 9, s.y - 62);
-      ctx.lineTo(s.x, s.y - 50);
-      ctx.lineTo(s.x - 9, s.y - 62);
-      ctx.closePath();
-      ctx.fill();
+      Art.bonfireGround(ctx, s.x, s.y, time, color, !s.used);
     } else {
-      const color = s.used ? '#555' : '#ff3355';
-      ctx.fillStyle = s.used ? 'rgba(40,30,30,0.6)' : 'rgba(40,10,20,0.75)';
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, TAU);
-      ctx.fill();
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      // estrela de cinco pontas
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      for (let i = 0; i <= 5; i++) {
-        const a = -Math.PI / 2 + (i * 2 * TAU) / 5;
-        const px = s.x + Math.cos(a) * s.r * 0.8;
-        const py = s.y + Math.sin(a) * s.r * 0.8;
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      }
-      ctx.stroke();
-      // pilares com chamas
-      for (let i = 0; i < 4; i++) {
-        const a = Math.PI / 4 + (i * TAU) / 4;
-        const px = s.x + Math.cos(a) * (s.r + 14);
-        const py = s.y + Math.sin(a) * (s.r + 14);
-        ctx.fillStyle = '#3c3640';
-        ctx.fillRect(px - 6, py - 22, 12, 24);
-        if (!s.used) {
-          const f = Math.sin(time * 12 + i) * 2;
-          ctx.fillStyle = '#ff5533';
-          ctx.beginPath();
-          ctx.ellipse(px, py - 28, 5, 8 + f, 0, 0, TAU);
-          ctx.fill();
-          ctx.fillStyle = '#ffd36b';
-          ctx.beginPath();
-          ctx.ellipse(px, py - 26, 2.5, 4, 0, 0, TAU);
-          ctx.fill();
-        }
-      }
+      Art.altar(ctx, s.x, s.y, s.r, time, s.used);
     }
-    // progresso de ativação
     if (!s.used && s.charge > 0) {
+      const k = s.charge / s.need;
+      Art.glow(ctx, s.x, s.y, s.r * 1.5, s.kind === 'totem' ? TOTEMS[s.type].color : '#ff3355', k * 0.6);
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 5;
       ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r + 6, -Math.PI / 2, -Math.PI / 2 + TAU * (s.charge / s.need));
+      ctx.ellipse(s.x, s.y, s.r + 8, (s.r + 8) * 0.6, 0, -Math.PI / 2, -Math.PI / 2 + TAU * k);
       ctx.stroke();
     }
     ctx.globalAlpha = 1;
   }
 
-  // Setas na borda da tela apontando para totens e altares fora de vista.
+  // Setas na borda da tela apontando para fogueiras e altares fora de vista.
   function drawIndicators() {
     for (const s of structures) {
       if (s.used) continue;
@@ -1470,328 +1581,141 @@
       const sx = W / 2 + c * t;
       const sy = (top + H - m) / 2 + n * t;
       const color = s.kind === 'totem' ? TOTEMS[s.type].color : '#ff3355';
+      const pulse = 1 + Math.sin(time * 5) * 0.08;
+      Art.glow(ctx, sx, sy, 26, color, 0.5);
       ctx.save();
       ctx.translate(sx, sy);
+      ctx.scale(pulse, pulse);
+      ctx.beginPath();
+      ctx.arc(0, 0, 13, 0, TAU);
+      ctx.fillStyle = 'rgba(15,12,25,0.85)';
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = color;
+      ctx.stroke();
       ctx.rotate(a);
       ctx.fillStyle = color;
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(14, 0);
-      ctx.lineTo(-8, -10);
-      ctx.lineTo(-4, 0);
-      ctx.lineTo(-8, 10);
+      ctx.moveTo(22, 0);
+      ctx.lineTo(14, -6);
+      ctx.lineTo(14, 6);
       ctx.closePath();
       ctx.fill();
-      ctx.stroke();
       ctx.restore();
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 11px "Segoe UI", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(Math.round(Math.hypot(dx, dy) / 10) + 'm', sx, sy + 24);
-    }
-  }
-
-  function drawPlayer() {
-    const p = player;
-    if (p.invuln > 0 && Math.floor(p.invuln * 20) % 2 === 0) return;
-    const bob = p.moving ? Math.sin(p.anim) * 2 : Math.sin(p.anim);
-    const f = p.facing;
-    const x = p.x;
-    const y = p.y + bob;
-    shadow(p.x, p.y, p.r);
-
-    if (p.char === 'mago') {
-      ctx.fillStyle = '#2b5fb8';
-      ctx.beginPath();
-      ctx.arc(x, y, p.r, 0, TAU);
-      ctx.fill();
-      ctx.fillStyle = '#f1c9a0';
-      ctx.beginPath();
-      ctx.arc(x + f * 3, y - 3, p.r * 0.55, 0, TAU);
-      ctx.fill();
-      ctx.fillStyle = '#1a1a1a';
-      ctx.fillRect(x + f * 5 - 3, y - 5, 2, 3);
-      ctx.fillRect(x + f * 5 + 2, y - 5, 2, 3);
-      ctx.fillStyle = '#1f478c';
-      ctx.beginPath();
-      ctx.moveTo(x - 13, y - 8);
-      ctx.lineTo(x + 13, y - 8);
-      ctx.lineTo(x - f * 6, y - 30);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = '#ffd36b';
-      ctx.fillRect(x - 13, y - 10, 26, 3);
-    } else if (p.char === 'maniaco') {
-      // capuz escuro, máscara branca e olhos vermelhos
-      ctx.fillStyle = '#3a1418';
-      ctx.beginPath();
-      ctx.arc(x, y, p.r, 0, TAU);
-      ctx.fill();
-      ctx.fillStyle = '#25090c';
-      ctx.beginPath();
-      ctx.arc(x, y - 4, p.r * 0.85, Math.PI, TAU);
-      ctx.fill();
-      ctx.fillStyle = '#eee8dc';
-      ctx.beginPath();
-      ctx.ellipse(x + f * 3, y - 2, p.r * 0.5, p.r * 0.6, 0, 0, TAU);
-      ctx.fill();
-      ctx.fillStyle = '#e01b2c';
-      ctx.fillRect(x + f * 5 - 4, y - 5, 3, 3);
-      ctx.fillRect(x + f * 5 + 2, y - 5, 3, 3);
-      ctx.strokeStyle = '#25090c';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(x + f * 3 - 4, y + 3);
-      ctx.lineTo(x + f * 3 + 4, y + 3);
-      ctx.stroke();
-    } else {
-      // golem: pedra com rachaduras, musgo e olhos em brasa
-      ctx.fillStyle = '#7a7470';
-      ctx.beginPath();
-      ctx.arc(x, y, p.r, 0, TAU);
-      ctx.fill();
-      ctx.fillStyle = '#5f5955';
-      ctx.beginPath();
-      ctx.arc(x - f * 10, y + 4, p.r * 0.45, 0, TAU);
-      ctx.arc(x + f * 12, y + 6, p.r * 0.35, 0, TAU);
-      ctx.fill();
-      ctx.fillStyle = '#5c8a3a';
-      ctx.beginPath();
-      ctx.ellipse(x - 4, y - p.r + 3, 9, 4, 0, 0, TAU);
-      ctx.fill();
-      ctx.strokeStyle = '#3e3936';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(x - 6, y + 2); ctx.lineTo(x - 1, y + 8); ctx.lineTo(x + 4, y + 5);
-      ctx.stroke();
-      const rage = 1 - p.hp / p.maxHp;
-      ctx.fillStyle = `rgb(255,${Math.round(180 - rage * 150)},40)`;
-      ctx.fillRect(x + f * 5 - 6, y - 5, 4, 3);
-      ctx.fillRect(x + f * 5 + 2, y - 5, 4, 3);
-    }
-
-    // barra de vida embaixo do jogador
-    const bw = 34;
-    ctx.fillStyle = '#000';
-    ctx.fillRect(p.x - bw / 2 - 1, p.y + p.r + 7, bw + 2, 6);
-    ctx.fillStyle = '#e04040';
-    ctx.fillRect(p.x - bw / 2, p.y + p.r + 8, bw * (p.hp / p.maxHp), 4);
-  }
-
-  function drawEnemy(e) {
-    shadow(e.x, e.y, e.r);
-    const white = e.flash > 0;
-    const col = white ? '#ffffff' : e.color;
-    const x = e.x;
-    const y = e.y;
-    const r = e.r;
-    const face = player.x >= x ? 1 : -1;
-
-    if (e.type === 'slime') {
-      const sq = Math.sin(e.phase * 6) * 0.12;
-      ctx.fillStyle = col;
-      ctx.beginPath();
-      ctx.ellipse(x, y + 2, r * (1 + sq), r * (0.85 - sq), 0, 0, TAU);
-      ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.35)';
-      ctx.beginPath();
-      ctx.arc(x - r * 0.35, y - r * 0.3, r * 0.25, 0, TAU);
-      ctx.fill();
-    } else if (e.type === 'bat') {
-      const flap = Math.sin(e.phase * 18) * 6;
-      ctx.fillStyle = white ? '#fff' : '#5a3c8c';
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x - r * 2.2, y - 4 - flap);
-      ctx.lineTo(x - r * 1.2, y + 4);
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + r * 2.2, y - 4 - flap);
-      ctx.lineTo(x + r * 1.2, y + 4);
-      ctx.fill();
-      ctx.fillStyle = col;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, TAU);
-      ctx.fill();
-    } else if (e.type === 'skeleton') {
-      ctx.fillStyle = col;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, TAU);
-      ctx.fill();
-      ctx.fillStyle = '#2a2a2a';
-      ctx.beginPath();
-      ctx.arc(x + face * 2 - 4, y - 2, 3, 0, TAU);
-      ctx.arc(x + face * 2 + 4, y - 2, 3, 0, TAU);
-      ctx.fill();
-      ctx.fillRect(x + face * 2 - 4, y + 5, 8, 2);
-    } else if (e.type === 'lich') {
-      // manto com capuz e coroa de ossos
-      ctx.fillStyle = white ? '#fff' : '#22324a';
-      ctx.beginPath();
-      ctx.moveTo(x - r, y + r);
-      ctx.lineTo(x, y - r * 1.2);
-      ctx.lineTo(x + r, y + r);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = col;
-      ctx.beginPath();
-      ctx.arc(x, y - r * 0.2, r * 0.6, 0, TAU);
-      ctx.fill();
-      ctx.fillStyle = '#e8e2cf';
-      for (let i = -2; i <= 2; i++) ctx.fillRect(x + i * 7 - 2, y - r * 0.95, 4, 10);
-    } else if (e.type === 'brute' || e.type === 'boss') {
-      ctx.fillStyle = white ? '#fff' : '#efe3c0';
-      ctx.beginPath();
-      ctx.moveTo(x - r * 0.7, y - r * 0.5);
-      ctx.lineTo(x - r * 0.9, y - r * 1.3);
-      ctx.lineTo(x - r * 0.3, y - r * 0.8);
-      ctx.moveTo(x + r * 0.7, y - r * 0.5);
-      ctx.lineTo(x + r * 0.9, y - r * 1.3);
-      ctx.lineTo(x + r * 0.3, y - r * 0.8);
-      ctx.fill();
-      ctx.fillStyle = col;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, TAU);
-      ctx.fill();
-      if (e.boss) {
-        ctx.fillStyle = '#ffd36b';
+      // miniatura: chama para fogueira, estrela para altar
+      if (s.kind === 'totem') {
+        Art.flame(ctx, sx, sy + 6, 4.5, 14 + Math.sin(time * 12) * 2, 0, color, '#fff3b0');
+      } else {
+        ctx.fillStyle = color;
         ctx.beginPath();
-        ctx.moveTo(x - 16, y - r + 4);
-        ctx.lineTo(x - 16, y - r - 12);
-        ctx.lineTo(x - 8, y - r - 4);
-        ctx.lineTo(x, y - r - 14);
-        ctx.lineTo(x + 8, y - r - 4);
-        ctx.lineTo(x + 16, y - r - 12);
-        ctx.lineTo(x + 16, y - r + 4);
-        ctx.closePath();
-        ctx.fill();
+        for (let i = 0; i <= 5; i++) {
+          const ang = -Math.PI / 2 + (i * 2 * TAU) / 5;
+          ctx.lineTo(sx + Math.cos(ang) * 7, sy + Math.sin(ang) * 7);
+        }
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
       }
+      ctx.fillStyle = '#fff';
+      ctx.font = `800 11px ${FONT}`;
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#000';
+      const label = Math.round(Math.hypot(dx, dy) / 10) + 'm';
+      ctx.strokeText(label, sx, sy + 28);
+      ctx.fillText(label, sx, sy + 28);
     }
-
-    if (e.type !== 'skeleton') {
-      const es = Math.max(2, r * 0.16);
-      ctx.fillStyle = e.type === 'slime' ? '#123d12' : e.type === 'lich' ? '#9ffcff' : '#ffef5a';
-      const ey = e.type === 'lich' ? y - r * 0.35 : y - r * 0.15;
-      ctx.fillRect(x + face * r * 0.2 - r * 0.35, ey, es, es + 1);
-      ctx.fillRect(x + face * r * 0.2 + r * 0.2, ey, es, es + 1);
-    }
-
-    if (e.boss || e.type === 'brute') {
-      const bw = e.r * 2;
-      ctx.fillStyle = '#000';
-      ctx.fillRect(x - bw / 2 - 1, y + r + 6, bw + 2, 6);
-      ctx.fillStyle = e.boss ? '#ff4f8b' : '#ff9b4f';
-      ctx.fillRect(x - bw / 2, y + r + 7, bw * clamp(e.hp / e.maxHp, 0, 1), 4);
-      if (e.boss) {
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 12px "Segoe UI", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(ENEMY_TYPES[e.type].name, x, y + r + 26);
-      }
-    }
-  }
-
-  function drawPickup(p) {
-    if (p.kind === 'heart') {
-      const s = 7;
-      ctx.fillStyle = '#ff4f6a';
-      ctx.beginPath();
-      ctx.arc(p.x - s / 2, p.y - s / 3, s / 1.6, 0, TAU);
-      ctx.arc(p.x + s / 2, p.y - s / 3, s / 1.6, 0, TAU);
-      ctx.moveTo(p.x - s * 1.1, p.y);
-      ctx.lineTo(p.x, p.y + s * 1.2);
-      ctx.lineTo(p.x + s * 1.1, p.y);
-      ctx.fill();
-      return;
-    }
-    if (p.kind === 'chest') {
-      const bob = Math.sin(time * 3) * 2;
-      shadow(p.x, p.y + 4, 16);
-      ctx.fillStyle = '#ffd36b';
-      ctx.globalAlpha = 0.25 + Math.sin(time * 5) * 0.1;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y + bob, 28, 0, TAU);
-      ctx.fill();
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = '#8a5a2b';
-      ctx.fillRect(p.x - 16, p.y - 10 + bob, 32, 22);
-      ctx.fillStyle = '#a8703a';
-      ctx.fillRect(p.x - 16, p.y - 16 + bob, 32, 8);
-      ctx.fillStyle = '#ffd36b';
-      ctx.fillRect(p.x - 16, p.y - 9 + bob, 32, 3);
-      ctx.fillRect(p.x - 3, p.y - 10 + bob, 6, 9);
-      return;
-    }
-    const big = p.v >= 5;
-    const s = big ? 7 : 4.5;
-    ctx.fillStyle = big ? '#ff6bd5' : p.v >= 2 ? '#5fffb0' : '#5fd3ff';
-    ctx.beginPath();
-    ctx.moveTo(p.x, p.y - s * 1.3);
-    ctx.lineTo(p.x + s, p.y);
-    ctx.lineTo(p.x, p.y + s * 1.3);
-    ctx.lineTo(p.x - s, p.y);
-    ctx.closePath();
-    ctx.fill();
   }
 
   function drawProjectile(p) {
     const a = Math.atan2(p.vy, p.vx);
     if (p.kind === 'missil') {
-      ctx.fillStyle = '#b07aff';
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r + 3, 0, TAU);
-      ctx.fill();
-      ctx.fillStyle = '#f2e6ff';
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r * 0.6, 0, TAU);
-      ctx.fill();
-    } else if (p.kind === 'fireball') {
-      ctx.fillStyle = 'rgba(255,120,30,0.45)';
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r + 6, 0, TAU);
-      ctx.fill();
-      ctx.fillStyle = '#ffb347';
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, TAU);
-      ctx.fill();
-      ctx.fillStyle = '#fff3c4';
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r * 0.45, 0, TAU);
-      ctx.fill();
-    } else {
+      Art.glow(ctx, p.x, p.y, 18, '#3fd0ff', 0.7);
       ctx.save();
       ctx.translate(p.x, p.y);
       ctx.rotate(a);
-      if (p.kind === 'arrow') {
-        ctx.strokeStyle = '#8a5a2b';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(-16, 0);
-        ctx.lineTo(8, 0);
-        ctx.stroke();
-        ctx.fillStyle = '#d9e4f2';
-        ctx.beginPath();
-        ctx.moveTo(14, 0);
-        ctx.lineTo(6, -5);
-        ctx.lineTo(6, 5);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#e04040';
-        ctx.fillRect(-18, -4, 6, 3);
-        ctx.fillRect(-18, 1, 6, 3);
-      } else {
-        ctx.fillStyle = '#cfd8e3';
-        ctx.beginPath();
-        ctx.moveTo(11, 0);
-        ctx.lineTo(-3, -4);
-        ctx.lineTo(-3, 4);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#4a3020';
-        ctx.fillRect(-9, -2, 6, 4);
-      }
+      Art.poly(ctx, [11, 0, 1, -4, -9, 0, 1, 4], Art.lin(ctx, -9, 0, 11, 0, '#5fb0e8', '#ffffff'), 1.3);
+      ctx.restore();
+    } else if (p.kind === 'fireball') {
+      Art.glow(ctx, p.x, p.y, 30, '#ff6a1a', 0.8);
+      Art.ball(ctx, p.x, p.y, 7.5, '#ffa040', 0, false);
+      Art.glow(ctx, p.x, p.y, 9, '#fff3c0', 1);
+    } else if (p.kind === 'arrow') {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(a);
+      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-40, 0);
+      ctx.lineTo(-16, 0);
+      ctx.stroke();
+      ctx.strokeStyle = Art.OUT;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(-16, 0);
+      ctx.lineTo(8, 0);
+      ctx.stroke();
+      ctx.strokeStyle = '#a8743e';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      Art.poly(ctx, [15, 0, 6, -5, 6, 5], '#e8eef6', 1.3);
+      Art.poly(ctx, [-12, -1, -18, -6, -16, -1], '#e04040', 1);
+      Art.poly(ctx, [-12, 1, -18, 6, -16, 1], '#e04040', 1);
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.life * 28);
+      Art.poly(ctx, [12, 0, -2, -4, -2, 4], Art.lin(ctx, -2, 0, 12, 0, '#8d96a2', '#ffffff'), 1.3);
+      Art.poly(ctx, [-2, -2.5, -10, -2.5, -10, 2.5, -2, 2.5], '#7a3020', 1.2);
       ctx.restore();
     }
+  }
+
+  function drawParticles(additive) {
+    if (additive) ctx.globalCompositeOperation = 'lighter';
+    for (const p of particles) {
+      if (!!p.add !== additive) continue;
+      const k = clamp(p.life / p.max, 0, 1);
+      if (p.kind === 'spark') {
+        ctx.globalAlpha = k;
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = p.size;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x - p.vx * 0.04, p.y - p.vy * 0.04);
+        ctx.stroke();
+      } else if (p.kind === 'smoke') {
+        ctx.globalAlpha = k * 0.35;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, TAU);
+        ctx.fill();
+      } else if (p.kind === 'ring') {
+        ctx.globalAlpha = k * 0.8;
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = 3 * k + 1;
+        ctx.beginPath();
+        ctx.ellipse(p.x, p.y, p.size, p.size * 0.7, 0, 0, TAU);
+        ctx.stroke();
+      } else if (p.kind === 'rock') {
+        ctx.globalAlpha = k;
+        ctx.fillStyle = p.color;
+        ctx.strokeStyle = Art.OUT;
+        ctx.lineWidth = 1;
+        ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+        ctx.strokeRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      } else {
+        ctx.globalAlpha = k;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * (additive ? 1 : 0.8), 0, TAU);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
   }
 
   function render() {
@@ -1803,119 +1727,174 @@
 
     ctx.save();
     ctx.translate(-camX, -camY);
-    drawGround(camX, camY);
+    Art.drawGround(ctx, camX, camY, W, H);
 
+    // ---------- Camada do chão ----------
     for (const h of hazards) {
-      ctx.fillStyle = `rgba(255,90,20,${0.18 + Math.sin(time * 10 + h.x) * 0.05})`;
-      ctx.beginPath();
-      ctx.arc(h.x, h.y, h.r, 0, TAU);
-      ctx.fill();
+      Art.glow(ctx, h.x, h.y, h.r * 1.4, '#ff5a1a', 0.5 * clamp(h.life, 0, 1));
     }
-
-    for (const s of structures) if (onScreen(s.x, s.y, 120)) drawStructure(s);
-    for (const p of pickups) if (onScreen(p.x, p.y, 30)) drawPickup(p);
+    for (const s of structures) if (onScreen(s.x, s.y, 160)) drawStructureGround(s);
 
     if (weapons.aura) {
       const r = auraRadius(weapons.aura.level);
-      const pulse = 0.12 + Math.sin(time * 4) * 0.03;
-      ctx.fillStyle = `rgba(255,230,120,${pulse})`;
-      ctx.strokeStyle = 'rgba(255,230,120,0.45)';
-      ctx.lineWidth = 2;
+      ctx.save();
+      ctx.translate(player.x, player.y);
+      ctx.scale(1, 0.75);
+      const gr = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r);
+      gr.addColorStop(0, 'rgba(255,230,120,0.02)');
+      gr.addColorStop(0.85, `rgba(255,220,100,${0.16 + Math.sin(time * 4) * 0.04})`);
+      gr.addColorStop(1, 'rgba(255,220,100,0.4)');
+      ctx.fillStyle = gr;
       ctx.beginPath();
-      ctx.arc(player.x, player.y, r, 0, TAU);
+      ctx.arc(0, 0, r, 0, TAU);
       ctx.fill();
+      ctx.strokeStyle = 'rgba(255,236,160,0.7)';
+      ctx.lineWidth = 2;
       ctx.stroke();
+      for (let i = 0; i < 12; i++) {
+        const a = time * 0.8 + (i / 12) * TAU;
+        Art.glow(ctx, Math.cos(a) * r, Math.sin(a) * r, 7, '#ffe27a', 0.6);
+      }
+      ctx.restore();
     }
 
     for (const ring of rings) {
       if (ring.delay > 0) continue;
-      const a = 1 - ring.r / ring.maxR;
-      ctx.strokeStyle = `rgba(200,170,120,${a})`;
-      ctx.lineWidth = 12 * a + 2;
+      const k = 1 - ring.r / ring.maxR;
+      ctx.save();
+      ctx.translate(ring.x, ring.y);
+      ctx.scale(1, 0.7);
+      ctx.strokeStyle = `rgba(120,95,60,${k * 0.8})`;
+      ctx.lineWidth = 16 * k + 3;
       ctx.beginPath();
-      ctx.arc(ring.x, ring.y, ring.r, 0, TAU);
+      ctx.arc(0, 0, ring.r, 0, TAU);
       ctx.stroke();
+      ctx.strokeStyle = `rgba(230,205,160,${k})`;
+      ctx.lineWidth = 4 * k + 1;
+      ctx.stroke();
+      ctx.restore();
     }
 
-    // desenha de cima para baixo para dar sensação de profundidade
-    const visible = enemies.filter((e) => onScreen(e.x, e.y, 60));
-    visible.sort((a, b) => a.y - b.y);
-    let playerDrawn = state === 'menu';
-    for (const e of visible) {
-      if (!playerDrawn && e.y > player.y) { drawPlayer(); playerDrawn = true; }
-      drawEnemy(e);
+    for (const p of pickups) {
+      if (p.kind === 'chest' || !onScreen(p.x, p.y, 30)) continue;
+      if (p.kind === 'xp') Art.drawGem(ctx, p, time);
+      else Art.drawHeart(ctx, p, time);
     }
-    if (!playerDrawn) drawPlayer();
 
+    // ---------- Camada de objetos, ordenada de cima para baixo ----------
+    const list = [];
+    for (const e of enemies) if (onScreen(e.x, e.y, 80)) list.push({ y: e.y, e });
+    for (const s of structures) if (s.kind === 'totem' && onScreen(s.x, s.y, 120)) list.push({ y: s.y, s });
+    for (const p of pickups) if (p.kind === 'chest' && onScreen(p.x, p.y, 80)) list.push({ y: p.y, c: p });
+    if (state !== 'menu') list.push({ y: player.y, player: true });
+    list.sort((a, b) => a.y - b.y);
+    for (const o of list) {
+      if (o.e) drawEnemyFull(o.e);
+      else if (o.s) {
+        ctx.globalAlpha = clamp(o.s.fade, 0, 1);
+        Art.bonfireTop(ctx, o.s.x, o.s.y, time, TOTEMS[o.s.type].color, !o.s.used);
+        ctx.globalAlpha = 1;
+      } else if (o.c) Art.drawChest(ctx, o.c.x, o.c.y, time);
+      else drawPlayer();
+    }
+
+    // ---------- Armas e efeitos por cima ----------
     if (weapons.laminas) {
-      for (const b of weapons.laminas.blades) {
+      const w = weapons.laminas;
+      ctx.save();
+      ctx.translate(player.x, player.y - 10);
+      ctx.strokeStyle = 'rgba(220,235,255,0.12)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, w.radius || 65, 0, TAU);
+      ctx.stroke();
+      ctx.restore();
+      for (const b of w.blades) {
+        ctx.strokeStyle = 'rgba(220,235,255,0.28)';
+        ctx.lineWidth = b.r * 1.2;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.arc(player.x, player.y - 10, w.radius || 65, b.a - 0.55, b.a - 0.05);
+        ctx.stroke();
         ctx.save();
         ctx.translate(b.x, b.y);
-        ctx.rotate(b.a + time * 10);
-        ctx.fillStyle = '#d9e4f2';
-        ctx.beginPath();
-        ctx.moveTo(0, -b.r * 1.4);
-        ctx.lineTo(b.r * 0.5, 0);
-        ctx.lineTo(0, b.r * 1.4);
-        ctx.lineTo(-b.r * 0.5, 0);
-        ctx.closePath();
-        ctx.fill();
+        ctx.rotate(time * 14);
+        for (let i = 0; i < 3; i++) {
+          ctx.rotate(TAU / 3);
+          Art.poly(ctx, [0, -b.r * 0.4, b.r * 0.5, -b.r * 0.9, b.r * 1.5, -b.r * 0.3, b.r * 0.5, b.r * 0.15], Art.lin(ctx, 0, -b.r, 0, b.r * 0.2, '#ffffff', '#8d96a2'), 1.4);
+        }
+        Art.ball(ctx, 0, 0, b.r * 0.4, '#6f86ab', 1.2, false);
         ctx.restore();
       }
     }
 
-    for (const p of projectiles) if (onScreen(p.x, p.y, 30)) drawProjectile(p);
+    for (const p of projectiles) if (onScreen(p.x, p.y, 40)) drawProjectile(p);
 
     for (const x of explosions) {
-      const k = x.life / 0.35;
-      ctx.fillStyle = `rgba(255,140,40,${k * 0.5})`;
+      const k = x.life / 0.4;
+      Art.glow(ctx, x.x, x.y, x.r * (1.5 - k * 0.4), '#ff6a1a', k * 0.55);
+      Art.glow(ctx, x.x, x.y, x.r * 0.5, '#ffd890', k * 0.5);
+      ctx.strokeStyle = `rgba(255,200,120,${k})`;
+      ctx.lineWidth = 4 * k + 1;
       ctx.beginPath();
-      ctx.arc(x.x, x.y, x.r * (1.1 - k * 0.3), 0, TAU);
-      ctx.fill();
-      ctx.fillStyle = `rgba(255,240,180,${k * 0.6})`;
-      ctx.beginPath();
-      ctx.arc(x.x, x.y, x.r * 0.45 * (1.1 - k * 0.3), 0, TAU);
-      ctx.fill();
+      ctx.ellipse(x.x, x.y, x.r * (1.15 - k * 0.5), x.r * (1.15 - k * 0.5) * 0.7, 0, 0, TAU);
+      ctx.stroke();
     }
 
+    ctx.globalCompositeOperation = 'lighter';
     for (const c of chains) {
-      const a = c.life / 0.3;
-      ctx.strokeStyle = `rgba(200,230,255,${a})`;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(c.pts[0].x, c.pts[0].y);
+      const k = c.life / 0.3;
+      const pts = [c.pts[0]];
       for (let i = 1; i < c.pts.length; i++) {
         const p0 = c.pts[i - 1];
         const p1 = c.pts[i];
-        // segmento em zigue-zague para parecer eletricidade
-        for (let k = 1; k <= 3; k++) {
-          const t = k / 4;
-          ctx.lineTo(p0.x + (p1.x - p0.x) * t + rand(-8, 8), p0.y + (p1.y - p0.y) * t + rand(-8, 8));
+        for (let s = 1; s <= 3; s++) {
+          const t = s / 4;
+          pts.push({ x: p0.x + (p1.x - p0.x) * t + rand(-9, 9), y: p0.y + (p1.y - p0.y) * t + rand(-9, 9) });
         }
-        ctx.lineTo(p1.x, p1.y);
+        pts.push(p1);
       }
-      ctx.stroke();
-      ctx.fillStyle = `rgba(160,210,255,${a * 0.6})`;
-      for (let i = 1; i < c.pts.length; i++) {
+      for (const [lw, color] of [[9, `rgba(80,160,255,${k * 0.35})`], [3, `rgba(220,240,255,${k})`]]) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lw;
+        ctx.lineJoin = 'round';
         ctx.beginPath();
-        ctx.arc(c.pts[i].x, c.pts[i].y, 10, 0, TAU);
-        ctx.fill();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (const p of pts) ctx.lineTo(p.x, p.y);
+        ctx.stroke();
       }
     }
+    ctx.globalCompositeOperation = 'source-over';
+    for (const c of chains) for (let i = 1; i < c.pts.length; i++) Art.glow(ctx, c.pts[i].x, c.pts[i].y, 22, '#8fd0ff', c.life / 0.3);
 
-    for (const p of particles) {
-      ctx.globalAlpha = clamp(p.life / p.max, 0, 1);
-      ctx.fillStyle = p.color;
-      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+    drawParticles(false);
+    drawParticles(true);
+
+    // coluna de luz ao subir de nível
+    if (levelFx > 0 && state !== 'menu') {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const gr = ctx.createLinearGradient(0, player.y - 220, 0, player.y);
+      gr.addColorStop(0, 'rgba(255,220,120,0)');
+      gr.addColorStop(1, `rgba(255,220,120,${levelFx * 0.6})`);
+      ctx.fillStyle = gr;
+      ctx.fillRect(player.x - 26 * levelFx, player.y - 220, 52 * levelFx, 220);
+      ctx.restore();
+      Art.glow(ctx, player.x, player.y - 10, 70, '#ffd36b', levelFx);
     }
-    ctx.globalAlpha = 1;
 
+    for (const s of structures) if (onScreen(s.x, s.y, 160)) drawStructureLabel(s);
+
+    // números de dano com "pulo" ao aparecer
     ctx.textAlign = 'center';
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = '#000';
+    ctx.lineJoin = 'round';
     for (const t of texts) {
-      ctx.globalAlpha = clamp(t.life / 0.4, 0, 1);
-      ctx.font = `bold ${t.big ? 18 : 13}px "Segoe UI", sans-serif`;
+      const pop = 1 + Math.max(0, t.life - 0.6) / 0.15 * 0.6;
+      const size = (t.big ? 20 : 14) * pop;
+      ctx.globalAlpha = clamp(t.life / 0.35, 0, 1);
+      ctx.font = `900 ${size}px ${FONT}`;
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#1a1222';
       ctx.strokeText(t.txt, t.x, t.y);
       ctx.fillStyle = t.color;
       ctx.fillText(t.txt, t.x, t.y);
@@ -1923,7 +1902,18 @@
     ctx.globalAlpha = 1;
     ctx.restore();
 
+    // ---------- Tela ----------
+    Art.vignette(ctx, W, H);
     if (state !== 'menu') {
+      const low = player.hp / player.maxHp < 0.3 ? (0.3 - player.hp / player.maxHp) / 0.3 : 0;
+      const red = Math.max(hurtFlash * 0.6, low * (0.35 + Math.sin(time * 6) * 0.15));
+      if (red > 0) {
+        const gr = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.hypot(W, H) * 0.6);
+        gr.addColorStop(0, 'rgba(200,0,20,0)');
+        gr.addColorStop(1, `rgba(200,0,20,${red})`);
+        ctx.fillStyle = gr;
+        ctx.fillRect(0, 0, W, H);
+      }
       drawIndicators();
       updateHud();
     }
@@ -1931,22 +1921,25 @@
 
   function updateHud() {
     $('xpfill').style.width = (100 * player.xp / player.xpNext) + '%';
-    $('lvltext').textContent = 'Nv ' + player.level;
+    $('lvlbadge').textContent = player.level;
     $('hpfill').style.width = (100 * player.hp / player.maxHp) + '%';
+    $('hpghost').style.width = (100 * Math.max(hpGhost, player.hp / player.maxHp)) + '%';
     $('hptext').textContent = Math.ceil(player.hp) + ' / ' + player.maxHp;
     $('timer').textContent = fmtTime(time);
-    $('kills').textContent = 'Abates: ' + kills;
+    $('kills').textContent = kills;
 
     const key = JSON.stringify([weapons, passiveLevels].map((o) => Object.entries(o).map(([k, v]) => k + (v.level || v))));
     if (key !== loadoutKey) {
       loadoutKey = key;
-      let html = '';
-      for (const id in weapons) {
-        html += `<div class="slot weapon" title="${WEAPONS[id].name}">${WEAPONS[id].icon}<span class="lv">${weapons[id].level}</span></div>`;
-      }
-      for (const id in passiveLevels) {
-        html += `<div class="slot" title="${PASSIVES[id].name}">${PASSIVES[id].icon}<span class="lv">${passiveLevels[id]}</span></div>`;
-      }
+      const slot = (id, name, lv, max, cls) => {
+        const pips = Array.from({ length: max }, (_, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('');
+        return `<div class="slot ${cls}" title="${name} · nível ${lv}"><img src="${Art.icon(id)}" alt=""><div class="pips">${pips}</div></div>`;
+      };
+      let html = '<div class="row">';
+      for (const id in weapons) html += slot(id, WEAPONS[id].name, weapons[id].level, WEAPONS[id].max, 'weapon');
+      html += '</div><div class="row">';
+      for (const id in passiveLevels) html += slot(id, PASSIVES[id].name, passiveLevels[id], PASSIVES[id].max, '');
+      html += '</div>';
       $('loadout').innerHTML = html;
     }
 
@@ -1954,8 +1947,11 @@
     const bkey = active.map((id) => id + Math.ceil(player.buffs[id])).join();
     if (bkey !== buffsKey) {
       buffsKey = bkey;
-      $('buffs').innerHTML = active.map((id) =>
-        `<div class="buff" style="border-color:${TOTEMS[id].color}">${TOTEMS[id].desc} <b>${Math.ceil(player.buffs[id])}s</b></div>`).join('');
+      $('buffs').innerHTML = active.map((id) => {
+        const T = TOTEMS[id];
+        const k = player.buffs[id] / T.dur;
+        return `<div class="buff" style="--c:${T.color}"><span>${T.desc}</span><b>${Math.ceil(player.buffs[id])}s</b><i style="width:${k * 100}%"></i></div>`;
+      }).join('');
     }
   }
 
@@ -1969,11 +1965,16 @@
     last = now;
     if (state === 'playing') {
       update(dt);
+      updateEffects(dt);
     } else if (state === 'menu') {
       // No menu a câmera passeia devagar pelo mapa.
       player.x += 30 * dt;
       player.y += 12 * dt;
       time += dt;
+      drawPortraits(now / 1000);
+    } else {
+      // Pausado, escolhendo recompensa ou morto: os efeitos terminam suavemente.
+      updateEffects(dt * 0.3);
     }
     render();
     requestAnimationFrame(frame);
@@ -1990,6 +1991,6 @@
     get enemies() { return enemies; },
     get structures() { return structures; },
     get weapons() { return weapons; },
-    gainXp, startGame, addWeapon, spawnBoss, selectChar,
+    gainXp, startGame, addWeapon, spawnBoss, spawnEnemy, selectChar,
   };
 })();

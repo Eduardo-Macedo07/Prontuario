@@ -10,8 +10,8 @@ Abra o arquivo `index.html` no navegador (Chrome, Edge ou Firefox no PC). Não p
 | Tecla | Ação |
 | --- | --- |
 | `W` `A` `S` `D` ou setas | Mover |
-| `1` `2` `3` `4` ou clique | Escolher personagem (no menu) e recompensa |
-| `Esc` ou `P` | Pausar (mostra seus atributos) |
+| Mouse ou `1` `2` `3` `4` | Escolher personagem (no menu) e recompensa |
+| `Esc`, `P` ou botão ❚❚ | Pausar (mostra seus atributos) |
 | `R` | Recomeçar depois de morrer |
 
 Os ataques são automáticos.
@@ -20,13 +20,13 @@ Os ataques são automáticos.
 
 | Personagem | Características | Passiva |
 | --- | --- | --- |
-| **Mago** (padrão) | Equilibrado, começa com Míssil Arcano | +1 de Sorte a cada chefão derrotado |
-| **Maníaco** | Muito rápido e frágil, começa com Facas | +1% de crítico a cada nível |
+| **Rei Gelado** (mago, padrão) | Equilibrado, começa com Estilhaço de Gelo | +1 de Sorte a cada chefão derrotado |
+| **Maníaco** (bobo da corte) | Muito rápido e frágil, começa com Facas | +1% de crítico a cada nível |
 | **Golem de Pedra** | Muita vida e armadura, lento, começa com Tremor | Mais dano quanto menor a vida (até +120%) |
 
 ## Arsenal (até 6 armas, cada uma até o nível 6)
 
-- **Míssil Arcano**: dispara no inimigo mais próximo.
+- **Estilhaço de Gelo**: dispara no inimigo mais próximo.
 - **Arco Caçador**: flechas teleguiadas que perfuram e seguem para os inimigos de trás.
 - **Facas**: arremessadas na direção em que você anda.
 - **Raio em Cadeia**: ricocheteia de inimigo em inimigo.
@@ -45,16 +45,23 @@ Vitalidade, Botas Ágeis, Força, Pressa, Ímã, Regeneração, Armadura, **Proj
 
 ## Mapa
 
-- **Totens**: fique parado no círculo para ganhar um buff (Fúria, Vento, Vida, Ímã ou Sorte).
+- **Fogueiras** (com uma espada fincada, a cor da chama indica o buff): fique parado no círculo para ganhar
+  Fúria, Vento, Vida, Ímã ou Sorte.
 - **Altares**: fique parado no altar para invocar um chefão.
-- Setas na borda da tela apontam para totens e altares fora de vista.
+- Setas na borda da tela apontam para fogueiras e altares fora de vista.
 - Todo chefão derrotado deixa um **baú** com recompensas raras garantidas.
 - Enxames a cada 50 segundos e um chefão a cada 3 minutos (Rei Ogro ou Lich, que invoca esqueletos).
+
+## Visual
+
+Tudo é desenhado por código no canvas, sem imagens: personagens e inimigos em estilo cartoon com contorno,
+sombreado e brilho, chão gerado em blocos, luzes aditivas, partículas, tremor de tela e números de dano.
 
 ## Estrutura
 
 ```
 index.html   telas (menu, HUD, recompensas, pausa, fim de jogo)
 style.css    visual das telas
-js/game.js   todo o jogo (laço, armas, inimigos, estruturas, desenho no canvas)
+js/art.js    desenhos: personagens, inimigos, fogueiras, altar, itens, chão e ícones
+js/game.js   lógica do jogo (laço, armas, inimigos, estruturas, efeitos e interface)
 ```
