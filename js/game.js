@@ -7,6 +7,7 @@
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   const $ = (id) => document.getElementById(id);
+
   // W e H são o tamanho da área visível do mundo. Em telas pequenas (celular) a câmera
   // se afasta (zoom < 1) para o jogador continuar enxergando a horda chegando.
   let W = 0;
@@ -42,6 +43,7 @@
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const FONT = '"Nunito", "Segoe UI", sans-serif';
   const TITLE_FONT = '"Cinzel", Georgia, serif';
+  const pct = (v) => Math.round(v * 100) + '%';
 
   function shuffle(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
@@ -58,43 +60,56 @@
   }
 
   // ============================================================
-  // Dados salvos no navegador (recorde e personagem escolhido)
+  // Progresso salvo no navegador (moedas, compras, recordes e configurações)
   // ============================================================
-  const SAVE_KEY = 'jogoteste.recorde';
-  const CHAR_KEY = 'jogoteste.personagem';
+  const SAVE_KEY = 'survivorbrowser.save';
 
-  function loadBest() {
+  function defaultSave() {
+    return {
+      coins: 0,
+      chars: { mago: true, maniaco: false, golem: false },
+      bought: {},
+      char: 'mago',
+      stats: { bestTime: 0, bestLevel: 0, bestKills: 0, bosses: 0, kills: 0, runs: 0 },
+      settings: { quality: 'auto', shake: true, numbers: true },
+    };
+  }
+
+  function merge(base, raw) {
+    for (const k in raw) {
+      if (base[k] && typeof base[k] === 'object' && raw[k] && typeof raw[k] === 'object') merge(base[k], raw[k]);
+      else base[k] = raw[k];
+    }
+    return base;
+  }
+
+  function loadSave() {
+    const s = defaultSave();
     try {
-      return JSON.parse(localStorage.getItem(SAVE_KEY)) || { time: 0, level: 0, kills: 0 };
+      const raw = JSON.parse(localStorage.getItem(SAVE_KEY));
+      if (raw) return merge(s, raw);
+      // traz o recorde da versão antiga do jogo
+      const old = JSON.parse(localStorage.getItem('jogoteste.recorde'));
+      if (old) {
+        s.stats.bestTime = old.time || 0;
+        s.stats.bestLevel = old.level || 0;
+        s.stats.bestKills = old.kills || 0;
+      }
     } catch (e) {
-      return { time: 0, level: 0, kills: 0 };
+      // armazenamento indisponível: começa do zero
+    }
+    return s;
+  }
+
+  function persist() {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(save));
+    } catch (e) {
+      // sem armazenamento: o progresso vale só nesta sessão
     }
   }
 
-  function saveBest(best) {
-    try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify(best));
-    } catch (e) {
-      // sem armazenamento disponível: o recorde só não é salvo
-    }
-  }
-
-  function loadChar() {
-    try {
-      const c = localStorage.getItem(CHAR_KEY);
-      return CHARACTERS[c] ? c : 'mago';
-    } catch (e) {
-      return 'mago';
-    }
-  }
-
-  function saveChar(c) {
-    try {
-      localStorage.setItem(CHAR_KEY, c);
-    } catch (e) {
-      // ignora
-    }
-  }
+  let save = loadSave();
 
   // ============================================================
   // Personagens
@@ -127,10 +142,43 @@
   };
 
   // ============================================================
+  // Loja: personagens e espaços extras, com objetivos para liberar
+  // ============================================================
+  const SHOP = [
+    { id: 'maniaco', kind: 'char', name: 'Maníaco', price: 250, desc: 'Desbloqueia o bobo da corte psicopata.' },
+    { id: 'golem', kind: 'char', name: 'Golem de Pedra', price: 400, desc: 'Desbloqueia o colosso de pedra.', req: { type: 'bosses', n: 1, text: 'Derrote 1 chefão' } },
+    { id: 'wslot1', kind: 'wslot', name: 'Espaço de arma', price: 200, desc: '+1 espaço de arma (4 no total).', req: { type: 'time', n: 300, text: 'Sobreviva 5 minutos' } },
+    { id: 'wslot2', kind: 'wslot', name: 'Espaço de arma', price: 600, desc: '+1 espaço de arma (5 no total).', req: { type: 'bosses', n: 3, text: 'Derrote 3 chefões no total' }, needs: 'wslot1' },
+    { id: 'pslot1', kind: 'pslot', name: 'Espaço de passiva', price: 150, desc: '+1 espaço de passiva (3 no total).', req: { type: 'level', n: 15, text: 'Alcance o nível 15' } },
+    { id: 'pslot2', kind: 'pslot', name: 'Espaço de passiva', price: 500, desc: '+1 espaço de passiva (4 no total).', req: { type: 'time', n: 600, text: 'Sobreviva 10 minutos' }, needs: 'pslot1' },
+  ];
+
+  const BASE_WEAPON_SLOTS = 3; // a arma inicial + 2
+  const BASE_PASSIVE_SLOTS = 2;
+  const MAX_WEAPON_SLOTS = 5;
+  const MAX_PASSIVE_SLOTS = 4;
+  const weaponSlots = () => BASE_WEAPON_SLOTS + (save.bought.wslot1 ? 1 : 0) + (save.bought.wslot2 ? 1 : 0);
+  const passiveSlots = () => BASE_PASSIVE_SLOTS + (save.bought.pslot1 ? 1 : 0) + (save.bought.pslot2 ? 1 : 0);
+
+  function reqMet(r) {
+    if (!r) return true;
+    const st = save.stats;
+    if (r.type === 'time') return st.bestTime >= r.n;
+    if (r.type === 'bosses') return st.bosses >= r.n;
+    if (r.type === 'level') return st.bestLevel >= r.n;
+    return true;
+  }
+
+  function reqProgress(r) {
+    const st = save.stats;
+    if (r.type === 'time') return `${fmtTime(Math.min(st.bestTime, r.n))} / ${fmtTime(r.n)}`;
+    if (r.type === 'bosses') return `${Math.min(st.bosses, r.n)} / ${r.n}`;
+    return `${Math.min(st.bestLevel, r.n)} / ${r.n}`;
+  }
+
+  // ============================================================
   // Armas
   // ============================================================
-  const MAX_WEAPONS = 6;
-
   const WEAPONS = {
     missil: {
       name: 'Estilhaço de Gelo', color: '#5fe8ff', max: 6,
@@ -157,7 +205,7 @@
     facas: {
       name: 'Facas', color: '#d8e0ea', max: 6,
       desc: [
-        'Arremessa facas na direção em que você anda.',
+        'Arremessa facas no inimigo mais próximo.',
         '+1 faca.',
         'Arremessa mais rápido.',
         '+1 faca.',
@@ -223,7 +271,7 @@
   };
 
   // ============================================================
-  // Passivas
+  // Passivas (ocupam espaço)
   // ============================================================
   const PASSIVES = {
     vigor: { name: 'Vitalidade', max: 5, desc: '+20 de vida máxima e cura 20.', apply: () => { player.maxHp += 20; heal(20); } },
@@ -236,19 +284,47 @@
     multi: { name: 'Projéteis', max: 3, desc: '+1 projétil, flecha, faca, lâmina, raio e bola de fogo.', apply: () => { player.extraProj += 1; } },
     precisao: { name: 'Precisão', max: 5, desc: '+6% de chance de dano crítico (dano x2).', apply: () => { player.crit += 0.06; } },
     area: { name: 'Área de Acerto', max: 5, desc: '+12% de área (aura, explosões, lâminas, ondas).', apply: () => { player.areaMul += 0.12; } },
-    sorte: { name: 'Sorte', max: 5, desc: '+1 de Sorte: recompensas raras, mais opções e mais itens.', apply: () => { player.luck += 1; } },
+    sorte: { name: 'Sorte', max: 5, desc: '+1 de Sorte: cartas de nível mais alto, mais opções e mais itens.', apply: () => { player.luck += 1; } },
   };
 
   // ============================================================
-  // Fogueiras (buffs temporários)
+  // Bênçãos das fogueiras (não ocupam espaço; força depende da sorte)
   // ============================================================
-  const TOTEMS = {
-    furia: { name: 'Fogueira da Fúria', color: '#ff4a2a', desc: '+40% de dano', dur: 30 },
-    vento: { name: 'Fogueira do Vento', color: '#4fd8ff', desc: '+30% de velocidade e recarga', dur: 30 },
-    vida: { name: 'Fogueira da Vida', color: '#4fff7a', desc: 'Cura 40% e regenera 4/s', dur: 20 },
-    ima: { name: 'Fogueira do Ímã', color: '#5a8cff', desc: 'Puxa todo o XP do mapa', dur: 0 },
-    sorte: { name: 'Fogueira da Sorte', color: '#ffc83a', desc: '+3 de Sorte', dur: 45 },
+  const BONFIRE_COLOR = '#ff8a2a';
+
+  const BOONS = {
+    dano: { name: 'Fúria Ancestral', icon: 'might', base: 0.08, text: (v) => `+${pct(v)} de dano`, apply: (v) => { player.dmgMul += v; } },
+    recarga: { name: 'Ritmo de Batalha', icon: 'haste', base: 0.05, text: (v) => `Armas ${pct(v)} mais rápidas`, apply: (v) => { player.cdMul *= 1 - v; } },
+    vida: { name: 'Coração de Brasa', icon: 'vigor', base: 15, text: (v) => `+${Math.round(v)} de vida máxima`, apply: (v) => { player.maxHp += Math.round(v); heal(Math.round(v)); } },
+    area: { name: 'Chama Expansiva', icon: 'area', base: 0.07, text: (v) => `+${pct(v)} de área`, apply: (v) => { player.areaMul += v; } },
+    critico: { name: 'Olho do Caçador', icon: 'precisao', base: 0.03, text: (v) => `+${pct(v)} de crítico`, apply: (v) => { player.crit += v; } },
+    velocidade: { name: 'Passos Leves', icon: 'boots', base: 0.05, text: (v) => `+${pct(v)} de velocidade`, apply: (v) => { player.speed *= 1 + v; } },
+    regen: { name: 'Brasas Vivas', icon: 'regen', base: 0.3, text: (v) => `+${v.toFixed(1).replace('.', ',')} de vida por segundo`, apply: (v) => { player.regen += v; } },
+    xp: { name: 'Sabedoria', icon: 'xp', base: 0.08, text: (v) => `+${pct(v)} de XP ganho`, apply: (v) => { player.xpMul += v; } },
+    ima: { name: 'Atração', icon: 'magnet', base: 0.15, text: (v) => `+${pct(v)} de alcance do ímã`, apply: (v) => { player.magnet *= 1 + v; } },
+    moedas: { name: 'Ganância', icon: 'coin', base: 0.15, text: (v) => `+${pct(v)} de moedas`, apply: (v) => { player.coinMul += v; } },
+    armadura: { name: 'Pele de Pedra', icon: 'armor', base: 0.6, text: (v) => `+${v.toFixed(1).replace('.', ',')} de armadura`, apply: (v) => { player.armor += v; } },
+    sorte: { name: 'Bênção da Sorte', icon: 'sorte', base: 0.5, text: (v) => `+${v.toFixed(1).replace('.', ',')} de Sorte`, apply: (v) => { player.luck += v; } },
   };
+
+  const TIERS = [
+    { name: 'Fraca', mul: 0.6, cls: 'weak' },
+    { name: 'Comum', mul: 1, cls: '' },
+    { name: 'Rara', mul: 1.7, cls: 'rare' },
+    { name: 'Épica', mul: 2.6, cls: 'epic' },
+    { name: 'Lendária', mul: 4, cls: 'legend' },
+  ];
+
+  function rollTier() {
+    const L = effLuck();
+    const weights = [Math.max(4, 30 - L * 6), 45, 15 + L * 4, 5 + L * 2.5, 1 + L * 1.2];
+    let r = Math.random() * weights.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < weights.length; i++) {
+      r -= weights[i];
+      if (r <= 0) return i;
+    }
+    return 1;
+  }
 
   // ============================================================
   // Inimigos
@@ -268,8 +344,10 @@
   // ============================================================
   // Estado do jogo
   // ============================================================
-  let state = 'menu';
-  let selectedChar = loadChar();
+  let state = 'home';
+  let inRun = false; // há uma partida em andamento (jogando, pausado ou escolhendo)
+  let settingsReturn = 'home';
+  let selectedChar = save.chars[save.char] ? save.char : 'mago';
   let player;
   let enemies;
   let projectiles;
@@ -283,14 +361,17 @@
   let structures;
   let weapons;
   let passiveLevels;
+  let boonsTaken;
   let time;
   let kills;
+  let runCoins;
   let spawnAcc;
   let nextBoss;
   let nextSwarm;
   let bossesSpawned;
   let pendingLevels;
   let pendingChests;
+  let pendingShrines;
   let structTimer;
   let shake;
   let hurtFlash;
@@ -298,7 +379,6 @@
   let trailT;
   let hpGhost;
   let loadoutKey = '';
-  let buffsKey = '';
   let currentChoices = [];
   let bannerTimer = null;
 
@@ -310,10 +390,11 @@
       hp: C.hp, maxHp: C.hp,
       speed: C.speed, regen: C.regen, armor: C.armor,
       magnet: 90, dmgMul: 1, cdMul: 1, areaMul: 1, extraProj: 0,
+      xpMul: 1, coinMul: 1,
       crit: C.crit, luck: C.luck,
       xp: 0, level: 1, xpNext: xpForLevel(1),
       invuln: 0, facing: 1, dirX: 1, dirY: 0, moving: false, anim: 0,
-      buffs: {}, bossKills: 0,
+      bossKills: 0,
     };
     enemies = [];
     projectiles = [];
@@ -327,14 +408,17 @@
     structures = [];
     weapons = {};
     passiveLevels = {};
+    boonsTaken = {};
     time = 0;
     kills = 0;
+    runCoins = 0;
     spawnAcc = 0;
     nextBoss = BOSS_INTERVAL;
     nextSwarm = 50;
     bossesSpawned = 0;
     pendingLevels = 0;
     pendingChests = 0;
+    pendingShrines = 0;
     structTimer = 0;
     shake = 0;
     hurtFlash = 0;
@@ -342,31 +426,36 @@
     trailT = 0;
     hpGhost = 1;
     loadoutKey = '';
-    buffsKey = '';
   }
 
   function xpForLevel(level) {
     return Math.floor(5 + (level - 1) * 4 + Math.pow(level - 1, 1.6));
   }
 
-  // ---------- Atributos efetivos (com buffs e passivas de personagem) ----------
-  const buffOn = (id) => (player.buffs[id] || 0) > 0;
+  // ---------- Atributos efetivos (com a passiva de cada personagem) ----------
   const golemRage = () => (player.char === 'golem' ? 1 - player.hp / player.maxHp : 0);
-
-  function effDmgMul() {
-    let m = player.dmgMul;
-    if (buffOn('furia')) m *= 1.4;
-    if (player.char === 'golem') m *= 1 + golemRage() * 1.2;
-    return m;
-  }
-  const effCd = () => player.cdMul * (buffOn('vento') ? 0.77 : 1);
-  const effSpeed = () => player.speed * (buffOn('vento') ? 1.3 : 1);
-  const effLuck = () => player.luck + (buffOn('sorte') ? 3 : 0);
-  const effRegen = () => player.regen + (buffOn('vida') ? 4 : 0);
+  const effDmgMul = () => player.dmgMul * (player.char === 'golem' ? 1 + golemRage() * 1.2 : 1);
+  const effCd = () => player.cdMul;
+  const effSpeed = () => player.speed;
+  const effLuck = () => player.luck;
+  const effRegen = () => player.regen;
   const bladeReduction = () => (weapons.laminas ? 0.06 * weapons.laminas.level : 0);
 
   // ============================================================
-  // Entrada (teclado e mouse)
+  // Configurações
+  // ============================================================
+  function applySettings() {
+    const forced = save.settings.quality === 'baixa';
+    if (forced !== lowQuality || save.settings.quality === 'alta') {
+      lowQuality = forced;
+      maxParticles = lowQuality ? 300 : 900;
+      Art.setLowQuality(lowQuality);
+      resize();
+    }
+  }
+
+  // ============================================================
+  // Entrada (teclado, mouse e toque)
   // ============================================================
   const keys = new Set();
 
@@ -422,12 +511,17 @@
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
   function onKey(k) {
-    if (state === 'menu') {
+    if (state === 'home') {
+      if (k === 'enter' || k === ' ') setState('chars');
+    } else if (state === 'chars') {
       if (k === 'enter' || k === ' ') startGame();
+      else if (k === 'escape') setState('home');
       const ids = Object.keys(CHARACTERS);
       const n = Number(k);
       if (n >= 1 && n <= ids.length) selectChar(ids[n - 1]);
-    } else if (state === 'playing' && (k === 'escape' || k === 'p')) setState('paused');
+    } else if (state === 'shop' && k === 'escape') setState('home');
+    else if (state === 'settings' && k === 'escape') setState(settingsReturn);
+    else if (state === 'playing' && (k === 'escape' || k === 'p')) setState('paused');
     else if (state === 'paused' && (k === 'escape' || k === 'p')) setState('playing');
     else if (state === 'levelup' && ['1', '2', '3', '4'].includes(k)) choose(Number(k) - 1);
     else if (state === 'dead' && (k === 'r' || k === 'enter')) startGame();
@@ -436,47 +530,76 @@
   // ============================================================
   // Telas
   // ============================================================
+  const OVERLAYS = { home: 'home', chars: 'chars', shop: 'shop', settings: 'settings', paused: 'pause', levelup: 'levelup', dead: 'gameover' };
+
   function setState(s) {
     state = s;
     if (s !== 'playing') stick.active = false;
-    $('menu').classList.toggle('hidden', s !== 'menu');
-    $('pause').classList.toggle('hidden', s !== 'paused');
-    $('levelup').classList.toggle('hidden', s !== 'levelup');
-    $('gameover').classList.toggle('hidden', s !== 'dead');
-    $('hud').classList.toggle('hidden', s === 'menu');
-    if (s === 'menu') renderMenu();
+    for (const st in OVERLAYS) $(OVERLAYS[st]).classList.toggle('hidden', st !== s);
+    $('hud').classList.toggle('hidden', !inRun);
+    document.querySelectorAll('.coinval').forEach((el) => { el.textContent = save.coins; });
+    if (s === 'home') renderHome();
+    if (s === 'chars') renderChars();
+    if (s === 'shop') renderShop();
+    if (s === 'settings') renderSettings();
     if (s === 'paused') renderStats();
   }
 
-  // ---------- Menu com retratos animados ----------
+  function toast(text) {
+    showBanner(text, '#ffd36b');
+  }
+
+  // ---------- Tela inicial ----------
+  function renderHome() {
+    const st = save.stats;
+    $('best').textContent = st.bestTime > 0
+      ? `Recorde: ${fmtTime(st.bestTime)} · nível ${st.bestLevel} · ${st.bosses} chefões derrotados`
+      : 'Sobreviva às hordas, suba de nível e fique mais forte.';
+  }
+
+  function drawHomeArt(t) {
+    const c = $('homeArt');
+    const g = c.getContext('2d');
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, c.width, c.height);
+    const ids = ['maniaco', 'mago', 'golem'];
+    const xs = [c.width * 0.22, c.width * 0.5, c.width * 0.78];
+    ids.forEach((id, i) => {
+      const s = id === 'golem' ? 3.3 : id === 'mago' ? 4.4 : 3.8;
+      const y = c.height * 0.92;
+      Art.glow(g, xs[i], y - 60, 120, CHARACTERS[id].accent, 0.35);
+      if (save.chars[id]) Art.drawHero(g, id, xs[i], y, s, t + i, i === 2 ? -1 : 1, { rage: 0.5 + Math.sin(t * 2) * 0.5 });
+      else Art.drawHeroSilhouette(g, id, xs[i], y, s, t + i);
+    });
+  }
+
+  // ---------- Escolha de personagem com retratos animados ----------
   let portraits = [];
   let hoverChar = null;
 
-  function renderMenu() {
-    const b = loadBest();
-    $('best').textContent = b.time > 0
-      ? `Recorde: ${fmtTime(b.time)} · nível ${b.level} · ${b.kills} abates`
-      : '';
-    const box = $('chars');
+  function renderChars() {
+    const box = $('charlist');
     box.innerHTML = '';
     portraits = [];
     Object.keys(CHARACTERS).forEach((id, i) => {
       const C = CHARACTERS[id];
+      const locked = !save.chars[id];
       const card = document.createElement('div');
-      card.className = 'card char' + (id === selectedChar ? ' selected' : '');
+      card.className = 'card char' + (id === selectedChar ? ' selected' : '') + (locked ? ' locked' : '');
       card.style.setProperty('--accent', C.accent);
       const bars = Object.entries(C.bars).map(([k, v]) =>
         `<div class="stat"><span>${k}</span><div class="sbar"><i style="width:${v * 100}%"></i></div></div>`).join('');
       card.innerHTML = `
         <canvas class="portrait" width="440" height="360"></canvas>
+        ${locked ? `<div class="lockbadge"><img src="${Art.icon('lock')}" alt=""><span>Desbloqueie na Loja</span></div>` : ''}
         <div class="ctitle">${C.title}</div>
         <div class="name">${C.name}</div>
         <div class="stats">${bars}</div>
         <div class="desc">${C.desc}</div>
         <div class="desc passive">${C.passive}</div>
-        <div class="key">${isTouch ? 'Toque para escolher' : 'Clique ou tecla ' + (i + 1)}</div>`;
+        <div class="key">${locked ? 'Bloqueado' : isTouch ? 'Toque para escolher' : 'Clique ou tecla ' + (i + 1)}</div>`;
       card.addEventListener('click', () => selectChar(id));
-      card.addEventListener('dblclick', () => { selectChar(id); startGame(); });
+      card.addEventListener('dblclick', () => { if (save.chars[id]) { selectChar(id); startGame(); } });
       card.addEventListener('mouseenter', () => { hoverChar = id; });
       card.addEventListener('mouseleave', () => { if (hoverChar === id) hoverChar = null; });
       box.appendChild(card);
@@ -490,10 +613,11 @@
       const C = CHARACTERS[p.id];
       const w = p.c.width;
       const h = p.c.height;
+      const locked = !save.chars[p.id];
       g.setTransform(1, 0, 0, 1, 0, 0);
       const bg = g.createRadialGradient(w / 2, h * 0.55, 10, w / 2, h * 0.55, w * 0.7);
-      bg.addColorStop(0, C.theme[0]);
-      bg.addColorStop(1, C.theme[1]);
+      bg.addColorStop(0, locked ? '#2a2438' : C.theme[0]);
+      bg.addColorStop(1, locked ? '#0c0a12' : C.theme[1]);
       g.fillStyle = bg;
       g.fillRect(0, 0, w, h);
       // partículas de ambiente de cada personagem
@@ -503,24 +627,118 @@
         const x = (seed * 37) % w;
         const y = p.id === 'mago' ? life * h : h - life * h;
         const r = 2 + (i % 3);
-        Art.glow(g, x + Math.sin(t + i) * 10, y, r * 4, C.accent, 0.5 * (1 - Math.abs(life - 0.5) * 2));
+        Art.glow(g, x + Math.sin(t + i) * 10, y, r * 4, locked ? '#6a6080' : C.accent, 0.5 * (1 - Math.abs(life - 0.5) * 2));
       }
       g.fillStyle = 'rgba(0,0,0,0.35)';
       g.beginPath();
       g.ellipse(w / 2, h * 0.86, w * 0.3, h * 0.07, 0, 0, TAU);
       g.fill();
-      Art.glow(g, w / 2, h * 0.86, w * 0.35, C.accent, 0.25);
-      const hovered = hoverChar === p.id;
       const s = p.id === 'golem' ? 4.6 : 5.6;
-      Art.drawHero(g, p.id, w / 2, h * 0.86, s, t, 1, { moving: hovered, rage: p.id === 'golem' ? 0.5 + Math.sin(t * 2) * 0.5 : 0 });
+      if (locked) {
+        Art.drawHeroSilhouette(g, p.id, w / 2, h * 0.86, s, t);
+      } else {
+        Art.glow(g, w / 2, h * 0.86, w * 0.35, C.accent, 0.25);
+        Art.drawHero(g, p.id, w / 2, h * 0.86, s, t, 1, { moving: hoverChar === p.id, rage: p.id === 'golem' ? 0.5 + Math.sin(t * 2) * 0.5 : 0 });
+      }
     }
   }
 
   function selectChar(id) {
+    if (!save.chars[id]) {
+      toast('Desbloqueie esse personagem na Loja');
+      return;
+    }
     selectedChar = id;
-    saveChar(id);
+    save.char = id;
+    persist();
     resetWorld();
-    renderMenu();
+    renderChars();
+  }
+
+  // ---------- Loja ----------
+  function renderShop() {
+    const box = $('shoplist');
+    box.innerHTML = '';
+    const groups = [['Personagens', 'char'], ['Espaços de arma', 'wslot'], ['Espaços de passiva', 'pslot']];
+    for (const [title, kind] of groups) {
+      const h = document.createElement('h3');
+      h.className = 'shophead';
+      h.textContent = title;
+      box.appendChild(h);
+      const row = document.createElement('div');
+      row.className = 'shoprow';
+      for (const item of SHOP.filter((i) => i.kind === kind)) {
+        const owned = item.kind === 'char' ? save.chars[item.id] : save.bought[item.id];
+        const needsOk = !item.needs || save.bought[item.needs];
+        const ok = reqMet(item.req);
+        const afford = save.coins >= item.price;
+        const icon = item.kind === 'char' ? Art.heroIcon(item.id) : Art.icon(item.kind === 'wslot' ? 'might' : 'armor');
+        const card = document.createElement('div');
+        card.className = 'card shopitem' + (owned ? ' owned' : '') + (!owned && (!ok || !needsOk) ? ' blocked' : '');
+        card.style.setProperty('--accent', item.kind === 'char' ? CHARACTERS[item.id].accent : item.kind === 'wslot' ? '#ffd36b' : '#8fd3a0');
+        let status;
+        if (owned) status = '<div class="owned-tag">Comprado</div>';
+        else if (!needsOk) status = '<div class="req">Compre o espaço anterior primeiro</div>';
+        else {
+          const reqHtml = item.req
+            ? `<div class="req ${ok ? 'ok' : ''}">${ok ? '✔' : '🔒'} ${item.req.text}${ok ? '' : ` <b>(${reqProgress(item.req)})</b>`}</div>`
+            : '';
+          status = `${reqHtml}<button class="buy" ${ok && afford ? '' : 'disabled'}><img src="${Art.icon('coin')}" alt="">${item.price}</button>`;
+        }
+        card.innerHTML = `
+          <div class="shopicon ${item.kind === 'char' ? 'hero' : ''}"><img src="${icon}" alt=""></div>
+          <div class="name">${item.name}</div>
+          <div class="desc">${item.desc}</div>
+          ${status}`;
+        const btn = card.querySelector('.buy');
+        if (btn) btn.addEventListener('click', () => buy(item));
+        row.appendChild(card);
+      }
+      box.appendChild(row);
+    }
+    document.querySelectorAll('.coinval').forEach((el) => { el.textContent = save.coins; });
+  }
+
+  function buy(item) {
+    if (save.coins < item.price || !reqMet(item.req) || (item.needs && !save.bought[item.needs])) return;
+    save.coins -= item.price;
+    save.bought[item.id] = true;
+    if (item.kind === 'char') save.chars[item.id] = true;
+    persist();
+    toast(`${item.name} desbloqueado!`);
+    renderShop();
+  }
+
+  // ---------- Configurações ----------
+  const SETTINGS = [
+    { id: 'quality', name: 'Qualidade gráfica', desc: 'Automática reduz sozinha se o aparelho ficar lento.', options: [['auto', 'Automática'], ['alta', 'Alta'], ['baixa', 'Baixa']] },
+    { id: 'shake', name: 'Tremor de tela', desc: 'A tela treme com explosões e golpes.', options: [[true, 'Ligado'], [false, 'Desligado']] },
+    { id: 'numbers', name: 'Números de dano', desc: 'Mostra o dano causado nos inimigos.', options: [[true, 'Ligado'], [false, 'Desligado']] },
+  ];
+
+  function renderSettings() {
+    const box = $('setlist');
+    box.innerHTML = '';
+    for (const opt of SETTINGS) {
+      const row = document.createElement('div');
+      row.className = 'setrow';
+      row.innerHTML = `<div class="setinfo"><b>${opt.name}</b><span>${opt.desc}</span></div><div class="seg"></div>`;
+      const seg = row.querySelector('.seg');
+      for (const [value, label] of opt.options) {
+        const b = document.createElement('button');
+        b.className = 'segbtn' + (save.settings[opt.id] === value ? ' on' : '');
+        b.textContent = label;
+        b.addEventListener('click', () => {
+          save.settings[opt.id] = value;
+          persist();
+          applySettings();
+          renderSettings();
+        });
+        seg.appendChild(b);
+      }
+      box.appendChild(row);
+    }
+    $('resetBtn').classList.toggle('hidden', settingsReturn !== 'home');
   }
 
   function renderStats() {
@@ -528,22 +746,24 @@
     const rows = [
       ['Personagem', C.name],
       ['Vida', `${Math.ceil(player.hp)} / ${player.maxHp}`],
-      ['Dano', `${Math.round(effDmgMul() * 100)}%`],
-      ['Crítico', `${Math.round(player.crit * 100)}%`],
-      ['Recarga', `${Math.round(effCd() * 100)}%`],
-      ['Área', `${Math.round(player.areaMul * 100)}%`],
+      ['Dano', pct(effDmgMul())],
+      ['Crítico', pct(player.crit)],
+      ['Recarga', pct(effCd())],
+      ['Área', pct(player.areaMul)],
       ['Projéteis extras', player.extraProj],
       ['Velocidade', Math.round(effSpeed())],
-      ['Armadura', player.armor],
-      ['Redução de dano', `${Math.round(bladeReduction() * 100)}%`],
+      ['Armadura', +player.armor.toFixed(1)],
+      ['Redução de dano', pct(bladeReduction())],
       ['Regeneração', `${effRegen().toFixed(1)}/s`],
-      ['Sorte', effLuck()],
-      ['Chefões derrotados', player.bossKills],
+      ['Sorte', +effLuck().toFixed(1)],
+      ['XP e moedas', `${pct(player.xpMul)} · ${pct(player.coinMul)}`],
+      ['Espaços', `armas ${Object.keys(weapons).length}/${weaponSlots()} · passivas ${Object.keys(passiveLevels).length}/${passiveSlots()}`],
     ];
     $('pstats').innerHTML = rows.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('');
   }
 
   function startGame() {
+    if (!save.chars[selectedChar]) selectedChar = 'mago';
     // No celular, entra em tela cheia (precisa vir de um toque do jogador).
     const root = document.documentElement;
     if (isTouch && !document.fullscreenElement && root.requestFullscreen) {
@@ -553,6 +773,7 @@
     addWeapon(CHARACTERS[selectedChar].weapon, 1);
     // Uma fogueira perto do início para o jogador descobrir a mecânica.
     spawnStructure('totem', 380);
+    inRun = true;
     setState('playing');
   }
 
@@ -567,30 +788,78 @@
     bannerTimer = setTimeout(() => el.classList.remove('show'), 2600);
   }
 
+  // Fecha a partida: soma moedas, atualiza recordes e objetivos.
+  function endRun() {
+    const minutes = Math.floor(time / 60);
+    const parts = [
+      ['Moedas coletadas', Math.round(runCoins)],
+      [`Tempo (${minutes} min)`, minutes * 10],
+      [`Chefões (${player.bossKills})`, player.bossKills * 25],
+      [`Abates (${kills})`, Math.floor(kills / 25)],
+    ];
+    const total = parts.reduce((a, [, v]) => a + v, 0);
+    const st = save.stats;
+    const newRecord = time > st.bestTime;
+    st.bestTime = Math.max(st.bestTime, time);
+    st.bestLevel = Math.max(st.bestLevel, player.level);
+    st.bestKills = Math.max(st.bestKills, kills);
+    st.bosses += player.bossKills;
+    st.kills += kills;
+    st.runs += 1;
+    save.coins += total;
+    persist();
+    inRun = false;
+    return { parts, total, newRecord };
+  }
+
   function gameOver() {
-    const best = loadBest();
-    const newRecord = time > best.time;
-    if (newRecord) saveBest({ time, level: player.level, kills });
+    const { parts, total, newRecord } = endRun();
     $('stats').innerHTML = `
       <div><span>Personagem</span><b>${CHARACTERS[player.char].name}</b></div>
       <div><span>Tempo sobrevivido</span><b>${fmtTime(time)}</b></div>
       <div><span>Nível alcançado</span><b>${player.level}</b></div>
-      <div><span>Inimigos derrotados</span><b>${kills}</b></div>
-      <div><span>Chefões derrotados</span><b>${player.bossKills}</b></div>
-      <div><span>Recorde</span><b>${fmtTime(Math.max(time, best.time))}</b></div>
-      ${newRecord ? '<p class="new">Novo recorde!</p>' : ''}`;
+      ${newRecord ? '<p class="new">Novo recorde!</p>' : ''}
+      <h3 class="earnhead">Moedas ganhas</h3>
+      ${parts.map(([k, v]) => `<div><span>${k}</span><b>+${v}</b></div>`).join('')}
+      <div class="total"><span>Total</span><b><img src="${Art.icon('coin')}" alt="">+${total}</b></div>`;
     setState('dead');
   }
 
-  $('playBtn').addEventListener('click', startGame);
+  function quitToHome() {
+    if (inRun) {
+      const { total } = endRun();
+      if (total > 0) setTimeout(() => toast(`+${total} moedas`), 50);
+    }
+    inRun = false;
+    resetWorld();
+    setState('home');
+  }
+
+  $('homePlay').addEventListener('click', () => setState('chars'));
+  $('homeShop').addEventListener('click', () => setState('shop'));
+  $('homeSettings').addEventListener('click', () => { settingsReturn = 'home'; setState('settings'); });
+  $('charsBack').addEventListener('click', () => setState('home'));
+  $('charsPlay').addEventListener('click', startGame);
+  $('shopBack').addEventListener('click', () => setState('home'));
+  $('settingsBack').addEventListener('click', () => setState(settingsReturn));
+  $('resetBtn').addEventListener('click', () => {
+    if (!window.confirm('Apagar todo o progresso (moedas, compras e recordes)?')) return;
+    save = defaultSave();
+    persist();
+    selectedChar = 'mago';
+    applySettings();
+    toast('Progresso apagado');
+    renderSettings();
+  });
   $('restartBtn').addEventListener('click', startGame);
   $('resumeBtn').addEventListener('click', () => setState('playing'));
+  $('pauseSettings').addEventListener('click', () => { settingsReturn = 'paused'; setState('settings'); });
   $('pauseBtn').addEventListener('click', () => { if (state === 'playing') setState('paused'); });
-  $('quitBtn').addEventListener('click', () => { resetWorld(); setState('menu'); });
-  $('menuBtn').addEventListener('click', () => { resetWorld(); setState('menu'); });
+  $('quitBtn').addEventListener('click', quitToHome);
+  $('menuBtn').addEventListener('click', quitToHome);
 
   // ============================================================
-  // Subir de nível, baús e recompensas
+  // Subir de nível, baús, fogueiras e recompensas
   // ============================================================
   const RARITY = [
     null,
@@ -613,18 +882,22 @@
     return Math.max(minRarity, rolled);
   }
 
+  // Armas e passivas misturadas, respeitando os espaços livres.
   function buildChoices(isChest) {
     const pool = [];
-    const ownedWeapons = Object.keys(weapons).length;
+    const weaponsFull = Object.keys(weapons).length >= weaponSlots();
+    const passivesFull = Object.keys(passiveLevels).length >= passiveSlots();
     for (const id in WEAPONS) {
       const lv = weapons[id] ? weapons[id].level : 0;
       if (lv >= WEAPONS[id].max) continue;
-      if (lv === 0 && ownedWeapons >= MAX_WEAPONS) continue;
+      if (lv === 0 && weaponsFull) continue;
       pool.push({ kind: 'weapon', id, lv });
     }
     for (const id in PASSIVES) {
       const lv = passiveLevels[id] || 0;
-      if (lv < PASSIVES[id].max) pool.push({ kind: 'passive', id, lv });
+      if (lv >= PASSIVES[id].max) continue;
+      if (lv === 0 && passivesFull) continue;
+      pool.push({ kind: 'passive', id, lv });
     }
     const count = 3 + (Math.random() < effLuck() * 0.08 ? 1 : 0);
     const picks = shuffle(pool).slice(0, count);
@@ -633,16 +906,28 @@
       c.rarity = rollRarity(isChest ? 2 : 1);
       c.gain = Math.min(c.rarity, max - c.lv);
     }
-    if (picks.length === 0) picks.push({ kind: 'heal', id: 'heal', rarity: 1, gain: 1 });
+    if (picks.length === 0) {
+      picks.push({ kind: 'heal', id: 'heal', rarity: 1, gain: 1 });
+      picks.push({ kind: 'gold', id: 'coin', rarity: 1, gain: 1 });
+    }
     return picks;
   }
 
+  function buildBoons() {
+    return shuffle(Object.keys(BOONS)).slice(0, 3).map((id) => {
+      const tier = rollTier();
+      return { kind: 'boon', id, tier, value: BOONS[id].base * TIERS[tier].mul };
+    });
+  }
+
   function openChoices() {
-    const isChest = pendingLevels <= 0 && pendingChests > 0;
-    currentChoices = buildChoices(isChest);
-    currentChoices.isChest = isChest;
-    $('choiceTitle').textContent = isChest ? 'Baú do tesouro!' : 'Subiu de nível!';
-    $('choiceSub').textContent = isChest ? 'Recompensas raras garantidas' : 'Escolha uma recompensa';
+    const mode = pendingLevels > 0 ? 'level' : pendingChests > 0 ? 'chest' : 'shrine';
+    currentChoices = mode === 'shrine' ? buildBoons() : buildChoices(mode === 'chest');
+    currentChoices.mode = mode;
+    $('choiceTitle').textContent = mode === 'chest' ? 'Baú do tesouro!' : mode === 'shrine' ? 'Fogueira acesa' : 'Subiu de nível!';
+    $('choiceSub').textContent = mode === 'chest' ? 'Recompensas raras garantidas'
+      : mode === 'shrine' ? 'Escolha uma bênção (não ocupa espaço). A Sorte deixa as bênçãos mais fortes.'
+        : `Espaços: armas ${Object.keys(weapons).length}/${weaponSlots()} · passivas ${Object.keys(passiveLevels).length}/${passiveSlots()}`;
     const cards = $('cards');
     cards.innerHTML = '';
     currentChoices.forEach((c, i) => {
@@ -650,6 +935,10 @@
       let tag;
       let desc;
       let color;
+      let ribbon = '';
+      let cls = '';
+      let bonus = '';
+      let iconId = c.id;
       if (c.kind === 'weapon') {
         const def = WEAPONS[c.id];
         name = def.name; desc = def.desc[c.lv]; color = def.color;
@@ -658,18 +947,31 @@
         const def = PASSIVES[c.id];
         name = def.name; desc = def.desc; color = '#8fd3a0';
         tag = c.lv === 0 ? 'Nova passiva' : `Passiva · nível ${c.lv + c.gain}`;
+      } else if (c.kind === 'boon') {
+        const def = BOONS[c.id];
+        const tier = TIERS[c.tier];
+        name = def.name; desc = def.text(c.value); color = BONFIRE_COLOR; iconId = def.icon;
+        tag = `Bênção ${tier.name.toLowerCase()}`;
+        cls = tier.cls;
+        ribbon = tier.name;
+      } else if (c.kind === 'gold') {
+        name = 'Saco de Moedas'; tag = 'Tudo no máximo'; desc = '+25 moedas.'; color = '#ffd36b';
       } else {
         name = 'Poção'; tag = 'Consumível'; desc = 'Recupera 40 de vida.'; color = '#ff4f6a';
       }
-      const rar = RARITY[c.rarity];
-      const bonus = c.gain > 1 ? `<div class="bonus">${rar.name}: +${c.gain} níveis de uma vez!</div>` : '';
+      if (c.rarity > 1) {
+        const rar = RARITY[c.rarity];
+        cls = rar.cls;
+        ribbon = rar.name;
+        if (c.gain > 1) bonus = `<div class="bonus">${rar.name}: +${c.gain} níveis de uma vez!</div>`;
+      }
       const card = document.createElement('div');
-      card.className = 'card reward ' + rar.cls;
+      card.className = 'card reward ' + cls;
       card.style.setProperty('--accent', color);
       card.style.animationDelay = (i * 0.07) + 's';
       card.innerHTML = `
-        ${c.rarity > 1 ? `<div class="ribbon">${rar.name}</div>` : ''}
-        <div class="medal"><img src="${Art.icon(c.id)}" alt=""></div>
+        ${ribbon ? `<div class="ribbon">${ribbon}</div>` : ''}
+        <div class="medal"><img src="${Art.icon(iconId)}" alt=""></div>
         <div class="name">${name}</div>
         <div class="tag">${tag}</div>
         <div class="desc">${desc}</div>
@@ -691,16 +993,21 @@
         passiveLevels[c.id] = (passiveLevels[c.id] || 0) + 1;
         PASSIVES[c.id].apply();
       }
-    } else heal(40);
-    if (currentChoices.isChest) pendingChests--;
+    } else if (c.kind === 'boon') {
+      BOONS[c.id].apply(c.value);
+      boonsTaken[c.id] = (boonsTaken[c.id] || 0) + c.value;
+    } else if (c.kind === 'gold') runCoins += 25;
+    else heal(40);
+    if (currentChoices.mode === 'chest') pendingChests--;
+    else if (currentChoices.mode === 'shrine') pendingShrines--;
     else pendingLevels--;
     sparks(player.x, player.y - 15, '#ffd36b', 16, 260);
-    if (pendingLevels > 0 || pendingChests > 0) openChoices();
+    if (pendingLevels > 0 || pendingChests > 0 || pendingShrines > 0) openChoices();
     else setState('playing');
   }
 
   function gainXp(v) {
-    player.xp += v;
+    player.xp += v * player.xpMul;
     while (player.xp >= player.xpNext) {
       player.xp -= player.xpNext;
       player.level++;
@@ -772,7 +1079,7 @@
       const crowded = structures.some((s) => Math.hypot(s.x - x, s.y - y) < 350);
       if (crowded) continue;
       if (kind === 'totem') {
-        structures.push({ kind, type: pick(Object.keys(TOTEMS)), x, y, r: 55, charge: 0, need: 1.5, used: false, fade: 1 });
+        structures.push({ kind, x, y, r: 55, charge: 0, need: 1.5, used: false, fade: 1 });
       } else {
         structures.push({ kind, x, y, r: 70, charge: 0, need: 2.5, used: false, fade: 1 });
       }
@@ -787,7 +1094,7 @@
       structures = structures.filter((s) => Math.hypot(s.x - player.x, s.y - player.y) < 2600 && s.fade > 0);
       const totems = structures.filter((s) => s.kind === 'totem' && !s.used).length;
       const altars = structures.filter((s) => s.kind === 'altar' && !s.used).length;
-      if (totems < 3) spawnStructure('totem');
+      if (totems < 2) spawnStructure('totem');
       if (altars < 1 && time > 20) spawnStructure('altar');
     }
 
@@ -796,7 +1103,7 @@
       // brasas e fumaça só para o que está na tela
       if (near) {
         if (s.kind === 'totem' && !s.used && Math.random() < dt * 14) {
-          fx({ kind: 'dot', add: true, x: s.x + rand(-10, 10), y: s.y - rand(5, 25), vx: rand(-15, 15), vy: rand(-70, -35), life: rand(0.6, 1.2), color: TOTEMS[s.type].color, size: rand(1.5, 3), drag: 0.98 });
+          fx({ kind: 'dot', add: true, x: s.x + rand(-10, 10), y: s.y - rand(5, 25), vx: rand(-15, 15), vy: rand(-70, -35), life: rand(0.6, 1.2), color: BONFIRE_COLOR, size: rand(1.5, 3), drag: 0.98 });
         } else if (s.kind === 'totem' && s.used && Math.random() < dt * 3) {
           smoke(s.x, s.y - 10, 1, '#6a6460');
         } else if (s.kind === 'altar' && !s.used && Math.random() < dt * 10) {
@@ -818,16 +1125,10 @@
   }
 
   function activateTotem(s) {
-    const T = TOTEMS[s.type];
-    sparks(s.x, s.y - 30, T.color, 40, 320);
-    ringFx(s.x, s.y, 80, T.color);
+    sparks(s.x, s.y - 30, BONFIRE_COLOR, 40, 320);
+    ringFx(s.x, s.y, 80, BONFIRE_COLOR);
     smoke(s.x, s.y - 20, 6, '#7a746e');
-    showBanner(`${T.name}: ${T.desc}`, T.color);
-    if (s.type === 'vida') heal(player.maxHp * 0.4);
-    if (s.type === 'ima') {
-      for (const p of pickups) if (p.kind === 'xp') p.pulled = true;
-    }
-    if (T.dur > 0) player.buffs[s.type] = Math.max(player.buffs[s.type] || 0, T.dur);
+    pendingShrines++;
   }
 
   function activateAltar(s) {
@@ -923,8 +1224,12 @@
       e.kby += ky || 0;
     }
     if (Math.random() < 0.5) sparks(e.x, e.y, crit ? '#ffd23f' : '#ffffff', crit ? 5 : 2, 180);
-    addText(e.x, e.y - e.r, crit ? dmg + '!' : dmg, crit ? '#ffd23f' : '#ffffff', crit);
+    if (save.settings.numbers) addText(e.x, e.y - e.r, crit ? dmg + '!' : dmg, crit ? '#ffd23f' : '#ffffff', crit);
     if (e.hp <= 0) killEnemy(e);
+  }
+
+  function coinValue() {
+    return 1 + Math.floor(time / 180);
   }
 
   function killEnemy(e) {
@@ -935,6 +1240,7 @@
     smoke(e.x, e.y, e.boss ? 14 : 1);
     if (e.boss) {
       for (let i = 0; i < 12; i++) dropXp(e.x + rand(-50, 50), e.y + rand(-50, 50), 5);
+      for (let i = 0; i < 8; i++) pickups.push({ kind: 'coin', x: e.x + rand(-60, 60), y: e.y + rand(-60, 60), v: coinValue() * 3 });
       pickups.push({ kind: 'chest', x: e.x, y: e.y });
       pickups.push({ kind: 'heart', x: e.x + 34, y: e.y, v: 50 });
       player.bossKills++;
@@ -947,7 +1253,9 @@
       showBanner('Chefão derrotado! Pegue o baú.', '#ffd36b');
     } else {
       dropXp(e.x, e.y, e.xp);
+      const luck = 1 + effLuck() * 0.1;
       if (Math.random() < 0.012 * (1 + effLuck() * 0.25)) pickups.push({ kind: 'heart', x: e.x, y: e.y, v: 25 });
+      else if (Math.random() < 0.05 * luck) pickups.push({ kind: 'coin', x: e.x + rand(-8, 8), y: e.y + rand(-8, 8), v: coinValue() });
     }
   }
 
@@ -1155,16 +1463,19 @@
     facas(w, lv, dt) {
       w.timer -= dt;
       if (w.timer > 0) return;
+      // Mira sozinha no inimigo mais próximo e corrige a rota em voo.
+      const target = nearestEnemy(player.x, player.y);
+      if (!target) { w.timer = 0.1; return; }
       w.timer = (lv >= 3 ? 0.32 : 0.45) * effCd();
       const n = 1 + (lv >= 2) + (lv >= 4) + (lv >= 6) + player.extraProj;
       const dmg = 7 + 3 * lv + (lv >= 6 ? 5 : 0);
-      const base = Math.atan2(player.dirY, player.dirX);
+      const base = Math.atan2(target.y - player.y, target.x - player.x);
       for (let i = 0; i < n; i++) {
-        const a = base + (i - (n - 1) / 2) * 0.12 + rand(-0.04, 0.04);
+        const a = base + (i - (n - 1) / 2) * 0.14 + rand(-0.04, 0.04);
         projectiles.push({
-          kind: 'knife', x: player.x, y: player.y - 12,
+          kind: 'knife', x: player.x, y: player.y - 12, speed: 620,
           vx: Math.cos(a) * 620, vy: Math.sin(a) * 620,
-          r: 5, dmg, pierce: lv >= 5 ? 1 : 0, life: 0.7, hit: new Set(),
+          r: 5, dmg, pierce: lv >= 5 ? 1 : 0, life: 0.8, hit: new Set(), target, turn: 6,
         });
       }
     },
@@ -1310,8 +1621,8 @@
 
   function updateProjectiles(dt) {
     for (const p of projectiles) {
-      // Flecha: persegue o alvo até acertar o primeiro; depois segue reto atravessando.
-      if (p.kind === 'arrow' && p.hit.size === 0) {
+      // Flechas e facas perseguem o alvo até acertar o primeiro; depois seguem reto atravessando.
+      if ((p.kind === 'arrow' || p.kind === 'knife') && p.hit.size === 0) {
         if (!p.target || p.target.dead) p.target = nearestEnemy(p.x, p.y, p.hit, 500);
         if (p.target) steer(p, p.target, dt);
       }
@@ -1402,7 +1713,7 @@
   }
 
   // ============================================================
-  // Itens no chão (XP, corações e baús)
+  // Itens no chão (XP, moedas, corações e baús)
   // ============================================================
   function updatePickups(dt) {
     const magnet2 = player.magnet * player.magnet;
@@ -1425,6 +1736,9 @@
         if (p.kind === 'xp') {
           gainXp(p.v);
           if (Math.random() < 0.3) sparks(player.x, player.y - 10, '#7fe0ff', 2, 120);
+        } else if (p.kind === 'coin') {
+          runCoins += p.v * player.coinMul;
+          sparks(player.x, player.y - 10, '#ffd36b', 4, 140);
         } else if (p.kind === 'chest') {
           pendingChests++;
           sparks(p.x, p.y, '#ffd36b', 40, 360);
@@ -1475,7 +1789,6 @@
     player.anim += dt;
     player.invuln -= dt;
     heal(effRegen() * dt);
-    for (const id in player.buffs) player.buffs[id] = Math.max(0, player.buffs[id] - dt);
     updateTrail(dt);
 
     updateSpawning(dt);
@@ -1489,7 +1802,7 @@
     if (state !== 'playing') return; // morreu durante este quadro
     updatePickups(dt);
 
-    if (pendingLevels > 0 || pendingChests > 0) openChoices();
+    if (pendingLevels > 0 || pendingChests > 0 || pendingShrines > 0) openChoices();
   }
 
   // Rastros do personagem: poeira ao andar e efeitos próprios de cada um.
@@ -1545,8 +1858,6 @@
     const p = player;
     ctx.save();
     if (p.invuln > 0 && Math.floor(p.invuln * 20) % 2 === 0) ctx.globalAlpha = 0.45;
-    if (buffOn('furia')) Art.glow(ctx, p.x, p.y - 15, 40, '#ff4a2a', 0.35);
-    if (buffOn('vento')) Art.glow(ctx, p.x, p.y - 15, 40, '#4fd8ff', 0.3);
     Art.drawHero(ctx, p.char, p.x, p.y, 1.15, p.anim, p.facing, { moving: p.moving, rage: golemRage() });
     ctx.restore();
     const bw = 36;
@@ -1583,9 +1894,9 @@
   function drawStructureLabel(s) {
     const d = Math.hypot(s.x - player.x, s.y - player.y);
     if (s.used || d > 240) return;
-    const label = s.kind === 'totem' ? TOTEMS[s.type].name : 'Altar de Invocação';
-    const sub = s.kind === 'totem' ? TOTEMS[s.type].desc : 'Invoca um chefão';
-    const color = s.kind === 'totem' ? TOTEMS[s.type].color : '#ff3355';
+    const label = s.kind === 'totem' ? 'Fogueira' : 'Altar de Invocação';
+    const sub = s.kind === 'totem' ? 'Fique perto para escolher uma bênção' : 'Invoca um chefão';
+    const color = s.kind === 'totem' ? BONFIRE_COLOR : '#ff3355';
     const y = s.y - (s.kind === 'totem' ? 100 : 64);
     ctx.globalAlpha = clamp((240 - d) / 80, 0, 1);
     ctx.textAlign = 'center';
@@ -1605,9 +1916,8 @@
   function drawStructureGround(s) {
     ctx.globalAlpha = clamp(s.fade, 0, 1);
     if (s.kind === 'totem') {
-      const color = TOTEMS[s.type].color;
       // círculo de ativação no chão
-      ctx.strokeStyle = s.used ? 'rgba(120,120,120,0.4)' : Art.rgba(color, 0.55);
+      ctx.strokeStyle = s.used ? 'rgba(120,120,120,0.4)' : Art.rgba(BONFIRE_COLOR, 0.55);
       ctx.lineWidth = 2;
       ctx.setLineDash([10, 8]);
       ctx.lineDashOffset = -time * 20;
@@ -1615,13 +1925,13 @@
       ctx.ellipse(s.x, s.y, s.r, s.r * 0.6, 0, 0, TAU);
       ctx.stroke();
       ctx.setLineDash([]);
-      Art.bonfireGround(ctx, s.x, s.y, time, color, !s.used);
+      Art.bonfireGround(ctx, s.x, s.y, time, BONFIRE_COLOR, !s.used);
     } else {
       Art.altar(ctx, s.x, s.y, s.r, time, s.used);
     }
     if (!s.used && s.charge > 0) {
       const k = s.charge / s.need;
-      Art.glow(ctx, s.x, s.y, s.r * 1.5, s.kind === 'totem' ? TOTEMS[s.type].color : '#ff3355', k * 0.6);
+      Art.glow(ctx, s.x, s.y, s.r * 1.5, s.kind === 'totem' ? BONFIRE_COLOR : '#ff3355', k * 0.6);
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 5;
       ctx.beginPath();
@@ -1642,12 +1952,12 @@
       const m = 34;
       const c = Math.cos(a);
       const n = Math.sin(a);
-      // A faixa de cima fica livre para o HUD (vida, armas e buffs).
+      // A faixa de cima fica livre para o HUD.
       const top = 160;
       const t = Math.min((W / 2 - m) / (Math.abs(c) || 1e-6), ((H - top - m) / 2) / (Math.abs(n) || 1e-6));
       const sx = W / 2 + c * t;
       const sy = (top + H - m) / 2 + n * t;
-      const color = s.kind === 'totem' ? TOTEMS[s.type].color : '#ff3355';
+      const color = s.kind === 'totem' ? BONFIRE_COLOR : '#ff3355';
       const pulse = 1 + Math.sin(time * 5) * 0.08;
       Art.glow(ctx, sx, sy, 26, color, 0.5);
       ctx.save();
@@ -1673,7 +1983,6 @@
       if (s.kind === 'totem') {
         Art.flame(ctx, sx, sy + 6, 4.5, 14 + Math.sin(time * 12) * 2, 0, color, '#fff3b0');
       } else {
-        ctx.fillStyle = color;
         ctx.beginPath();
         for (let i = 0; i <= 5; i++) {
           const ang = -Math.PI / 2 + (i * 2 * TAU) / 5;
@@ -1786,11 +2095,13 @@
   }
 
   function render() {
-    const sx = shake > 0 ? rand(-shake, shake) : 0;
-    const sy = shake > 0 ? rand(-shake, shake) : 0;
+    const sh = save.settings.shake ? shake : 0;
+    const sx = sh > 0 ? rand(-sh, sh) : 0;
+    const sy = sh > 0 ? rand(-sh, sh) : 0;
     const camX = player.x - W / 2 + sx;
     const camY = player.y - H / 2 + sy;
     const onScreen = (x, y, m) => x > camX - m && x < camX + W + m && y > camY - m && y < camY + H + m;
+    const showPlayer = inRun;
 
     ctx.save();
     ctx.translate(-camX, -camY);
@@ -1845,6 +2156,7 @@
     for (const p of pickups) {
       if (p.kind === 'chest' || !onScreen(p.x, p.y, 30)) continue;
       if (p.kind === 'xp') Art.drawGem(ctx, p, time);
+      else if (p.kind === 'coin') Art.drawCoin(ctx, p, time);
       else Art.drawHeart(ctx, p, time);
     }
 
@@ -1853,13 +2165,13 @@
     for (const e of enemies) if (onScreen(e.x, e.y, 80)) list.push({ y: e.y, e });
     for (const s of structures) if (s.kind === 'totem' && onScreen(s.x, s.y, 120)) list.push({ y: s.y, s });
     for (const p of pickups) if (p.kind === 'chest' && onScreen(p.x, p.y, 80)) list.push({ y: p.y, c: p });
-    if (state !== 'menu') list.push({ y: player.y, player: true });
+    if (showPlayer) list.push({ y: player.y, player: true });
     list.sort((a, b) => a.y - b.y);
     for (const o of list) {
       if (o.e) drawEnemyFull(o.e);
       else if (o.s) {
         ctx.globalAlpha = clamp(o.s.fade, 0, 1);
-        Art.bonfireTop(ctx, o.s.x, o.s.y, time, TOTEMS[o.s.type].color, !o.s.used);
+        Art.bonfireTop(ctx, o.s.x, o.s.y, time, BONFIRE_COLOR, !o.s.used);
         ctx.globalAlpha = 1;
       } else if (o.c) Art.drawChest(ctx, o.c.x, o.c.y, time);
       else drawPlayer();
@@ -1938,7 +2250,7 @@
     drawParticles(true);
 
     // coluna de luz ao subir de nível
-    if (levelFx > 0 && state !== 'menu') {
+    if (levelFx > 0 && showPlayer) {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       const gr = ctx.createLinearGradient(0, player.y - 220, 0, player.y);
@@ -1950,7 +2262,7 @@
       Art.glow(ctx, player.x, player.y - 10, 70, '#ffd36b', levelFx);
     }
 
-    for (const s of structures) if (onScreen(s.x, s.y, 160)) drawStructureLabel(s);
+    if (showPlayer) for (const s of structures) if (onScreen(s.x, s.y, 160)) drawStructureLabel(s);
 
     // números de dano com "pulo" ao aparecer
     ctx.textAlign = 'center';
@@ -1971,7 +2283,7 @@
 
     // ---------- Tela ----------
     Art.vignette(ctx, W, H);
-    if (state !== 'menu') {
+    if (inRun) {
       const low = player.hp / player.maxHp < 0.3 ? (0.3 - player.hp / player.maxHp) / 0.3 : 0;
       const red = Math.max(hurtFlash * 0.6, low * (0.35 + Math.sin(time * 6) * 0.15));
       if (red > 0) {
@@ -2024,6 +2336,7 @@
     $('hptext').textContent = Math.ceil(player.hp) + ' / ' + player.maxHp;
     $('timer').textContent = fmtTime(time);
     $('kills').textContent = kills;
+    $('runcoins').textContent = Math.round(runCoins);
 
     const key = JSON.stringify([weapons, passiveLevels].map((o) => Object.entries(o).map(([k, v]) => k + (v.level || v))));
     if (key !== loadoutKey) {
@@ -2032,23 +2345,19 @@
         const pips = Array.from({ length: max }, (_, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('');
         return `<div class="slot ${cls}" title="${name} · nível ${lv}"><img src="${Art.icon(id)}" alt=""><div class="pips">${pips}</div></div>`;
       };
+      // Espaços vazios aparecem tracejados; os ainda não comprados, com cadeado.
+      const empty = (n, cls) => `<div class="slot empty ${cls}"></div>`.repeat(Math.max(0, n));
+      const locked = (n) => `<div class="slot lockedslot"><img src="${Art.icon('lock')}" alt=""></div>`.repeat(Math.max(0, n));
+      const wN = Object.keys(weapons).length;
+      const pN = Object.keys(passiveLevels).length;
       let html = '<div class="row">';
       for (const id in weapons) html += slot(id, WEAPONS[id].name, weapons[id].level, WEAPONS[id].max, 'weapon');
+      html += empty(weaponSlots() - wN, 'weapon') + locked(MAX_WEAPON_SLOTS - weaponSlots());
       html += '</div><div class="row">';
       for (const id in passiveLevels) html += slot(id, PASSIVES[id].name, passiveLevels[id], PASSIVES[id].max, '');
+      html += empty(passiveSlots() - pN, '') + locked(MAX_PASSIVE_SLOTS - passiveSlots());
       html += '</div>';
       $('loadout').innerHTML = html;
-    }
-
-    const active = Object.keys(player.buffs).filter((id) => player.buffs[id] > 0);
-    const bkey = active.map((id) => id + Math.ceil(player.buffs[id])).join();
-    if (bkey !== buffsKey) {
-      buffsKey = bkey;
-      $('buffs').innerHTML = active.map((id) => {
-        const T = TOTEMS[id];
-        const k = player.buffs[id] / T.dur;
-        return `<div class="buff" style="--c:${T.color}"><span>${T.desc}</span><b>${Math.ceil(player.buffs[id])}s</b><i style="width:${k * 100}%"></i></div>`;
-      }).join('');
     }
   }
 
@@ -2059,10 +2368,10 @@
   let fpsAvg = 60;
   let slowT = 0;
 
-  // Se o aparelho não aguentar (menos de ~40 quadros por segundo por alguns segundos),
-  // reduz resolução, partículas e brilhos.
+  // Na qualidade automática, se o aparelho não aguentar (menos de ~40 quadros por
+  // segundo por alguns segundos), reduz resolução, partículas e brilhos.
   function watchPerformance(rawDt) {
-    if (lowQuality || state !== 'playing' || rawDt <= 0 || rawDt > 0.5) return;
+    if (save.settings.quality !== 'auto' || lowQuality || state !== 'playing' || rawDt <= 0 || rawDt > 0.5) return;
     fpsAvg += (1 / rawDt - fpsAvg) * 0.05;
     slowT = fpsAvg < 40 ? slowT + rawDt : Math.max(0, slowT - rawDt);
     if (slowT > 3) {
@@ -2081,12 +2390,13 @@
     if (state === 'playing') {
       update(dt);
       updateEffects(dt);
-    } else if (state === 'menu') {
-      // No menu a câmera passeia devagar pelo mapa.
+    } else if (!inRun && state !== 'dead') {
+      // Nos menus a câmera passeia devagar pelo mapa.
       player.x += 30 * dt;
       player.y += 12 * dt;
       time += dt;
-      drawPortraits(now / 1000);
+      if (state === 'home') drawHomeArt(now / 1000);
+      if (state === 'chars') drawPortraits(now / 1000);
     } else {
       // Pausado, escolhendo recompensa ou morto: os efeitos terminam suavemente.
       updateEffects(dt * 0.3);
@@ -2095,8 +2405,9 @@
     requestAnimationFrame(frame);
   }
 
+  applySettings();
   resetWorld();
-  setState('menu');
+  setState('home');
   requestAnimationFrame(frame);
 
   // Acesso para testes no console do navegador.
@@ -2106,8 +2417,9 @@
     get enemies() { return enemies; },
     get structures() { return structures; },
     get weapons() { return weapons; },
+    get save() { return save; },
     get lowQuality() { return lowQuality; },
     get zoom() { return zoom; },
-    gainXp, startGame, addWeapon, spawnBoss, spawnEnemy, selectChar,
+    gainXp, startGame, addWeapon, spawnBoss, spawnEnemy, selectChar, persist,
   };
 })();

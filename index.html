@@ -7,7 +7,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Jogo Teste</title>
+  <title>Survivor Browser</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -29,30 +29,65 @@
     </div>
     <div id="timer">00:00</div>
     <div id="topright">
-      <div id="killbox"><span class="skull">☠</span><span id="kills">0</span></div>
+      <div class="pill"><span class="coin-ico"></span><span id="runcoins">0</span></div>
+      <div class="pill"><span class="skull">☠</span><span id="kills">0</span></div>
       <button id="pauseBtn" title="Pausar (Esc)">❚❚</button>
     </div>
-    <div id="buffs"></div>
   </div>
 
   <div id="banner"></div>
 
-  <div id="menu" class="overlay">
-    <div class="panel wide">
-      <h1>Jogo Teste</h1>
-      <p class="subtitle">Sobreviva às hordas, suba de nível e fique mais forte.</p>
-      <h3>Escolha seu personagem</h3>
-      <div id="chars"></div>
+  <!-- Tela inicial -->
+  <div id="home" class="overlay">
+    <div class="homebox">
+      <div class="coinbadge"><span class="coin-ico"></span><span class="coinval">0</span></div>
+      <h1 class="logo"><span>Survivor</span><span>Browser</span></h1>
+      <canvas id="homeArt" width="720" height="260"></canvas>
+      <p id="best" class="best"></p>
+      <div class="homebtns">
+        <button id="homePlay" class="big">Jogar</button>
+        <button id="homeShop" class="secondary">Loja</button>
+        <button id="homeSettings" class="secondary">Configurações</button>
+      </div>
       <ul class="controls">
         <li class="pc-only"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>, setas ou arrastar o mouse: mover · ataques automáticos</li>
-        <li class="pc-only">Mouse ou <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd>: escolher personagem e recompensas</li>
         <li class="touch-only">Toque e arraste em qualquer lugar para mover · ataques automáticos</li>
-        <li>Fique parado numa <b class="fire">fogueira</b> para ganhar um buff · num <b class="blood">altar</b> para invocar um chefão</li>
-        <li class="pc-only"><kbd>Esc</kbd> ou <kbd>P</kbd>: pausar</li>
-        <li class="touch-only">Botão ❚❚ no canto: pausar</li>
+        <li>Fique numa <b class="fire">fogueira</b> para escolher uma bênção · num <b class="blood">altar</b> para invocar um chefão</li>
       </ul>
-      <p id="best" class="best"></p>
-      <button id="playBtn">Jogar</button>
+    </div>
+  </div>
+
+  <!-- Escolha de personagem -->
+  <div id="chars" class="overlay hidden">
+    <div class="panel wide">
+      <h2>Escolha seu personagem</h2>
+      <p class="subtitle">Personagens novos são liberados na Loja</p>
+      <div id="charlist"></div>
+      <div class="btnrow">
+        <button id="charsBack" class="secondary">Voltar</button>
+        <button id="charsPlay">Começar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loja -->
+  <div id="shop" class="overlay hidden">
+    <div class="panel wide">
+      <div class="coinbadge"><span class="coin-ico"></span><span class="coinval">0</span></div>
+      <h2>Loja</h2>
+      <p class="subtitle">Ganhe moedas nas partidas e cumpra objetivos para liberar novos itens</p>
+      <div id="shoplist"></div>
+      <button id="shopBack" class="secondary">Voltar</button>
+    </div>
+  </div>
+
+  <!-- Configurações -->
+  <div id="settings" class="overlay hidden">
+    <div class="panel">
+      <h2>Configurações</h2>
+      <div id="setlist"></div>
+      <button id="settingsBack">Voltar</button>
+      <button id="resetBtn" class="danger">Apagar progresso</button>
     </div>
   </div>
 
@@ -69,7 +104,8 @@
       <h2>Pausado</h2>
       <div id="pstats"></div>
       <button id="resumeBtn">Continuar</button>
-      <button id="quitBtn" class="secondary">Voltar ao menu</button>
+      <button id="pauseSettings" class="secondary">Configurações</button>
+      <button id="quitBtn" class="secondary">Sair e receber moedas</button>
     </div>
   </div>
 
@@ -78,7 +114,7 @@
       <h2 class="danger">Você morreu</h2>
       <div id="stats"></div>
       <button id="restartBtn">Jogar de novo (R)</button>
-      <button id="menuBtn" class="secondary">Voltar ao menu</button>
+      <button id="menuBtn" class="secondary">Menu inicial</button>
     </div>
   </div>
 

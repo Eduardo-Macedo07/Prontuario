@@ -1256,7 +1256,98 @@ const Art = (() => {
       g.stroke();
     },
     heal(g) { ICONS.vigor(g); },
+    xp(g) {
+      glow(g, 0, 0, 26, '#4fc9ff', 0.6);
+      const k = 3;
+      poly(g, [0, -5.5 * k, 5.5 * k * 0.7, -1 * k, 0, 5 * k, -5.5 * k * 0.7, -1 * k], '#4fc9ff', 2);
+      poly(g, [0, -5.5 * k, 5.5 * k * 0.7, -1 * k, 0, -0.5 * k], light('#4fc9ff', 0.45), 0);
+      poly(g, [0, -0.5 * k, 5.5 * k * 0.7, -1 * k, 0, 5 * k], dark('#4fc9ff', 0.3), 0);
+      path(g, [0, -5.5 * k, 5.5 * k * 0.7, -1 * k, 0, 5 * k, -5.5 * k * 0.7, -1 * k]);
+      outline(g, 2);
+    },
+    coin(g) {
+      glow(g, 0, 0, 26, '#ffd36b', 0.5);
+      ball(g, 0, 0, 16, '#f2c443', 2.2);
+      g.strokeStyle = '#a8761e';
+      g.lineWidth = 2;
+      g.beginPath();
+      g.arc(0, 0, 10.5, 0, TAU);
+      g.stroke();
+      g.fillStyle = '#a8761e';
+      g.font = '900 15px sans-serif';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText('$', 0, 1);
+    },
+    lock(g) {
+      g.strokeStyle = OUT;
+      g.lineWidth = 7;
+      g.beginPath();
+      g.arc(0, -4, 9, Math.PI, 0);
+      g.lineTo(9, 2);
+      g.moveTo(-9, 2);
+      g.lineTo(-9, -4);
+      g.stroke();
+      g.strokeStyle = '#c9d0da';
+      g.lineWidth = 3.5;
+      g.stroke();
+      poly(g, [-14, 0, 14, 0, 14, 20, -14, 20], lin(g, 0, 0, 0, 20, '#ffd36b', '#b8862a'), 2);
+      ball(g, 0, 8, 3, '#3a2a10', 0, false);
+      g.fillStyle = '#3a2a10';
+      g.fillRect(-1.2, 8, 2.4, 6);
+    },
   };
+
+  // Moeda girando no chão.
+  const coinSprite = () => sprite('coin', 24, (g) => {
+    ball(g, 0, 0, 7, '#f2c443', 1.6);
+    g.strokeStyle = '#a8761e';
+    g.lineWidth = 1.2;
+    g.beginPath();
+    g.arc(0, 0, 4.5, 0, TAU);
+    g.stroke();
+  });
+
+  function drawCoin(g, p, t) {
+    const spin = Math.max(0.2, Math.abs(Math.cos(t * 5 + p.x * 0.05)));
+    glow(g, p.x, p.y, 12, '#ffd36b', 0.35);
+    blit(g, coinSprite(), p.x, p.y + Math.sin(t * 4 + p.y) * 1.5, spin, 1);
+  }
+
+  // Silhueta escura de um personagem (para os bloqueados).
+  let silCanvas = null;
+  function drawHeroSilhouette(g, id, x, y, s, t) {
+    const size = 420;
+    if (!silCanvas) {
+      silCanvas = document.createElement('canvas');
+      silCanvas.width = silCanvas.height = size;
+    }
+    const c = silCanvas.getContext('2d');
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.globalCompositeOperation = 'source-over';
+    c.clearRect(0, 0, size, size);
+    drawHero(c, id, size / 2, size * 0.9, s, t, 1, {});
+    c.globalCompositeOperation = 'source-atop';
+    c.fillStyle = '#07050c';
+    c.fillRect(0, 0, size, size);
+    c.globalCompositeOperation = 'source-over';
+    g.drawImage(silCanvas, x - size / 2, y - size * 0.9);
+  }
+
+  // Retrato parado de um personagem, como imagem (para a loja).
+  const heroUrls = new Map();
+  function heroIcon(id) {
+    let url = heroUrls.get(id);
+    if (!url) {
+      const c = document.createElement('canvas');
+      c.width = c.height = 200;
+      const g = c.getContext('2d');
+      drawHero(g, id, 100, 182, id === 'golem' ? 3.6 : 4.4, 0.4, 1, { rage: 0.4 });
+      url = c.toDataURL();
+      heroUrls.set(id, url);
+    }
+    return url;
+  }
 
   const iconUrls = new Map();
   function icon(id) {
@@ -1278,7 +1369,7 @@ const Art = (() => {
     TAU, OUT,
     mix, light, dark, rgba,
     outline, ball, oval, poly, path, lin, shadow, glow, flame, sprite, blit,
-    drawHero, drawEnemy, drawGem, drawHeart, drawChest,
+    drawHero, drawHeroSilhouette, heroIcon, drawEnemy, drawGem, drawHeart, drawChest, drawCoin,
     bonfireGround, bonfireTop, altar,
     drawGround, vignette, icon, setLowQuality,
   };

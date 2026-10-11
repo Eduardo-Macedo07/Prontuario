@@ -1,6 +1,6 @@
 {
-  "name": "Jogo Teste",
-  "short_name": "Jogo Teste",
+  "name": "Survivor Browser",
+  "short_name": "Survivor",
   "start_url": "./",
   "display": "fullscreen",
   "orientation": "any",

@@ -1,23 +1,44 @@
-# Jogo Teste
+# Survivor Browser
 
 Jogo de navegador no estilo *roguelite* com visão de cima (inspirado em Megabonk e Vampire Survivors).
-Sobreviva às hordas, colete gemas de XP, suba de nível e escolha recompensas. Se morrer, começa de novo.
+Sobreviva às hordas, colete gemas de XP, suba de nível e escolha recompensas. Se morrer, começa de novo,
+mas as moedas ganhas ficam para comprar personagens e espaços na Loja.
 
 ## Como jogar
 
 - **PC:** abra o arquivo `index.html` no navegador (Chrome, Edge ou Firefox). Não precisa instalar nada.
 - **Celular:** abra o link do GitHub Pages (https://eduardo-macedo07.github.io/Prontuario/) e toque e arraste
   em qualquer lugar da tela para mover. Dá para usar "Adicionar à tela inicial" para abrir como um app.
-  Se o aparelho ficar lento, o jogo reduz a qualidade sozinho.
 
-| Tecla | Ação |
+| Controle | Ação |
 | --- | --- |
 | `W` `A` `S` `D`, setas ou tocar/clicar e arrastar | Mover |
-| Mouse ou `1` `2` `3` `4` | Escolher personagem (no menu) e recompensa |
+| Mouse, toque ou `1` `2` `3` `4` | Escolher personagem e recompensas |
 | `Esc`, `P` ou botão ❚❚ | Pausar (mostra seus atributos) |
-| `R` | Recomeçar depois de morrer |
 
-Os ataques são automáticos.
+Todas as armas atacam e miram sozinhas.
+
+## Progressão
+
+- **Espaços:** cada partida começa com 3 espaços de arma (a inicial + 2) e 2 de passiva.
+  A Loja libera até 5 de arma e 4 de passiva.
+- **Subir de nível:** armas e passivas aparecem misturadas e aleatórias. A Sorte faz cartas raras (+2 níveis)
+  e épicas (+3) aparecerem mais, e às vezes dá uma 4ª opção.
+- **Fogueiras:** fique perto para escolher 1 de 3 bênçãos (não ocupam espaço). Elas vão de fraca a lendária,
+  e quanto mais Sorte, mais fortes.
+- **Altares:** invocam um chefão. Todo chefão deixa um baú com recompensas raras.
+- **Moedas:** caem dos inimigos e somam bônus por tempo, chefões e abates ao fim da partida.
+
+## Loja
+
+| Item | Preço | Objetivo |
+| --- | --- | --- |
+| Maníaco | 250 | — |
+| Golem de Pedra | 400 | Derrotar 1 chefão |
+| Espaço de arma (4º) | 200 | Sobreviver 5 minutos |
+| Espaço de arma (5º) | 600 | Derrotar 3 chefões no total |
+| Espaço de passiva (3º) | 150 | Alcançar o nível 15 |
+| Espaço de passiva (4º) | 500 | Sobreviver 10 minutos |
 
 ## Personagens
 
@@ -27,44 +48,22 @@ Os ataques são automáticos.
 | **Maníaco** (bobo da corte) | Muito rápido e frágil, começa com Facas | +1% de crítico a cada nível |
 | **Golem de Pedra** | Muita vida e armadura, lento, começa com Tremor | Mais dano quanto menor a vida (até +120%) |
 
-## Arsenal (até 6 armas, cada uma até o nível 6)
+## Arsenal (cada arma até o nível 6)
 
-- **Estilhaço de Gelo**: dispara no inimigo mais próximo.
-- **Arco Caçador**: flechas teleguiadas que perfuram e seguem para os inimigos de trás.
-- **Facas**: arremessadas na direção em que você anda.
-- **Raio em Cadeia**: ricocheteia de inimigo em inimigo.
-- **Bola de Fogo**: explode em área; no nível 6 deixa o chão em chamas.
-- **Lâminas Orbitais**: giram ao seu redor e reduzem 6% do dano recebido por nível (até 36%).
-- **Aura Sagrada**: fere inimigos próximos.
-- **Tremor de Pedra**: onda de choque que empurra.
+Estilhaço de Gelo, Arco Caçador (flechas teleguiadas que perfuram), Facas (teleguiadas), Raio em Cadeia
+(ricocheteia), Bola de Fogo (explosão em área), Lâminas Orbitais (reduzem o dano recebido), Aura Sagrada e
+Tremor de Pedra.
 
-## Passivas
+## Configurações
 
-Vitalidade, Botas Ágeis, Força, Pressa, Ímã, Regeneração, Armadura, **Projéteis** (+1 projétil em todas as armas),
-**Precisão** (chance de crítico), **Área de Acerto** (aumenta aura, explosões, lâminas e ondas) e **Sorte**.
-
-**Sorte** aumenta a chance de recompensas raras (+2 níveis de uma vez) e épicas (+3), a chance de aparecer uma
-4ª opção e a chance de cair coração dos inimigos.
-
-## Mapa
-
-- **Fogueiras** (com uma espada fincada, a cor da chama indica o buff): fique parado no círculo para ganhar
-  Fúria, Vento, Vida, Ímã ou Sorte.
-- **Altares**: fique parado no altar para invocar um chefão.
-- Setas na borda da tela apontam para fogueiras e altares fora de vista.
-- Todo chefão derrotado deixa um **baú** com recompensas raras garantidas.
-- Enxames a cada 50 segundos e um chefão a cada 3 minutos (Rei Ogro ou Lich, que invoca esqueletos).
-
-## Visual
-
-Tudo é desenhado por código no canvas, sem imagens: personagens e inimigos em estilo cartoon com contorno,
-sombreado e brilho, chão gerado em blocos, luzes aditivas, partículas, tremor de tela e números de dano.
+Qualidade gráfica (automática, alta ou baixa), tremor de tela, números de dano e apagar progresso.
+O progresso fica salvo no navegador.
 
 ## Estrutura
 
 ```
-index.html   telas (menu, HUD, recompensas, pausa, fim de jogo)
+index.html   telas (inicial, personagens, loja, configurações, HUD, recompensas, pausa, fim de jogo)
 style.css    visual das telas
 js/art.js    desenhos: personagens, inimigos, fogueiras, altar, itens, chão e ícones
-js/game.js   lógica do jogo (laço, armas, inimigos, estruturas, efeitos e interface)
+js/game.js   lógica do jogo (laço, armas, inimigos, loja, progresso, efeitos e interface)
 ```

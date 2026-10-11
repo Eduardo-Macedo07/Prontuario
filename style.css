@@ -104,27 +104,22 @@ body.touch .pc-only { display: none; }
 }
 
 #topright { position: absolute; top: 20px; right: max(16px, env(safe-area-inset-right)); display: flex; gap: 10px; align-items: center; }
-#killbox {
+.pill {
   display: flex; align-items: center; gap: 8px; padding: 6px 14px;
   background: rgba(15,12,25,.75); border: 2px solid #3d3556; border-radius: 20px;
   font-weight: 900; font-size: 18px; text-shadow: 0 2px 0 #000;
 }
-#killbox .skull { color: #ff6b7a; }
+.pill .skull { color: #ff6b7a; }
+.coin-ico {
+  display: inline-block; width: 18px; height: 18px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff3c0, #f2c443 45%, #a8761e);
+  border: 2px solid #1a1222; box-shadow: inset 0 0 0 2px rgba(168,118,30,.6);
+}
 
 #pauseBtn {
   pointer-events: auto; width: 42px; height: 42px; margin: 0; padding: 0;
   font-size: 14px; letter-spacing: -2px; border-radius: 50%;
 }
-
-#buffs { position: absolute; top: 76px; right: 16px; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
-.buff {
-  position: relative; overflow: hidden; display: flex; gap: 10px; align-items: center;
-  background: rgba(15,12,25,.8); border: 2px solid var(--c); border-radius: 8px;
-  padding: 5px 12px 7px; font-size: 13px; text-shadow: 0 1px 0 #000;
-  box-shadow: 0 0 12px color-mix(in srgb, var(--c) 40%, transparent);
-}
-.buff b { color: var(--c); }
-.buff i { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--c); }
 
 #banner {
   position: fixed; top: 20%; left: 0; right: 0; text-align: center;
@@ -231,7 +226,6 @@ button.secondary {
 .card .desc { font-size: 14px; color: #e8e0d0; line-height: 1.4; padding: 0 12px; }
 .card .key { margin: 12px 0 12px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
 
-#chars { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
 .card.char { width: 262px; overflow: hidden; }
 .card.char .portrait { display: block; width: 100%; height: 214px; object-fit: cover; border-bottom: 2px solid #3d3556; }
 .card.char .ctitle { margin-top: 10px; font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; font-weight: 900; }
@@ -292,7 +286,6 @@ button.secondary {
   .best { font-size: 13px; margin-bottom: 4px; }
   button { padding: 10px; font-size: 16px; margin-top: 8px; }
 
-  #chars { gap: 8px; flex-wrap: nowrap; }
   .card.char { width: auto; flex: 1 1 0; min-width: 0; max-width: 180px; }
   .card.char .portrait { height: auto; aspect-ratio: 440 / 360; }
   .card.char .stats, .card.char .desc:not(.passive) { display: none; }
@@ -321,10 +314,7 @@ button.secondary {
   .slot img { width: 22px; height: 22px; }
   #timer { font-size: 22px; top: 12px; }
   #topright { top: 12px; gap: 6px; right: max(8px, env(safe-area-inset-right)); }
-  #killbox { font-size: 13px; padding: 4px 10px; }
   #pauseBtn { width: 38px; height: 38px; }
-  #buffs { top: 58px; right: 8px; }
-  .buff { font-size: 10px; padding: 3px 8px 5px; }
   #banner { font-size: 20px; padding: 0 10px; }
   #stats, #pstats { min-width: 0; font-size: 13px; line-height: 1.7; }
 }
@@ -332,4 +322,131 @@ button.secondary {
 /* Celular em pé: o cronômetro desce para não ficar em cima da barra de vida */
 @media (max-width: 520px) {
   #timer { top: auto; bottom: max(14px, env(safe-area-inset-bottom)); }
+}
+
+/* ============================================================
+   Tela inicial
+   ============================================================ */
+.homebox { position: relative; text-align: center; width: min(760px, 96vw); max-height: 98vh; overflow-y: auto; padding: 10px; }
+.logo {
+  display: flex; flex-direction: column; align-items: center; line-height: .95; margin-top: 18px;
+  font-size: 64px; letter-spacing: 4px; transform: rotate(-2deg);
+}
+.logo span:last-child { font-size: .72em; letter-spacing: 10px; }
+#homeArt { display: block; width: 100%; max-width: 620px; height: auto; margin: -6px auto 0; }
+.homebtns { display: flex; flex-direction: column; gap: 4px; width: min(340px, 90%); margin: 4px auto 6px; }
+.homebtns button { margin-top: 6px; }
+button.big { font-size: 26px; padding: 16px; }
+.coinbadge {
+  position: absolute; top: 12px; right: 12px; display: flex; align-items: center; gap: 8px;
+  padding: 6px 14px; border-radius: 20px; background: rgba(15,12,25,.8); border: 2px solid var(--gold-dark);
+  font-weight: 900; font-size: 18px; color: var(--gold); text-shadow: 0 2px 0 #000; z-index: 2;
+}
+.coinbadge .coin-ico { width: 20px; height: 20px; }
+.btnrow { display: flex; gap: 10px; }
+.btnrow button { flex: 1; }
+button.danger { background: linear-gradient(#ff7a7a, #c0303a); color: #fff; box-shadow: 0 4px 0 #6a1018, 0 6px 14px rgba(0,0,0,.5); }
+button:disabled { filter: grayscale(.8) brightness(.6); cursor: not-allowed; transform: none; }
+
+#charlist { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+.card.char.locked { filter: saturate(.4); }
+.card.char.locked .name { color: #8a82a0; }
+.lockbadge {
+  position: absolute; top: 70px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  font-weight: 900; font-size: 12px; color: var(--gold); text-shadow: 0 2px 0 #000; pointer-events: none;
+}
+.lockbadge img { width: 56px; height: 56px; filter: drop-shadow(0 3px 0 #000); }
+
+/* ============================================================
+   Loja
+   ============================================================ */
+#shoplist { text-align: left; }
+.shophead { margin: 14px 4px 8px; color: var(--gold); }
+.shoprow { display: flex; gap: 12px; flex-wrap: wrap; }
+.card.shopitem { width: 210px; padding: 12px 0 14px; cursor: default; }
+.card.shopitem:hover { transform: translateY(-3px); }
+.shopicon {
+  width: 86px; height: 86px; margin: 0 auto 4px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+  background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--accent) 35%, #2a2340), #120e1c 75%);
+  border: 3px solid var(--accent);
+}
+.shopicon img { width: 62px; height: 62px; }
+.shopicon.hero img { width: 100px; height: 100px; margin-top: 18px; }
+.card.shopitem .desc { min-height: 2.8em; }
+.req { margin: 8px 12px 0; font-size: 12px; color: #ff9b9b; font-weight: 800; }
+.req.ok { color: #8fd3a0; }
+.req b { color: #fff; }
+button.buy {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: calc(100% - 24px); margin: 10px 12px 0; padding: 8px; font-size: 18px;
+}
+button.buy img { width: 24px; height: 24px; }
+.owned-tag { margin: 12px auto 0; display: inline-block; padding: 4px 14px; border-radius: 12px; background: #8fd3a0; color: #0e0b16; font-weight: 900; font-size: 13px; }
+.card.shopitem.owned { border-color: #8fd3a0; }
+.card.shopitem.blocked { opacity: .8; }
+
+/* ============================================================
+   Configurações
+   ============================================================ */
+#setlist { display: flex; flex-direction: column; gap: 12px; margin: 14px 0 6px; text-align: left; }
+.setrow { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 12px; border-radius: 10px; background: rgba(0,0,0,.25); border: 1px solid #2f2846; }
+.setinfo { display: flex; flex-direction: column; }
+.setinfo b { color: var(--gold); font-size: 15px; }
+.setinfo span { color: var(--muted); font-size: 12px; }
+.seg { display: flex; border: 2px solid #000; border-radius: 10px; overflow: hidden; flex-shrink: 0; }
+.segbtn {
+  width: auto; margin: 0; padding: 8px 12px; border: 0; border-radius: 0; box-shadow: none;
+  font-family: var(--body); font-size: 13px; font-weight: 900; letter-spacing: 0;
+  background: #2e2844; color: var(--muted);
+}
+.segbtn + .segbtn { border-left: 2px solid #000; }
+.segbtn.on { background: linear-gradient(#fff0b0, var(--gold) 45%, #d69a2a); color: #2a1a05; }
+.segbtn:hover { transform: none; }
+
+/* ============================================================
+   HUD: espaços vazios e bloqueados
+   ============================================================ */
+.slot.empty { border-style: dashed; background: rgba(15,12,25,.45); box-shadow: none; }
+.slot.empty.weapon { border-color: rgba(184,134,42,.6); }
+.slot.lockedslot { background: rgba(15,12,25,.35); border-color: #2a2438; box-shadow: none; align-items: center; }
+.slot.lockedslot img { width: 20px; height: 20px; margin: 0; opacity: .55; }
+
+/* Fim de jogo: moedas */
+.earnhead { margin: 14px 0 4px; color: var(--gold); }
+#stats .total { border-top: 2px solid var(--gold-dark); border-bottom: 0; margin-top: 4px; font-size: 17px; }
+#stats .total b { display: flex; align-items: center; gap: 6px; }
+#stats .total img { width: 22px; height: 22px; }
+
+/* Bênçãos das fogueiras: tiers fraca e lendária */
+.card.weak { border-color: #6a6280; filter: saturate(.6); }
+.card.weak .ribbon { background: #6a6280; color: #fff; }
+.card.legend { border-color: #ffb020; box-shadow: 0 0 28px rgba(255,176,32,.7); animation: deal .35s cubic-bezier(.2, 1.3, .4, 1) backwards, legend 1.4s ease-in-out infinite alternate; }
+.card.legend .ribbon { background: linear-gradient(90deg, #ff8a2a, #ffd36b); color: #2a1a05; }
+@keyframes legend { to { box-shadow: 0 0 40px rgba(255,176,32,.95); } }
+
+@media (max-width: 760px), (max-height: 540px) {
+  .logo { font-size: 38px; margin-top: 34px; }
+  #homeArt { max-width: 420px; }
+  button.big { font-size: 20px; padding: 11px; }
+  .coinbadge { font-size: 14px; padding: 4px 10px; top: 8px; right: 8px; }
+  #charlist { gap: 8px; flex-wrap: nowrap; }
+  .card.shopitem { width: calc(50% - 6px); }
+  .shopicon { width: 60px; height: 60px; }
+  .shopicon img { width: 44px; height: 44px; }
+  .shopicon.hero img { width: 72px; height: 72px; margin-top: 12px; }
+  .setrow { flex-direction: column; align-items: stretch; gap: 8px; }
+  .segbtn { flex: 1; padding: 8px 4px; font-size: 12px; }
+  .pill { font-size: 13px; padding: 4px 9px; gap: 5px; }
+  .coin-ico { width: 14px; height: 14px; }
+  .lockbadge { top: 30px; }
+  .lockbadge img { width: 36px; height: 36px; }
+}
+@media (max-height: 540px) and (orientation: landscape) {
+  .homebox { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 0 10px; }
+  .logo { grid-column: 1; margin-top: 10px; }
+  #homeArt { grid-column: 1; }
+  .homebox .best { grid-column: 2; grid-row: 1; align-self: end; }
+  .homebtns { grid-column: 2; grid-row: 2; }
+  .homebox .controls { display: none; }
 }
