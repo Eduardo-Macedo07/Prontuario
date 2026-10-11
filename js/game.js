@@ -7,18 +7,28 @@
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   const $ = (id) => document.getElementById(id);
+  // W e H são o tamanho da área visível do mundo. Em telas pequenas (celular) a câmera
+  // se afasta (zoom < 1) para o jogador continuar enxergando a horda chegando.
   let W = 0;
   let H = 0;
+  let zoom = 1;
+  let lowQuality = false;
+  const isTouch = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  document.body.classList.toggle('touch', isTouch);
 
   function resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    W = window.innerWidth;
-    H = window.innerHeight;
-    canvas.width = Math.floor(W * dpr);
-    canvas.height = Math.floor(H * dpr);
-    canvas.style.width = W + 'px';
-    canvas.style.height = H + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const maxDpr = lowQuality ? 1 : isTouch ? 1.5 : 2;
+    const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+    const sw = window.innerWidth;
+    const sh = window.innerHeight;
+    zoom = Math.max(0.6, Math.min(1, Math.min(sw, sh) / 700));
+    W = sw / zoom;
+    H = sh / zoom;
+    canvas.width = Math.floor(sw * dpr);
+    canvas.height = Math.floor(sh * dpr);
+    canvas.style.width = sw + 'px';
+    canvas.style.height = sh + 'px';
+    ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, 0, 0);
   }
   window.addEventListener('resize', resize);
   resize();
@@ -371,6 +381,45 @@
     keys.clear();
     if (state === 'playing') setState('paused');
   });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && state === 'playing') setState('paused');
+  });
+
+  // Joystick virtual: encoste o dedo (ou clique e arraste o mouse) em qualquer lugar e arraste.
+  const STICK_R = 60;
+  const stick = { active: false, id: null, ox: 0, oy: 0, x: 0, y: 0, used: false };
+
+  canvas.addEventListener('pointerdown', (e) => {
+    if (state !== 'playing' || stick.active) return;
+    e.preventDefault();
+    stick.active = true;
+    stick.used = true;
+    stick.id = e.pointerId;
+    stick.ox = stick.x = e.clientX / zoom;
+    stick.oy = stick.y = e.clientY / zoom;
+    if (canvas.setPointerCapture) canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!stick.active || e.pointerId !== stick.id) return;
+    stick.x = e.clientX / zoom;
+    stick.y = e.clientY / zoom;
+    // Se o dedo vai além do limite, a base acompanha (não precisa voltar ao centro).
+    const dx = stick.x - stick.ox;
+    const dy = stick.y - stick.oy;
+    const d = Math.hypot(dx, dy);
+    if (d > STICK_R) {
+      stick.ox = stick.x - (dx / d) * STICK_R;
+      stick.oy = stick.y - (dy / d) * STICK_R;
+    }
+  });
+  const endStick = (e) => {
+    if (e.pointerId !== stick.id) return;
+    stick.active = false;
+    stick.id = null;
+  };
+  canvas.addEventListener('pointerup', endStick);
+  canvas.addEventListener('pointercancel', endStick);
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
   function onKey(k) {
     if (state === 'menu') {
@@ -389,6 +438,7 @@
   // ============================================================
   function setState(s) {
     state = s;
+    if (s !== 'playing') stick.active = false;
     $('menu').classList.toggle('hidden', s !== 'menu');
     $('pause').classList.toggle('hidden', s !== 'paused');
     $('levelup').classList.toggle('hidden', s !== 'levelup');
@@ -424,7 +474,7 @@
         <div class="stats">${bars}</div>
         <div class="desc">${C.desc}</div>
         <div class="desc passive">${C.passive}</div>
-        <div class="key">Clique ou tecla ${i + 1}</div>`;
+        <div class="key">${isTouch ? 'Toque para escolher' : 'Clique ou tecla ' + (i + 1)}</div>`;
       card.addEventListener('click', () => selectChar(id));
       card.addEventListener('dblclick', () => { selectChar(id); startGame(); });
       card.addEventListener('mouseenter', () => { hoverChar = id; });
@@ -494,6 +544,11 @@
   }
 
   function startGame() {
+    // No celular, entra em tela cheia (precisa vir de um toque do jogador).
+    const root = document.documentElement;
+    if (isTouch && !document.fullscreenElement && root.requestFullscreen) {
+      root.requestFullscreen().catch(() => {});
+    }
     resetWorld();
     addWeapon(CHARACTERS[selectedChar].weapon, 1);
     // Uma fogueira perto do início para o jogador descobrir a mecânica.
@@ -587,7 +642,7 @@
     currentChoices = buildChoices(isChest);
     currentChoices.isChest = isChest;
     $('choiceTitle').textContent = isChest ? 'Baú do tesouro!' : 'Subiu de nível!';
-    $('choiceSub').textContent = isChest ? 'Recompensas raras garantidas' : 'Escolha uma recompensa com o mouse ou o teclado';
+    $('choiceSub').textContent = isChest ? 'Recompensas raras garantidas' : 'Escolha uma recompensa';
     const cards = $('cards');
     cards.innerHTML = '';
     currentChoices.forEach((c, i) => {
@@ -619,7 +674,7 @@
         <div class="tag">${tag}</div>
         <div class="desc">${desc}</div>
         ${bonus}
-        <div class="key">Clique ou tecla ${i + 1}</div>`;
+        <div class="key">${isTouch ? 'Toque para escolher' : 'Clique ou tecla ' + (i + 1)}</div>`;
       card.addEventListener('click', () => choose(i));
       cards.appendChild(card);
     });
@@ -663,10 +718,10 @@
   // ============================================================
   // Partículas e efeitos
   // ============================================================
-  const MAX_PARTICLES = 900;
+  let maxParticles = 900;
 
   function fx(o) {
-    if (particles.length >= MAX_PARTICLES) return;
+    if (particles.length >= maxParticles) return;
     o.max = o.life;
     if (o.vx === undefined) o.vx = 0;
     if (o.vy === undefined) o.vy = 0;
@@ -1396,14 +1451,26 @@
     if (keys.has('s') || keys.has('arrowdown')) my += 1;
     if (keys.has('a') || keys.has('arrowleft')) mx -= 1;
     if (keys.has('d') || keys.has('arrowright')) mx += 1;
+    if (stick.active) {
+      const dx = stick.x - stick.ox;
+      const dy = stick.y - stick.oy;
+      const d = Math.hypot(dx, dy);
+      if (d > 8) {
+        const k = Math.min(1, d / STICK_R);
+        mx = (dx / d) * k;
+        my = (dy / d) * k;
+      }
+    }
     const len = Math.hypot(mx, my);
-    player.moving = len > 0;
+    player.moving = len > 0.05;
     if (player.moving) {
+      // No joystick, arrastar pouco anda devagar; no teclado é sempre velocidade máxima.
+      const k = Math.min(1, len);
       player.dirX = mx / len;
       player.dirY = my / len;
-      player.x += player.dirX * effSpeed() * dt;
-      player.y += player.dirY * effSpeed() * dt;
-      if (mx !== 0) player.facing = Math.sign(mx);
+      player.x += player.dirX * effSpeed() * k * dt;
+      player.y += player.dirY * effSpeed() * k * dt;
+      if (Math.abs(mx) > 0.1) player.facing = Math.sign(mx);
     }
     player.anim += dt;
     player.invuln -= dt;
@@ -1890,7 +1957,7 @@
     ctx.lineJoin = 'round';
     for (const t of texts) {
       const pop = 1 + Math.max(0, t.life - 0.6) / 0.15 * 0.6;
-      const size = (t.big ? 20 : 14) * pop;
+      const size = (t.big ? 20 : 14) * pop / Math.sqrt(zoom);
       ctx.globalAlpha = clamp(t.life / 0.35, 0, 1);
       ctx.font = `900 ${size}px ${FONT}`;
       ctx.lineWidth = 4;
@@ -1915,7 +1982,37 @@
         ctx.fillRect(0, 0, W, H);
       }
       drawIndicators();
+      drawStick();
       updateHud();
+    }
+  }
+
+  function drawStick() {
+    if (stick.active) {
+      ctx.save();
+      ctx.globalAlpha = 0.55;
+      ctx.beginPath();
+      ctx.arc(stick.ox, stick.oy, STICK_R, 0, TAU);
+      ctx.fillStyle = 'rgba(15,12,25,0.45)';
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.stroke();
+      ctx.globalAlpha = 0.85;
+      Art.ball(ctx, stick.x, stick.y, 24, '#ffd36b', 2.5);
+      ctx.restore();
+    } else if (isTouch && !stick.used && state === 'playing') {
+      // dica até o jogador tocar a primeira vez
+      ctx.save();
+      ctx.globalAlpha = 0.6 + Math.sin(time * 4) * 0.3;
+      ctx.textAlign = 'center';
+      ctx.font = `900 22px ${FONT}`;
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = '#000';
+      ctx.strokeText('Toque e arraste para mover', W / 2, H - 90);
+      ctx.fillStyle = '#fff';
+      ctx.fillText('Toque e arraste para mover', W / 2, H - 90);
+      ctx.restore();
     }
   }
 
@@ -1959,10 +2056,28 @@
   // Laço principal
   // ============================================================
   let last = performance.now();
+  let fpsAvg = 60;
+  let slowT = 0;
+
+  // Se o aparelho não aguentar (menos de ~40 quadros por segundo por alguns segundos),
+  // reduz resolução, partículas e brilhos.
+  function watchPerformance(rawDt) {
+    if (lowQuality || state !== 'playing' || rawDt <= 0 || rawDt > 0.5) return;
+    fpsAvg += (1 / rawDt - fpsAvg) * 0.05;
+    slowT = fpsAvg < 40 ? slowT + rawDt : Math.max(0, slowT - rawDt);
+    if (slowT > 3) {
+      lowQuality = true;
+      maxParticles = 300;
+      Art.setLowQuality(true);
+      resize();
+    }
+  }
 
   function frame(now) {
-    const dt = Math.min(0.05, (now - last) / 1000);
+    const rawDt = (now - last) / 1000;
+    const dt = Math.min(0.05, rawDt);
     last = now;
+    watchPerformance(rawDt);
     if (state === 'playing') {
       update(dt);
       updateEffects(dt);
@@ -1991,6 +2106,8 @@
     get enemies() { return enemies; },
     get structures() { return structures; },
     get weapons() { return weapons; },
+    get lowQuality() { return lowQuality; },
+    get zoom() { return zoom; },
     gainXp, startGame, addWeapon, spawnBoss, spawnEnemy, selectChar,
   };
 })();

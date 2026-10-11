@@ -23,7 +23,17 @@ html, body {
   user-select: none;
 }
 
-canvas { display: block; }
+canvas { display: block; touch-action: none; }
+
+html, body {
+  overscroll-behavior: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.touch-only { display: none; }
+body.touch .touch-only { display: list-item; }
+body.touch .pc-only { display: none; }
 
 .hidden { display: none !important; }
 
@@ -43,7 +53,7 @@ canvas { display: block; }
   transition: width .15s;
 }
 
-#topleft { position: absolute; top: 20px; left: 16px; display: flex; gap: 10px; align-items: flex-start; }
+#topleft { position: absolute; top: 20px; left: max(16px, env(safe-area-inset-left)); display: flex; gap: 10px; align-items: flex-start; }
 
 #lvlbadge {
   width: 52px; height: 52px; border-radius: 50%;
@@ -93,7 +103,7 @@ canvas { display: block; }
   color: #fff; text-shadow: 0 3px 0 #000, 0 0 12px rgba(0,0,0,.8);
 }
 
-#topright { position: absolute; top: 20px; right: 16px; display: flex; gap: 10px; align-items: center; }
+#topright { position: absolute; top: 20px; right: max(16px, env(safe-area-inset-right)); display: flex; gap: 10px; align-items: center; }
 #killbox {
   display: flex; align-items: center; gap: 8px; padding: 6px 14px;
   background: rgba(15,12,25,.75); border: 2px solid #3d3556; border-radius: 20px;
@@ -223,7 +233,7 @@ button.secondary {
 
 #chars { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
 .card.char { width: 262px; overflow: hidden; }
-.card.char .portrait { display: block; width: 100%; height: 214px; border-bottom: 2px solid #3d3556; }
+.card.char .portrait { display: block; width: 100%; height: 214px; object-fit: cover; border-bottom: 2px solid #3d3556; }
 .card.char .ctitle { margin-top: 10px; font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; font-weight: 900; }
 .card.char.selected {
   border-color: var(--accent);
@@ -268,3 +278,58 @@ button.secondary {
 /* Barra de rolagem discreta nos painéis */
 .panel::-webkit-scrollbar { width: 8px; }
 .panel::-webkit-scrollbar-thumb { background: #3d3556; border-radius: 4px; }
+
+/* ============================================================
+   Telas pequenas (celular em pé ou deitado)
+   ============================================================ */
+@media (max-width: 760px), (max-height: 540px) {
+  .panel { padding: 14px; min-width: 0; width: 96vw; border-radius: 12px; }
+  h1 { font-size: 28px; letter-spacing: 1px; }
+  h2 { font-size: 22px; }
+  h3 { font-size: 14px; margin: 2px 0 8px; }
+  .subtitle { font-size: 13px; margin-bottom: 10px; }
+  .controls { font-size: 12px; line-height: 1.7; margin: 8px auto 4px; }
+  .best { font-size: 13px; margin-bottom: 4px; }
+  button { padding: 10px; font-size: 16px; margin-top: 8px; }
+
+  #chars { gap: 8px; flex-wrap: nowrap; }
+  .card.char { width: auto; flex: 1 1 0; min-width: 0; max-width: 180px; }
+  .card.char .portrait { height: auto; aspect-ratio: 440 / 360; }
+  .card.char .stats, .card.char .desc:not(.passive) { display: none; }
+  .card.char .ctitle { margin-top: 6px; font-size: 9px; letter-spacing: 1px; }
+  .card.char.selected::after { font-size: 9px; padding: 2px 6px; top: 6px; right: 6px; }
+  .card .name { font-size: 14px; }
+  .card .desc { font-size: 11px; padding: 0 6px; }
+  .card .key { margin: 6px 0 8px; font-size: 9px; }
+  .card:hover { transform: none; }
+
+  #cards { gap: 8px; }
+  .card.reward { flex: 1 1 28%; min-width: 0; max-width: 210px; width: auto; padding-top: 10px; }
+  .card .medal { width: 54px; height: 54px; margin-bottom: 4px; }
+  .card .medal img { width: 40px; height: 40px; }
+  .card .tag { font-size: 9px; margin: 2px 0 6px; }
+  .card .bonus { font-size: 11px; margin: 6px 6px 0; }
+  .card .ribbon { font-size: 9px; top: 8px; left: -40px; }
+
+  #xpbar { height: 7px; }
+  #topleft { top: 12px; gap: 6px; left: max(8px, env(safe-area-inset-left)); }
+  #lvlbadge { width: 36px; height: 36px; font-size: 15px; border-width: 2px; }
+  #hpbar { width: 140px; height: 17px; border-width: 2px; margin-top: 2px; }
+  #hptext { font-size: 10px; line-height: 13px; }
+  #loadout .row { gap: 3px; max-width: 190px; }
+  .slot { width: 28px; height: 31px; border-radius: 6px; }
+  .slot img { width: 22px; height: 22px; }
+  #timer { font-size: 22px; top: 12px; }
+  #topright { top: 12px; gap: 6px; right: max(8px, env(safe-area-inset-right)); }
+  #killbox { font-size: 13px; padding: 4px 10px; }
+  #pauseBtn { width: 38px; height: 38px; }
+  #buffs { top: 58px; right: 8px; }
+  .buff { font-size: 10px; padding: 3px 8px 5px; }
+  #banner { font-size: 20px; padding: 0 10px; }
+  #stats, #pstats { min-width: 0; font-size: 13px; line-height: 1.7; }
+}
+
+/* Celular em pé: o cronômetro desce para não ficar em cima da barra de vida */
+@media (max-width: 520px) {
+  #timer { top: auto; bottom: max(14px, env(safe-area-inset-bottom)); }
+}

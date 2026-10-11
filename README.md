@@ -5,11 +5,14 @@ Sobreviva às hordas, colete gemas de XP, suba de nível e escolha recompensas. 
 
 ## Como jogar
 
-Abra o arquivo `index.html` no navegador (Chrome, Edge ou Firefox no PC). Não precisa instalar nada.
+- **PC:** abra o arquivo `index.html` no navegador (Chrome, Edge ou Firefox). Não precisa instalar nada.
+- **Celular:** abra o link do GitHub Pages (https://eduardo-macedo07.github.io/Prontuario/) e toque e arraste
+  em qualquer lugar da tela para mover. Dá para usar "Adicionar à tela inicial" para abrir como um app.
+  Se o aparelho ficar lento, o jogo reduz a qualidade sozinho.
 
 | Tecla | Ação |
 | --- | --- |
-| `W` `A` `S` `D` ou setas | Mover |
+| `W` `A` `S` `D`, setas ou tocar/clicar e arrastar | Mover |
 | Mouse ou `1` `2` `3` `4` | Escolher personagem (no menu) e recompensa |
 | `Esc`, `P` ou botão ❚❚ | Pausar (mostra seus atributos) |
 | `R` | Recomeçar depois de morrer |

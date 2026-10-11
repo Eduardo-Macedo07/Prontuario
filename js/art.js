@@ -126,8 +126,12 @@ const Art = (() => {
     return c;
   }
 
+  // Em modo de qualidade reduzida, brilhos pequenos são pulados.
+  let low = false;
+  function setLowQuality(v) { low = v; }
+
   function glow(g, x, y, r, color, alpha) {
-    if (r <= 0) return;
+    if (r <= 0 || (low && r < 18)) return;
     const op = g.globalCompositeOperation;
     const a = g.globalAlpha;
     g.globalCompositeOperation = 'lighter';
@@ -1276,6 +1280,6 @@ const Art = (() => {
     outline, ball, oval, poly, path, lin, shadow, glow, flame, sprite, blit,
     drawHero, drawEnemy, drawGem, drawHeart, drawChest,
     bonfireGround, bonfireTop, altar,
-    drawGround, vignette, icon,
+    drawGround, vignette, icon, setLowQuality,
   };
 })();
