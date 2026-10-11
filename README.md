@@ -71,9 +71,21 @@ Gerado sem fim: trilhas de terra contínuas, cemitérios com lápides, cruzes, v
 árvores, árvores secas, cercas quebradas, abóboras, crânios, pedras, névoa e vagalumes.
 Objetos altos ficam transparentes quando você passa atrás deles.
 
+## Som
+
+Música e efeitos sonoros gerados na hora pelo navegador (sem arquivos de áudio): música calma nos menus,
+mais rápida na partida e mais intensa quando há um chefão; sons para cada arma, golpes, explosões, itens,
+subir de nível, fogueiras, altares, aviso dos mísseis do robô e rosnado do lobisomem.
+
+## Arte em imagens
+
+Qualquer personagem, inimigo ou objeto pode ser trocado por um PNG. Os modelos ficam em `assets/modelos/`
+e o passo a passo em [`assets/LEIA-ME.md`](assets/LEIA-ME.md).
+
 ## Configurações
 
-Qualidade gráfica (automática, alta ou baixa), tremor de tela, números de dano e apagar progresso.
+Qualidade gráfica (automática, alta ou baixa), tremor de tela, números de dano, volume da música,
+volume dos efeitos e apagar progresso.
 O progresso fica salvo no navegador.
 
 ## Estrutura
@@ -82,5 +94,7 @@ O progresso fica salvo no navegador.
 index.html   telas (inicial, personagens, loja, configurações, HUD, recompensas, pausa, fim de jogo)
 style.css    visual das telas
 js/art.js    desenhos: personagens, inimigos, fogueiras, altar, itens, chão e ícones
+js/audio.js  sons e música
+assets/      arte opcional em imagens (sprites.js, modelos/ e sprites/)
 js/game.js   lógica do jogo (laço, armas, inimigos, loja, progresso, efeitos e interface)
 ```

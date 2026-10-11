@@ -217,6 +217,44 @@ const Art = (() => {
   }
 
   // ============================================================
+  // Arte em imagens (opcional)
+  // Se assets/sprites.js listar um PNG para um personagem, inimigo ou objeto,
+  // a imagem substitui o desenho feito por código. Veja assets/LEIA-ME.md.
+  // ============================================================
+  const SHEETS = {};
+  (function loadSheets() {
+    const list = window.SPRITES || {};
+    for (const id in list) {
+      const def = Object.assign({ frames: 1, fps: 8 }, list[id]);
+      const img = new Image();
+      img.onload = () => {
+        def.img = img;
+        def.fw = img.width / def.frames;
+        def.fh = img.height;
+        SHEETS[id] = def;
+      };
+      img.onerror = () => console.warn('Sprite não encontrado: assets/sprites/' + def.file);
+      img.src = 'assets/sprites/' + def.file;
+    }
+  })();
+
+  // Desenha um quadro da folha de sprites. O tamanho e o ponto de apoio padrão
+  // são os mesmos dos modelos em assets/modelos, então um desenho feito em cima
+  // de um modelo encaixa sem ajuste.
+  function drawSheet(g, id, x, y, height, anchor, t, flip, animate) {
+    const S = SHEETS[id];
+    const h = height * (S.scale || 1);
+    const anchorY = S.anchorY !== undefined ? S.anchorY : anchor;
+    const w = (h * S.fw) / S.fh;
+    const frame = animate && S.frames > 1 ? Math.floor(t * S.fps) % S.frames : 0;
+    g.save();
+    g.translate(x, y);
+    if (flip < 0) g.scale(-1, 1);
+    g.drawImage(S.img, frame * S.fw, 0, S.fw, S.fh, -w / 2, -h * anchorY, w, h);
+    g.restore();
+  }
+
+  // ============================================================
   // Personagens (desenhados olhando para a direita; o chão é y = 0)
   // ============================================================
   function feet(g, t, moving, color) {
@@ -513,7 +551,8 @@ const Art = (() => {
     if (o.moving) g.rotate(Math.sin(t * 10) * 0.06);
     else g.scale(1 + Math.sin(t * 2.5) * 0.012, 1 + Math.sin(t * 2.5 + 1) * 0.025); // respiração
     if (f < 0) g.scale(-1, 1);
-    HEROES[id](g, t, o);
+    if (SHEETS[id] && !o.noSheet) drawSheet(g, id, 0, 0, 160 / 2.2, 0.95, t, 1, o.moving);
+    else HEROES[id](g, t, o);
     g.restore();
   }
 
@@ -931,7 +970,20 @@ const Art = (() => {
       rot = Math.sin(e.phase * (e.type === 'mummy' ? 4 : 7)) * 0.07;
     }
     if (float) g.globalAlpha = 0.86;
-    blit(g, enemySprite(e.type, e.r, frame, e.flash > 0), e.x, e.y + oy, sx, sy, rot);
+    if (SHEETS[e.type]) {
+      const cell = Math.ceil(e.r * 6);
+      drawSheet(g, e.type, e.x, e.y + oy, cell, 0.55, e.phase, face, true);
+      if (e.flash > 0) {
+        // clarão ao levar dano
+        const op = g.globalCompositeOperation;
+        g.globalCompositeOperation = 'lighter';
+        g.globalAlpha *= 0.6;
+        drawSheet(g, e.type, e.x, e.y + oy, cell, 0.55, e.phase, face, true);
+        g.globalCompositeOperation = op;
+      }
+    } else {
+      blit(g, enemySprite(e.type, e.r, frame, e.flash > 0), e.x, e.y + oy, sx, sy, rot);
+    }
     g.globalAlpha = 1;
   }
 
@@ -1609,7 +1661,8 @@ const Art = (() => {
     });
     const flip = p.type === 'lantern' ? 1 : p.flip;
     g.globalAlpha = alpha;
-    blit(g, s, p.x, p.y - def.size * 0.35, flip, 1);
+    if (SHEETS[p.type]) drawSheet(g, p.type, p.x, p.y, 170, 150 / 170, t, flip, true);
+    else blit(g, s, p.x, p.y - def.size * 0.35, flip, 1);
     g.globalAlpha = 1;
     if (def.light) {
       const L = def.light;
@@ -1945,7 +1998,14 @@ const Art = (() => {
       c.width = c.height = 200;
       const g = c.getContext('2d');
       drawHero(g, id, 100, 182, id === 'golem' ? 3.6 : 4.4, 0.4, 1, { rage: 0.4 });
-      url = c.toDataURL();
+      try {
+        url = c.toDataURL();
+      } catch (e) {
+        // aberto direto do disco com imagens: o navegador bloqueia; usa o desenho por código
+        g.clearRect(0, 0, 200, 200);
+        drawHero(g, id, 100, 182, id === 'golem' ? 3.6 : 4.4, 0.4, 1, { rage: 0.4, noSheet: true });
+        url = c.toDataURL();
+      }
       heroUrls.set(id, url);
     }
     return url;

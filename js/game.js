@@ -71,7 +71,7 @@
       bought: {},
       char: 'mago',
       stats: { bestTime: 0, bestLevel: 0, bestKills: 0, bosses: 0, kills: 0, runs: 0 },
-      settings: { quality: 'auto', shake: true, numbers: true },
+      settings: { quality: 'auto', shake: true, numbers: true, music: 0.6, sfx: 0.8 },
     };
   }
 
@@ -452,6 +452,7 @@
   // Configurações
   // ============================================================
   function applySettings() {
+    Sound.setVolumes(save.settings.music, save.settings.sfx);
     const forced = save.settings.quality === 'baixa';
     if (forced !== lowQuality || save.settings.quality === 'alta') {
       lowQuality = forced;
@@ -465,6 +466,28 @@
   // Entrada (teclado, mouse e toque)
   // ============================================================
   const keys = new Set();
+
+  // O som só pode começar depois do primeiro toque ou tecla.
+  let audioReady = false;
+  const unlockAudio = () => {
+    Sound.unlock();
+    if (!audioReady) {
+      audioReady = true;
+      updateMusic();
+    }
+  };
+  window.addEventListener('pointerdown', unlockAudio, true);
+  window.addEventListener('keydown', unlockAudio, true);
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('button')) Sound.play('click');
+  });
+
+  function updateMusic() {
+    if (state === 'dead') Sound.music('off');
+    else if (!inRun) Sound.music('menu');
+    else Sound.music(enemies.some((e) => e.boss) ? 'boss' : 'game');
+    Sound.duck(inRun && state !== 'playing');
+  }
 
   window.addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
@@ -550,6 +573,7 @@
     if (s === 'shop') renderShop();
     if (s === 'settings') renderSettings();
     if (s === 'paused') renderStats();
+    updateMusic();
   }
 
   function toast(text) {
@@ -652,6 +676,7 @@
 
   function selectChar(id) {
     if (!save.chars[id]) {
+      Sound.play('denied');
       toast('Desbloqueie esse personagem na Loja');
       return;
     }
@@ -709,6 +734,7 @@
   function buy(item) {
     if (save.coins < item.price || !reqMet(item.req) || (item.needs && !save.bought[item.needs])) return;
     save.coins -= item.price;
+    Sound.play('buy');
     save.bought[item.id] = true;
     if (item.kind === 'char') save.chars[item.id] = true;
     persist();
@@ -721,6 +747,8 @@
     { id: 'quality', name: 'Qualidade gráfica', desc: 'Automática reduz sozinha se o aparelho ficar lento.', options: [['auto', 'Automática'], ['alta', 'Alta'], ['baixa', 'Baixa']] },
     { id: 'shake', name: 'Tremor de tela', desc: 'A tela treme com explosões e golpes.', options: [[true, 'Ligado'], [false, 'Desligado']] },
     { id: 'numbers', name: 'Números de dano', desc: 'Mostra o dano causado nos inimigos.', options: [[true, 'Ligado'], [false, 'Desligado']] },
+    { id: 'music', name: 'Música', desc: 'Volume da música.', options: [[0, 'Mudo'], [0.3, 'Baixo'], [0.6, 'Médio'], [1, 'Alto']] },
+    { id: 'sfx', name: 'Efeitos sonoros', desc: 'Volume dos golpes, explosões e itens.', options: [[0, 'Mudo'], [0.4, 'Baixo'], [0.8, 'Médio'], [1, 'Alto']] },
   ];
 
   function renderSettings() {
@@ -820,6 +848,7 @@
   }
 
   function gameOver() {
+    Sound.play('death');
     const { parts, total, newRecord } = endRun();
     $('stats').innerHTML = `
       <div><span>Personagem</span><b>${CHARACTERS[player.char].name}</b></div>
@@ -931,6 +960,7 @@
     const mode = pendingLevels > 0 ? 'level' : pendingChests > 0 ? 'chest' : 'shrine';
     currentChoices = mode === 'shrine' ? buildBoons() : buildChoices(mode === 'chest');
     currentChoices.mode = mode;
+    if (mode === 'level') Sound.play('levelup');
     $('choiceTitle').textContent = mode === 'chest' ? 'Baú do tesouro!' : mode === 'shrine' ? 'Fogueira acesa' : 'Subiu de nível!';
     $('choiceSub').textContent = mode === 'chest' ? 'Recompensas raras garantidas'
       : mode === 'shrine' ? 'Escolha uma bênção (não ocupa espaço). A Sorte deixa as bênçãos mais fortes.'
@@ -1009,6 +1039,7 @@
     else if (currentChoices.mode === 'shrine') pendingShrines--;
     else pendingLevels--;
     sparks(player.x, player.y - 15, '#ffd36b', 16, 260);
+    Sound.play('select');
     if (pendingLevels > 0 || pendingChests > 0 || pendingShrines > 0) openChoices();
     else setState('playing');
   }
@@ -1132,6 +1163,7 @@
   }
 
   function activateTotem(s) {
+    Sound.play('bonfire');
     sparks(s.x, s.y - 30, BONFIRE_COLOR, 40, 320);
     ringFx(s.x, s.y, 80, BONFIRE_COLOR);
     smoke(s.x, s.y - 20, 6, '#7a746e');
@@ -1139,6 +1171,7 @@
   }
 
   function activateAltar(s) {
+    Sound.play('altar');
     sparks(s.x, s.y, '#ff3355', 60, 380);
     ringFx(s.x, s.y, 140, '#ff3355');
     smoke(s.x, s.y, 10, '#3a2028');
@@ -1190,6 +1223,7 @@
     const mul = (1 + (bossesSpawned - 1) * 0.5) * (extraMul || 1);
     const e = spawnEnemy(type, x, y, mul);
     smoke(x, y, 12, '#2a1a24');
+    Sound.play('boss');
     return e;
   }
 
@@ -1212,6 +1246,7 @@
         spawnEnemy(type, player.x + Math.cos(a) * d, player.y + Math.sin(a) * d);
       }
       showBanner('Cuidado, um enxame!');
+      Sound.play('swarm');
     }
 
     if (time >= nextBoss) {
@@ -1235,6 +1270,7 @@
       e.kby += ky || 0;
     }
     if (Math.random() < 0.5) sparks(e.x, e.y, crit ? '#ffd23f' : '#ffffff', crit ? 5 : 2, 180);
+    Sound.play(crit ? 'crit' : 'hit');
     if (save.settings.numbers) addText(e.x, e.y - e.r, crit ? dmg + '!' : dmg, crit ? '#ffd23f' : '#ffffff', crit);
     if (e.hp <= 0) killEnemy(e);
   }
@@ -1246,6 +1282,7 @@
   function killEnemy(e) {
     e.dead = true;
     kills++;
+    Sound.play(e.boss ? 'bossdeath' : 'kill');
     burst(e.x, e.y, e.color, e.boss ? 40 : 7, e.boss ? 280 : 150);
     ringFx(e.x, e.y, e.r * 1.4, '#ffffff');
     smoke(e.x, e.y, e.boss ? 14 : 1);
@@ -1285,6 +1322,7 @@
     player.invuln = 0.6;
     shake = Math.max(shake, 7);
     hurtFlash = 1;
+    Sound.play('hurt');
     sparks(player.x, player.y - 15, '#ff4444', 8, 220);
     addText(player.x, player.y - 40, '-' + dmg, '#ff5555', true);
     if (player.hp <= 0) {
@@ -1338,6 +1376,7 @@
           }
         } else if (e.lungeCd <= 0 && d < 260) {
           e.windup = 0.45;
+          Sound.play('growl');
           e.lungeCd = rand(2.5, 4);
         }
       }
@@ -1354,6 +1393,7 @@
             strikes.push({ x: tx, y: ty, r: 58, t: 1.6 + i * 0.08, max: 1.6 + i * 0.08, dmg: e.dmg * 0.9 });
           }
           sparks(e.x, e.y - e.r, '#ff4a3a', 18, 260);
+          Sound.play('warn');
           smoke(e.x, e.y - e.r, 6, '#5a5a60');
         }
       }
@@ -1469,6 +1509,7 @@
       const target = nearestEnemy(player.x, player.y);
       if (!target) { w.timer = 0.1; return; }
       w.timer = (lv >= 3 ? 0.7 : 0.95) * effCd();
+      Sound.play('ice');
       const n = 1 + (lv >= 2) + (lv >= 4) + (lv >= 6) + player.extraProj;
       const dmg = 8 + 3 * lv + (lv >= 6 ? 6 : 0);
       const base = Math.atan2(target.y - player.y, target.x - player.x);
@@ -1497,6 +1538,7 @@
       }
       if (!targets.length) { w.timer = 0.1; return; }
       w.timer = (lv >= 3 ? 0.85 : 1.1) * effCd();
+      Sound.play('arrow');
       const dmg = 12 + 4 * lv + (lv >= 6 ? 8 : 0);
       const pierce = 2 + (lv >= 3 ? 1 : 0) + (lv >= 5 ? 2 : 0);
       for (let i = 0; i < n; i++) {
@@ -1517,6 +1559,7 @@
       const target = nearestEnemy(player.x, player.y);
       if (!target) { w.timer = 0.1; return; }
       w.timer = (lv >= 3 ? 0.32 : 0.45) * effCd();
+      Sound.play('knife');
       const n = 1 + (lv >= 2) + (lv >= 4) + (lv >= 6) + player.extraProj;
       const dmg = 7 + 3 * lv + (lv >= 6 ? 5 : 0);
       const base = Math.atan2(target.y - player.y, target.x - player.x);
@@ -1536,6 +1579,7 @@
       const starts = shuffle(enemiesOnScreen());
       if (!starts.length) { w.timer = 0.1; return; }
       w.timer = (lv >= 5 ? 1.5 : 2.2) * effCd();
+      Sound.play('zap');
       const n = 1 + (lv >= 6 ? 1 : 0) + player.extraProj;
       const bounces = 2 + lv;
       const dmg = 20 + 8 * lv + (lv >= 3 ? 10 : 0);
@@ -1551,6 +1595,7 @@
       const options = enemiesOnScreen();
       if (!options.length) { w.timer = 0.1; return; }
       w.timer = (lv >= 3 ? 1.6 : 2.1) * effCd();
+      Sound.play('fire');
       const n = 1 + (lv >= 4 ? 1 : 0) + player.extraProj;
       const radius = (60 + (lv >= 2 ? 15 : 0) + (lv >= 5 ? 25 : 0)) * player.areaMul;
       const dmg = 22 + 9 * lv + (lv >= 5 ? 12 : 0);
@@ -1607,6 +1652,7 @@
       w.timer -= dt;
       if (w.timer > 0) return;
       w.timer = (lv >= 3 ? 2.5 : 3.2) * effCd();
+      Sound.play('tremor');
       const ring = {
         x: player.x, y: player.y, r: 0,
         maxR: (125 + (lv >= 4 ? 50 : 0)) * player.areaMul,
@@ -1650,6 +1696,7 @@
   }
 
   function explode(x, y, radius, dmg, burn) {
+    Sound.play('explosion');
     areaDamage(x, y, radius, dmg, 220);
     explosions.push({ x, y, r: radius, life: 0.4 });
     sparks(x, y, '#ffb347', 14, 320);
@@ -1765,7 +1812,12 @@
   function updateStrikes(dt) {
     for (const s of strikes) {
       s.t -= dt;
+      if (s.t <= 0.45 && !s.whistled) {
+        s.whistled = true;
+        Sound.play('whistle');
+      }
       if (s.t > 0) continue;
+      Sound.play('explosion');
       explosions.push({ x: s.x, y: s.y, r: s.r, life: 0.4 });
       sparks(s.x, s.y, '#ffb347', 16, 340);
       smoke(s.x, s.y, 6, '#4a4040');
@@ -1799,16 +1851,20 @@
         p.taken = true;
         if (p.kind === 'xp') {
           gainXp(p.v);
+          Sound.play('gem');
           if (Math.random() < 0.3) sparks(player.x, player.y - 10, '#7fe0ff', 2, 120);
         } else if (p.kind === 'coin') {
           runCoins += p.v * player.coinMul;
+          Sound.play('coin');
           sparks(player.x, player.y - 10, '#ffd36b', 4, 140);
         } else if (p.kind === 'chest') {
           pendingChests++;
+          Sound.play('chest');
           sparks(p.x, p.y, '#ffd36b', 40, 360);
           ringFx(p.x, p.y, 70, '#ffd36b');
         } else {
           heal(p.v);
+          Sound.play('heal');
           sparks(player.x, player.y - 15, '#6bff8a', 12, 200);
           addText(player.x, player.y - 40, '+' + p.v, '#6bff8a', true);
         }
@@ -1872,6 +1928,7 @@
     updatePickups(dt);
 
     if (pendingLevels > 0 || pendingChests > 0 || pendingShrines > 0) openChoices();
+    updateMusic();
   }
 
   // Rastros do personagem: poeira ao andar e efeitos próprios de cada um.
