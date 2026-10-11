@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jogo Teste</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="hud" class="hidden">
+    <div id="xpbar"><div id="xpfill"></div><span id="lvltext">Nv 1</span></div>
+    <div id="hudrow">
+      <div id="hpbar"><div id="hpfill"></div><span id="hptext">100 / 100</span></div>
+      <div id="timer">00:00</div>
+      <div id="kills">Abates: 0</div>
+    </div>
+    <div id="loadout"></div>
+  </div>
+
+  <div id="banner"></div>
+
+  <div id="menu" class="overlay">
+    <div class="panel">
+      <h1>Jogo Teste</h1>
+      <p class="subtitle">Sobreviva às hordas, suba de nível e fique mais forte.</p>
+      <ul class="controls">
+        <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> ou setas: mover</li>
+        <li>Os ataques são automáticos</li>
+        <li><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> ou clique: escolher recompensa</li>
+        <li><kbd>Esc</kbd> ou <kbd>P</kbd>: pausar</li>
+      </ul>
+      <p id="best" class="best"></p>
+      <button id="playBtn">Jogar (Enter)</button>
+    </div>
+  </div>
+
+  <div id="levelup" class="overlay hidden">
+    <div class="panel wide">
+      <h2>Subiu de nível!</h2>
+      <p class="subtitle">Escolha uma recompensa</p>
+      <div id="cards"></div>
+    </div>
+  </div>
+
+  <div id="pause" class="overlay hidden">
+    <div class="panel">
+      <h2>Pausado</h2>
+      <button id="resumeBtn">Continuar</button>
+      <button id="quitBtn" class="secondary">Voltar ao menu</button>
+    </div>
+  </div>
+
+  <div id="gameover" class="overlay hidden">
+    <div class="panel">
+      <h2 class="danger">Você morreu</h2>
+      <div id="stats"></div>
+      <button id="restartBtn">Jogar de novo (R)</button>
+      <button id="menuBtn" class="secondary">Voltar ao menu</button>
+    </div>
+  </div>
+
+  <script src="js/game.js"></script>
+</body>
+</html>
