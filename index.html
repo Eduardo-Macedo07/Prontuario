@@ -17,18 +17,23 @@
       <div id="kills">Abates: 0</div>
     </div>
     <div id="loadout"></div>
+    <div id="buffs"></div>
   </div>
 
   <div id="banner"></div>
 
   <div id="menu" class="overlay">
-    <div class="panel">
+    <div class="panel wide">
       <h1>Jogo Teste</h1>
       <p class="subtitle">Sobreviva às hordas, suba de nível e fique mais forte.</p>
+      <h3>Escolha seu personagem</h3>
+      <div id="chars"></div>
       <ul class="controls">
         <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> ou setas: mover</li>
         <li>Os ataques são automáticos</li>
-        <li><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> ou clique: escolher recompensa</li>
+        <li><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd> ou clique: escolher personagem e recompensa</li>
+        <li>Fique parado num <b>totem</b> para ganhar um buff</li>
+        <li>Fique parado num <b>altar</b> para invocar um chefão (ele deixa um baú)</li>
         <li><kbd>Esc</kbd> ou <kbd>P</kbd>: pausar</li>
       </ul>
       <p id="best" class="best"></p>
@@ -38,8 +43,8 @@
 
   <div id="levelup" class="overlay hidden">
     <div class="panel wide">
-      <h2>Subiu de nível!</h2>
-      <p class="subtitle">Escolha uma recompensa</p>
+      <h2 id="choiceTitle">Subiu de nível!</h2>
+      <p id="choiceSub" class="subtitle">Escolha uma recompensa</p>
       <div id="cards"></div>
     </div>
   </div>
@@ -47,6 +52,7 @@
   <div id="pause" class="overlay hidden">
     <div class="panel">
       <h2>Pausado</h2>
+      <div id="pstats"></div>
       <button id="resumeBtn">Continuar</button>
       <button id="quitBtn" class="secondary">Voltar ao menu</button>
     </div>
