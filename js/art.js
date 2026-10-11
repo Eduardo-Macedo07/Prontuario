@@ -2001,10 +2001,12 @@ const Art = (() => {
       try {
         url = c.toDataURL();
       } catch (e) {
-        // aberto direto do disco com imagens: o navegador bloqueia; usa o desenho por código
-        g.clearRect(0, 0, 200, 200);
-        drawHero(g, id, 100, 182, id === 'golem' ? 3.6 : 4.4, 0.4, 1, { rage: 0.4, noSheet: true });
-        url = c.toDataURL();
+        // Aberto direto do disco com imagens, o navegador bloqueia a leitura do canvas.
+        // Usa um canvas novo com o desenho por código.
+        const c2 = document.createElement('canvas');
+        c2.width = c2.height = 200;
+        drawHero(c2.getContext('2d'), id, 100, 182, id === 'golem' ? 3.6 : 4.4, 0.4, 1, { rage: 0.4, noSheet: true });
+        url = c2.toDataURL();
       }
       heroUrls.set(id, url);
     }
@@ -2031,7 +2033,7 @@ const Art = (() => {
     TAU, OUT,
     mix, light, dark, rgba,
     outline, ball, oval, poly, path, lin, shadow, glow, flame, sprite, blit,
-    drawHero, drawHeroSilhouette, heroIcon, drawEnemy, drawGem, drawHeart, drawChest, drawCoin,
+    drawHero, drawHeroSilhouette, heroIcon, hasSheet: (id) => !!SHEETS[id], drawEnemy, drawGem, drawHeart, drawChest, drawCoin,
     bonfireGround, bonfireTop, altar,
     drawGround, drawFog, propsInView, drawProp, PROP_HEIGHT, vignette, icon, setLowQuality,
   };

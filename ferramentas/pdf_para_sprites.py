@@ -4,6 +4,9 @@ Para cada página: acha o código do sprite no título, pega a maior imagem da p
 remove fundo verde (#00FF00) se houver, ajusta à proporção esperada, salva em
 assets/sprites/<codigo>.png e ativa a linha correspondente em assets/sprites.js.
 
+Também compara com o modelo (assets/modelos) para calcular a escala e a altura dos pés:
+assim um desenho que ocupa o quadro inteiro fica do mesmo tamanho do modelo no jogo.
+
 Uso: python3 ferramentas/pdf_para_sprites.py arquivo.pdf
 """
 import os
@@ -18,6 +21,12 @@ from sprites_comum import CODES_BY_LENGTH  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SPRITES_DIR = os.path.join(ROOT, "assets", "sprites")
+MODELS_DIR = os.path.join(ROOT, "assets", "modelos")
+
+# Altura padrão da imagem inteira no jogo e ponto de apoio, por tipo (mesmos valores do js/art.js).
+ANCHOR = {"personagem": 0.95, "inimigo": 0.55, "chefão": 0.55, "cenário": 150 / 170}
+# Quanto maior que o desenho do modelo a arte nova deve aparecer.
+SIZE_BOOST = {"personagem": 1.1, "inimigo": 1.2, "chefão": 1.05, "cenário": 1.0}
 MANIFEST = os.path.join(ROOT, "assets", "sprites.js")
 
 
@@ -61,10 +70,37 @@ def fit(img, frames, fw, fh):
     return canvas
 
 
-def enable_in_manifest(code):
+def content_box(img):
+    """Fração (topo, base) ocupada pelo desenho, somando todos os quadros."""
+    box = img.getchannel("A").point(lambda a: 255 if a > 40 else 0).getbbox()
+    if not box:
+        return 0.0, 1.0
+    return box[1] / img.height, box[3] / img.height
+
+
+def fit_to_model(img, code, kind):
+    """Escala e ponto de apoio para o desenho ficar do tamanho e na altura do modelo."""
+    model_path = os.path.join(MODELS_DIR, f"{code}.png")
+    if not os.path.exists(model_path):
+        return None
+    model = Image.open(model_path).convert("RGBA")
+    mt, mb = content_box(model)
+    nt, nb = content_box(img)
+    scale = SIZE_BOOST[kind] * (mb - mt) / max(0.05, nb - nt)
+    a = ANCHOR[kind]
+    # os pés do desenho novo ficam no mesmo lugar que os pés do modelo
+    anchor = nb - (mb - a) / scale
+    return round(scale, 3), round(anchor, 3)
+
+
+def enable_in_manifest(code, fit_values=None):
     with open(MANIFEST, encoding="utf-8") as f:
         text = f.read()
     new = re.sub(r"^(\s*)//\s*(\w+:\s*\{\s*file:\s*'" + re.escape(code) + r"\.png')", r"\1\2", text, flags=re.M)
+    if fit_values:
+        scale, anchor = fit_values
+        line = re.compile(r"^(\s*\w+:\s*\{\s*file:\s*'" + re.escape(code) + r"\.png'[^}\n]*?)(,\s*scale:[^}]*)?\s*\}", re.M)
+        new = line.sub(lambda m: f"{m.group(1)}, scale: {scale}, anchorY: {anchor} }}", new)
     with open(MANIFEST, "w", encoding="utf-8") as f:
         f.write(new)
 
@@ -77,7 +113,7 @@ def main(pdf_path):
         entry = find_code(page.extract_text() or "")
         if not entry:
             continue
-        code, _id, name, _kind, frames, (fw, fh) = entry
+        code, _id, name, kind, frames, (fw, fh) = entry
         images = list(page.images)
         if not images:
             print(f"página {n} ({code}): sem imagem, ignorada")
@@ -89,9 +125,11 @@ def main(pdf_path):
         img = fit(img, frames, fw, fh)
         out = os.path.join(SPRITES_DIR, f"{code}.png")
         img.save(out)
-        enable_in_manifest(code)
+        fit_values = fit_to_model(img, code, kind)
+        enable_in_manifest(code, fit_values)
         done.append(code)
-        print(f"página {n}: {code} ({name}) -> assets/sprites/{code}.png  {img.width}x{img.height}")
+        extra = f"  escala {fit_values[0]}, apoio {fit_values[1]}" if fit_values else ""
+        print(f"página {n}: {code} ({name}) -> assets/sprites/{code}.png  {img.width}x{img.height}{extra}")
     print(f"\n{len(done)} sprite(s) importado(s).")
 
 

@@ -657,7 +657,8 @@
       g.beginPath();
       g.ellipse(w / 2, h * 0.86, w * 0.3, h * 0.07, 0, 0, TAU);
       g.fill();
-      const s = p.id === 'golem' ? 4.6 : 5.6;
+      // arte em imagem ocupa mais o quadro que o desenho por código
+      const s = Art.hasSheet(p.id) ? 4.2 : p.id === 'golem' ? 4.6 : 5.6;
       if (locked) {
         Art.drawHeroSilhouette(g, p.id, w / 2, h * 0.86, s, t);
       } else {

@@ -12,18 +12,18 @@
 
 window.SPRITES = {
   // ---------- Personagens ----------
-  // mago:     { file: 'mago.png', frames: 4, fps: 8 },
-  // maniaco:  { file: 'maniaco.png', frames: 4, fps: 10 },
-  // golem:    { file: 'golem.png', frames: 4, fps: 6 },
+  mago:     { file: 'mago.png', frames: 4, fps: 8, scale: 1.013, anchorY: 0.888 },
+  maniaco:  { file: 'maniaco.png', frames: 4, fps: 10, scale: 1.069, anchorY: 0.891 },
+  golem:    { file: 'golem.png', frames: 4, fps: 6, scale: 0.789, anchorY: 0.874 },
 
   // ---------- Inimigos ----------
-  // skeleton:   { file: 'esqueleto.png', frames: 4, fps: 8 },
-  // skelknight: { file: 'cavaleiro.png', frames: 4, fps: 6 },
-  // mummy:      { file: 'mumia.png', frames: 4, fps: 5 },
-  // ghost:      { file: 'ceifador.png', frames: 4, fps: 6 },
-  // werewolf:   { file: 'lobisomem.png', frames: 4, fps: 10 },
-  // robo:       { file: 'robo.png', frames: 4, fps: 6 },
-  // boss:       { file: 'rei-ogro.png', frames: 4, fps: 6 },
+  skeleton:   { file: 'esqueleto.png', frames: 4, fps: 8, scale: 0.61, anchorY: 0.609 },
+  skelknight: { file: 'cavaleiro.png', frames: 4, fps: 6, scale: 0.67, anchorY: 0.636 },
+  mummy:      { file: 'mumia.png', frames: 4, fps: 5, scale: 0.551, anchorY: 0.578 },
+  ghost:      { file: 'ceifador.png', frames: 4, fps: 6, scale: 0.786, anchorY: 0.695 },
+  werewolf:   { file: 'lobisomem.png', frames: 4, fps: 10, scale: 0.623, anchorY: 0.609 },
+  robo:       { file: 'robo.png', frames: 4, fps: 6, scale: 0.557, anchorY: 0.572 },
+  boss:       { file: 'rei-ogro.png', frames: 4, fps: 6, scale: 0.535, anchorY: 0.556 },
   // lich:       { file: 'lich.png', frames: 4, fps: 6 },
 
   // ---------- Cenário ----------
