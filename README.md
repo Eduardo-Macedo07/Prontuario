@@ -22,8 +22,12 @@ Todas as armas atacam e miram sozinhas.
 
 - **Espaços:** cada partida começa com 3 espaços de arma (a inicial + 2) e 2 de passiva.
   A Loja libera até 5 de arma e 4 de passiva.
-- **Subir de nível:** armas e passivas aparecem misturadas e aleatórias. A Sorte faz cartas raras (+2 níveis)
-  e épicas (+3) aparecerem mais, e às vezes dá uma 4ª opção.
+- **Subir de nível:** armas e passivas aparecem misturadas e aleatórias. Cada arma tem **10 níveis** e cada
+  passiva 5 (Projéteis, 3). A **raridade da carta multiplica o bônus** daquele nível:
+  Comum 1×, Raro 1,67×, Épico 2,67×, Lendário 3,83× (ex.: Chance de Crítico +6% / +10% / +16% / +23%).
+  Projéteis usa 1 / 1,5 / 2 / 4, e as frações somam até virar um projétil inteiro.
+- **Sorte:** aumenta a chance das raridades altas (sorte 0: 82% comum e 0,5% lendário; sorte 5: 48% comum
+  e 6% lendário) e às vezes dá uma 4ª opção.
 - **Fogueiras:** fique perto para escolher 1 de 3 bênçãos (não ocupam espaço). Elas vão de fraca a lendária,
   e quanto mais Sorte, mais fortes.
 - **Altares:** invocam um chefão. Todo chefão deixa um baú com recompensas raras.
@@ -59,7 +63,12 @@ Todos andam um pouco mais devagar que o seu personagem.
 | **Maníaco** (bobo da corte) | Muito rápido e frágil, começa com Facas | +1% de crítico a cada nível |
 | **Golem de Pedra** | Muita vida e armadura, lento, começa com Tremor | Mais dano quanto menor a vida (até +120%) |
 
-## Arsenal (cada arma até o nível 6)
+## Passivas
+
+Vida Máxima, Velocidade de Movimento, Dano, Velocidade de Ataque, Alcance de Coleta, Regeneração, Armadura,
+Projéteis, Chance de Crítico, Área e Sorte.
+
+## Arsenal (cada arma até o nível 10)
 
 Estilhaço de Gelo, Arco Caçador (flechas teleguiadas que perfuram), Facas (teleguiadas), Raio em Cadeia
 (ricocheteia), Bola de Fogo (explosão em área), Lâminas Orbitais (reduzem o dano recebido), Aura Sagrada e

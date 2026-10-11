@@ -179,112 +179,110 @@
   // ============================================================
   // Armas
   // ============================================================
+  // Cada arma tem atributos base e uma lista de melhorias, uma por nível (do 2 ao 10).
+  // A raridade da carta multiplica o valor da melhoria (ver RARITY).
+  // unit = como chamar os "projéteis" dessa arma no texto das cartas.
   const WEAPONS = {
     missil: {
-      name: 'Estilhaço de Gelo', color: '#5fe8ff', max: 6,
-      desc: [
-        'Dispara no inimigo mais próximo.',
-        '+1 projétil.',
-        '+Dano e dispara mais rápido.',
-        '+1 projétil.',
-        'Projéteis atravessam 2 inimigos.',
-        '+1 projétil e +dano.',
-      ],
+      name: 'Estilhaço de Gelo', color: '#5fe8ff', max: 10, unit: ['estilhaço', 'estilhaços'],
+      desc: 'Dispara no inimigo mais próximo.',
+      base: { dmg: 10, cd: 0.95, count: 1, pierce: 0 },
+      ups: [[['dmg', 4]], [['count', 1]], [['cd', 0.08]], [['dmg', 4]], [['pierce', 1]], [['count', 1]], [['cd', 0.08]], [['dmg', 6]], [['count', 1], ['pierce', 1]]],
     },
     arco: {
-      name: 'Arco Caçador', color: '#d69a52', max: 6,
-      desc: [
-        'Flechas teleguiadas que perfuram e seguem para o inimigo de trás.',
-        '+1 flecha.',
-        '+1 perfuração e atira mais rápido.',
-        '+1 flecha.',
-        '+2 perfurações.',
-        '+1 flecha e +dano.',
-      ],
+      name: 'Arco Caçador', color: '#d69a52', max: 10, unit: ['flecha', 'flechas'],
+      desc: 'Flechas teleguiadas que perfuram e seguem para o inimigo de trás.',
+      base: { dmg: 16, cd: 1.1, count: 1, pierce: 2 },
+      ups: [[['count', 1]], [['pierce', 1]], [['dmg', 5]], [['cd', 0.08]], [['count', 1]], [['pierce', 2]], [['dmg', 6]], [['cd', 0.08]], [['count', 1]]],
     },
     facas: {
-      name: 'Facas', color: '#d8e0ea', max: 6,
-      desc: [
-        'Arremessa facas no inimigo mais próximo.',
-        '+1 faca.',
-        'Arremessa mais rápido.',
-        '+1 faca.',
-        'Facas perfuram 1 inimigo.',
-        '+1 faca e +dano.',
-      ],
+      name: 'Facas', color: '#d8e0ea', max: 10, unit: ['faca', 'facas'],
+      desc: 'Arremessa facas teleguiadas no inimigo mais próximo.',
+      base: { dmg: 10, cd: 0.45, count: 1, pierce: 0 },
+      ups: [[['count', 1]], [['dmg', 3]], [['cd', 0.08]], [['count', 1]], [['pierce', 1]], [['dmg', 4]], [['cd', 0.08]], [['count', 1]], [['dmg', 5]]],
     },
     raio: {
-      name: 'Raio em Cadeia', color: '#ffd23f', max: 6,
-      desc: [
-        'Raio que ricocheteia entre 3 inimigos.',
-        '+1 ricochete.',
-        '+1 ricochete e +dano.',
-        '+1 ricochete.',
-        '+1 ricochete e recarrega mais rápido.',
-        '+1 raio extra e +1 ricochete.',
-      ],
+      name: 'Raio em Cadeia', color: '#ffd23f', max: 10, unit: ['raio', 'raios'],
+      desc: 'Raio que ricocheteia entre os inimigos.',
+      base: { dmg: 28, cd: 2.2, count: 1, bounces: 3 },
+      ups: [[['bounces', 1]], [['dmg', 8]], [['bounces', 1]], [['cd', 0.1]], [['bounces', 1]], [['count', 1]], [['dmg', 10]], [['bounces', 2]], [['cd', 0.1]]],
     },
     fogo: {
-      name: 'Bola de Fogo', color: '#ff7a1a', max: 6,
-      desc: [
-        'Bola de fogo que explode em área.',
-        '+Raio da explosão.',
-        'Recarrega mais rápido.',
-        '+1 bola de fogo.',
-        '+Raio e +dano.',
-        'Deixa o chão em chamas.',
-      ],
+      name: 'Bola de Fogo', color: '#ff7a1a', max: 10, unit: ['bola de fogo', 'bolas de fogo'],
+      desc: 'Bola de fogo que explode em área.',
+      base: { dmg: 31, cd: 2.1, count: 1, area: 60, burn: 0 },
+      ups: [[['area', 15]], [['dmg', 9]], [['cd', 0.1]], [['count', 1]], [['area', 20]], [['dmg', 12]], [['burn', 1]], [['cd', 0.1]], [['count', 1]]],
     },
     laminas: {
-      name: 'Lâminas Orbitais', color: '#c9d6e6', max: 6,
-      desc: [
-        'Lâminas giram ao seu redor e reduzem 6% do dano recebido.',
-        '+6% de redução de dano.',
-        '+1 lâmina e +6% de redução.',
-        '+6% de redução e +dano.',
-        '+1 lâmina e +6% de redução.',
-        '+6% de redução e giram mais rápido.',
-      ],
+      name: 'Lâminas Orbitais', color: '#c9d6e6', max: 10, unit: ['lâmina', 'lâminas'],
+      desc: 'Lâminas giram ao seu redor e reduzem o dano recebido.',
+      base: { dmg: 7, count: 2, reduction: 0.05, spin: 2.8, area: 65 },
+      ups: [[['reduction', 0.04]], [['count', 1]], [['dmg', 3]], [['reduction', 0.04]], [['area', 12]], [['count', 1]], [['reduction', 0.05]], [['spin', 1]], [['dmg', 5]]],
     },
     aura: {
-      name: 'Aura Sagrada', color: '#ffe27a', max: 6,
-      desc: [
-        'Campo que fere inimigos próximos.',
-        '+Raio.',
-        '+Dano.',
-        '+Raio.',
-        '+Dano e ritmo.',
-        '+Raio e dano.',
-      ],
+      name: 'Aura Sagrada', color: '#ffe27a', max: 10, unit: ['aura', 'auras'],
+      desc: 'Campo que fere inimigos próximos.',
+      base: { dmg: 6, area: 70, cd: 0.5 },
+      ups: [[['area', 10]], [['dmg', 2]], [['area', 10]], [['dmg', 3]], [['cd', 0.1]], [['area', 12]], [['dmg', 3]], [['area', 12]], [['dmg', 4]]],
     },
     tremor: {
-      name: 'Tremor de Pedra', color: '#c8a878', max: 6,
-      desc: [
-        'Onda de choque que fere e empurra os inimigos.',
-        '+Dano.',
-        'Recarrega mais rápido.',
-        '+Raio.',
-        '+Dano e empurra mais.',
-        'Onda dupla.',
-      ],
+      name: 'Tremor de Pedra', color: '#c8a878', max: 10, unit: ['onda', 'ondas'],
+      desc: 'Onda de choque que fere e empurra os inimigos.',
+      base: { dmg: 22, cd: 3.2, area: 125, knock: 300, count: 1 },
+      ups: [[['dmg', 7]], [['cd', 0.1]], [['area', 25]], [['dmg', 8]], [['knock', 120]], [['count', 1]], [['dmg', 10]], [['cd', 0.1]], [['area', 30]]],
     },
   };
 
+  // Números com uma casa decimal só quando precisa ("1,7", "2").
+  const fmtNum = (v) => (Math.abs(v - Math.round(v)) < 0.05 ? String(Math.round(v)) : v.toFixed(1).replace('.', ','));
+  const plural = (v, [one, many]) => (Math.abs(v - 1) < 0.05 ? one : many);
+
+  function statText(def, stat, v) {
+    switch (stat) {
+      case 'dmg': return `+${fmtNum(v)} de dano`;
+      case 'count': return `+${fmtNum(v)} ${plural(v, def.unit)}`;
+      case 'cd': return `Ataca ${pct(v)} mais rápido`;
+      case 'pierce': return `+${fmtNum(v)} ${plural(v, ['perfuração', 'perfurações'])}`;
+      case 'bounces': return `+${fmtNum(v)} ${plural(v, ['ricochete', 'ricochetes'])}`;
+      case 'area': return `+${fmtNum(v)} de raio`;
+      case 'reduction': return `+${pct(v)} de redução de dano`;
+      case 'spin': return `Giram ${pct(v / 2.8)} mais rápido`;
+      case 'knock': return `+${fmtNum(v)} de empurrão`;
+      case 'burn': return v > 1.05 ? `Chão em chamas (${pct(v)} de força)` : 'Deixa o chão em chamas';
+      default: return '';
+    }
+  }
+
+  function applyStat(s, stat, v) {
+    if (stat === 'cd') s.cdMul = Math.max(0.2, s.cdMul * (1 - v));
+    else s[stat] = (s[stat] || 0) + v;
+  }
+
   // ============================================================
-  // Passivas (ocupam espaço)
+  // Passivas (ocupam espaço). v = valor de uma carta comum.
   // ============================================================
   const PASSIVES = {
-    vigor: { name: 'Vitalidade', max: 5, desc: '+20 de vida máxima e cura 20.', apply: () => { player.maxHp += 20; heal(20); } },
-    boots: { name: 'Botas Ágeis', max: 5, desc: '+10% de velocidade.', apply: () => { player.speed *= 1.1; } },
-    might: { name: 'Força', max: 5, desc: '+15% de dano.', apply: () => { player.dmgMul += 0.15; } },
-    haste: { name: 'Pressa', max: 5, desc: 'Armas recarregam 8% mais rápido.', apply: () => { player.cdMul *= 0.92; } },
-    magnet: { name: 'Ímã', max: 5, desc: '+35% de alcance para coletar XP.', apply: () => { player.magnet *= 1.35; } },
-    regen: { name: 'Regeneração', max: 5, desc: '+0,6 de vida por segundo.', apply: () => { player.regen += 0.6; } },
-    armor: { name: 'Armadura', max: 5, desc: '-1 de dano recebido por golpe.', apply: () => { player.armor += 1; } },
-    multi: { name: 'Projéteis', max: 3, desc: '+1 projétil, flecha, faca, lâmina, raio e bola de fogo.', apply: () => { player.extraProj += 1; } },
-    precisao: { name: 'Precisão', max: 5, desc: '+6% de chance de dano crítico (dano x2).', apply: () => { player.crit += 0.06; } },
-    area: { name: 'Área de Acerto', max: 5, desc: '+12% de área (aura, explosões, lâminas, ondas).', apply: () => { player.areaMul += 0.12; } },
-    sorte: { name: 'Sorte', max: 5, desc: '+1 de Sorte: cartas de nível mais alto, mais opções e mais itens.', apply: () => { player.luck += 1; } },
+    vigor: { name: 'Vida Máxima', max: 5, v: 20, text: (v) => `+${Math.round(v)} de vida máxima (e cura o mesmo)`, apply: (v) => { player.maxHp += Math.round(v); heal(Math.round(v)); } },
+    boots: { name: 'Velocidade de Movimento', max: 5, v: 0.08, text: (v) => `+${pct(v)} de velocidade de movimento`, apply: (v) => { player.speed *= 1 + v; } },
+    might: { name: 'Dano', max: 5, v: 0.12, text: (v) => `+${pct(v)} de dano em todas as armas`, apply: (v) => { player.dmgMul += v; } },
+    haste: { name: 'Velocidade de Ataque', max: 5, v: 0.08, text: (v) => `Todas as armas atacam ${pct(v)} mais rápido`, apply: (v) => { player.cdMul = Math.max(0.25, player.cdMul * (1 - v)); } },
+    magnet: { name: 'Alcance de Coleta', max: 5, v: 0.3, text: (v) => `+${pct(v)} de alcance para puxar XP e moedas`, apply: (v) => { player.magnet *= 1 + v; } },
+    regen: { name: 'Regeneração', max: 5, v: 0.5, text: (v) => `+${fmtNum(v)} de vida por segundo`, apply: (v) => { player.regen += v; } },
+    armor: { name: 'Armadura', max: 5, v: 1, text: (v) => `-${fmtNum(v)} de dano recebido por golpe`, apply: (v) => { player.armor += v; } },
+    multi: {
+      name: 'Projéteis', max: 3, v: 1, table: [1, 1.5, 2, 4],
+      text: (v) => `+${fmtNum(v)} ${plural(v, ['projétil', 'projéteis'])} em todas as armas (frações somam até virar um inteiro)`,
+      apply: (v) => { player.extraProj += v; },
+    },
+    precisao: { name: 'Chance de Crítico', max: 5, v: 0.06, text: (v) => `+${pct(v)} de chance de crítico (dano x2)`, apply: (v) => { player.crit = Math.min(1, player.crit + v); } },
+    area: { name: 'Área', max: 5, v: 0.1, text: (v) => `+${pct(v)} de área (aura, explosões, lâminas, ondas)`, apply: (v) => { player.areaMul += v; } },
+    sorte: { name: 'Sorte', max: 5, v: 1, text: (v) => `+${fmtNum(v)} de Sorte: cartas raras, épicas e lendárias aparecem mais`, apply: (v) => { player.luck += v; } },
+  };
+
+  // Valor de uma passiva numa carta da raridade r.
+  const passiveValue = (id, r) => {
+    const def = PASSIVES[id];
+    return def.v * (def.table ? def.table[r] : RARITY[r].mult);
   };
 
   // ============================================================
@@ -455,7 +453,7 @@
   const effSpeed = () => player.speed;
   const effLuck = () => player.luck;
   const effRegen = () => player.regen;
-  const bladeReduction = () => (weapons.laminas ? 0.06 * weapons.laminas.level : 0);
+  const bladeReduction = () => (weapons.laminas ? Math.min(0.6, weapons.laminas.s.reduction) : 0);
 
   // ============================================================
   // Configurações
@@ -788,7 +786,7 @@
       ['Crítico', pct(player.crit)],
       ['Recarga', pct(effCd())],
       ['Área', pct(player.areaMul)],
-      ['Projéteis extras', player.extraProj],
+      ['Projéteis extras', fmtNum(player.extraProj)],
       ['Velocidade', Math.round(effSpeed())],
       ['Armadura', +player.armor.toFixed(1)],
       ['Redução de dano', pct(bladeReduction())],
@@ -808,7 +806,7 @@
       root.requestFullscreen().catch(() => {});
     }
     resetWorld();
-    addWeapon(CHARACTERS[selectedChar].weapon, 1);
+    addWeapon(CHARACTERS[selectedChar].weapon, 0);
     // Uma fogueira perto do início para o jogador descobrir a mecânica.
     spawnStructure('totem', 380);
     inRun = true;
@@ -900,25 +898,54 @@
   // ============================================================
   // Subir de nível, baús, fogueiras e recompensas
   // ============================================================
+  // Raridade das cartas: multiplica o valor do bônus (6% de crítico vira 10%, 16% ou 23%).
   const RARITY = [
-    null,
-    { name: 'Comum', cls: '' },
-    { name: 'Raro', cls: 'rare' },
-    { name: 'Épico', cls: 'epic' },
+    { name: 'Comum', cls: '', mult: 1 },
+    { name: 'Raro', cls: 'rare', mult: 5 / 3 },
+    { name: 'Épico', cls: 'epic', mult: 8 / 3 },
+    { name: 'Lendário', cls: 'legend', mult: 23 / 6 },
   ];
 
-  function addWeapon(id, levels) {
-    if (weapons[id]) weapons[id].level = Math.min(WEAPONS[id].max, weapons[id].level + levels);
-    else weapons[id] = { level: Math.min(WEAPONS[id].max, levels), timer: 0.3, angle: 0, blades: [] };
+  // Chance de cada raridade. A Sorte aumenta muito as raras:
+  // sorte 0 -> 81% comum, 15% raro, 3% épico, 0,5% lendário
+  // sorte 5 -> 48% comum, 33% raro, 14% épico, 6% lendário
+  function rarityWeights(minRarity) {
+    const L = Math.max(0, effLuck());
+    const w = [100, 18 + L * 10, 4 + L * 5, 0.6 + L * 2.2];
+    for (let i = 0; i < minRarity; i++) w[i] = 0;
+    return w;
   }
 
   function rollRarity(minRarity) {
-    const luck = effLuck();
-    const epic = Math.min(0.3, 0.01 + luck * 0.02);
-    const rare = Math.min(0.6, 0.06 + luck * 0.05);
-    const r = Math.random();
-    const rolled = r < epic ? 3 : r < epic + rare ? 2 : 1;
-    return Math.max(minRarity, rolled);
+    const w = rarityWeights(minRarity);
+    let r = Math.random() * w.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < w.length; i++) {
+      r -= w[i];
+      if (r <= 0) return i;
+    }
+    return minRarity;
+  }
+
+  // Arma nova ou um nível a mais, com o bônus multiplicado pela raridade.
+  function addWeapon(id, rarity) {
+    const def = WEAPONS[id];
+    const mult = RARITY[rarity || 0].mult;
+    const w = weapons[id];
+    if (w) {
+      if (w.level >= def.max) return;
+      for (const [stat, v] of def.ups[w.level - 1]) applyStat(w.s, stat, v * mult);
+      w.level++;
+    } else {
+      // arma nova de raridade alta já começa com mais dano
+      const s = Object.assign({ cdMul: 1 }, def.base);
+      s.dmg *= 1 + (mult - 1) * 0.3;
+      weapons[id] = { level: 1, timer: 0.3, angle: 0, blades: [], s };
+    }
+  }
+
+  function weaponUpText(id, lv, mult) {
+    const def = WEAPONS[id];
+    return def.ups[lv - 1].map(([stat, v]) => statText(def, stat, v * mult)).join(' · ');
   }
 
   // Armas e passivas misturadas, respeitando os espaços livres.
@@ -940,14 +967,10 @@
     }
     const count = 3 + (Math.random() < effLuck() * 0.08 ? 1 : 0);
     const picks = shuffle(pool).slice(0, count);
-    for (const c of picks) {
-      const max = c.kind === 'weapon' ? WEAPONS[c.id].max : PASSIVES[c.id].max;
-      c.rarity = rollRarity(isChest ? 2 : 1);
-      c.gain = Math.min(c.rarity, max - c.lv);
-    }
+    for (const c of picks) c.rarity = rollRarity(isChest ? 1 : 0);
     if (picks.length === 0) {
-      picks.push({ kind: 'heal', id: 'heal', rarity: 1, gain: 1 });
-      picks.push({ kind: 'gold', id: 'coin', rarity: 1, gain: 1 });
+      picks.push({ kind: 'heal', id: 'heal', rarity: 0 });
+      picks.push({ kind: 'gold', id: 'coin', rarity: 0 });
     }
     return picks;
   }
@@ -965,9 +988,9 @@
     currentChoices.mode = mode;
     if (mode === 'level') Sound.play('levelup');
     $('choiceTitle').textContent = mode === 'chest' ? 'Baú do tesouro!' : mode === 'shrine' ? 'Fogueira acesa' : 'Subiu de nível!';
-    $('choiceSub').textContent = mode === 'chest' ? 'Recompensas raras garantidas'
+    $('choiceSub').textContent = mode === 'chest' ? 'Recompensas raras ou melhores garantidas'
       : mode === 'shrine' ? 'Escolha uma bênção (não ocupa espaço). A Sorte deixa as bênçãos mais fortes.'
-        : `Espaços: armas ${Object.keys(weapons).length}/${weaponSlots()} · passivas ${Object.keys(passiveLevels).length}/${passiveSlots()}`;
+        : `Espaços: armas ${Object.keys(weapons).length}/${weaponSlots()} · passivas ${Object.keys(passiveLevels).length}/${passiveSlots()} · Sorte ${fmtNum(effLuck())}`;
     const cards = $('cards');
     cards.innerHTML = '';
     currentChoices.forEach((c, i) => {
@@ -977,16 +1000,23 @@
       let color;
       let ribbon = '';
       let cls = '';
-      let bonus = '';
       let iconId = c.id;
       if (c.kind === 'weapon') {
         const def = WEAPONS[c.id];
-        name = def.name; desc = def.desc[c.lv]; color = def.color;
-        tag = c.lv === 0 ? 'Nova arma' : `Arma · nível ${c.lv + c.gain}`;
+        const mult = RARITY[c.rarity].mult;
+        name = def.name; color = def.color;
+        if (c.lv === 0) {
+          tag = 'Nova arma';
+          desc = def.desc + (c.rarity > 0 ? `<br><b>+${pct((mult - 1) * 0.3)} de dano base</b>` : '');
+        } else {
+          tag = `Arma · nível ${c.lv + 1}/${def.max}`;
+          desc = `<b>${weaponUpText(c.id, c.lv, mult)}</b>`;
+        }
       } else if (c.kind === 'passive') {
         const def = PASSIVES[c.id];
-        name = def.name; desc = def.desc; color = '#8fd3a0';
-        tag = c.lv === 0 ? 'Nova passiva' : `Passiva · nível ${c.lv + c.gain}`;
+        name = def.name; color = '#8fd3a0';
+        tag = `${c.lv === 0 ? 'Nova passiva' : 'Passiva'} · nível ${c.lv + 1}/${def.max}`;
+        desc = `<b>${def.text(passiveValue(c.id, c.rarity))}</b>`;
       } else if (c.kind === 'boon') {
         const def = BOONS[c.id];
         const tier = TIERS[c.tier];
@@ -999,11 +1029,10 @@
       } else {
         name = 'Poção'; tag = 'Consumível'; desc = 'Recupera 40 de vida.'; color = '#ff4f6a';
       }
-      if (c.rarity > 1) {
+      if (c.kind === 'weapon' || c.kind === 'passive') {
         const rar = RARITY[c.rarity];
         cls = rar.cls;
-        ribbon = rar.name;
-        if (c.gain > 1) bonus = `<div class="bonus">${rar.name}: +${c.gain} níveis de uma vez!</div>`;
+        ribbon = c.rarity > 0 ? rar.name : '';
       }
       const card = document.createElement('div');
       card.className = 'card reward ' + cls;
@@ -1015,7 +1044,6 @@
         <div class="name">${name}</div>
         <div class="tag">${tag}</div>
         <div class="desc">${desc}</div>
-        ${bonus}
         <div class="key">${isTouch ? 'Toque para escolher' : 'Clique ou tecla ' + (i + 1)}</div>`;
       card.addEventListener('click', () => choose(i));
       cards.appendChild(card);
@@ -1027,12 +1055,10 @@
     if (state !== 'levelup') return;
     const c = currentChoices[i];
     if (!c) return;
-    if (c.kind === 'weapon') addWeapon(c.id, c.gain);
+    if (c.kind === 'weapon') addWeapon(c.id, c.rarity);
     else if (c.kind === 'passive') {
-      for (let n = 0; n < c.gain; n++) {
-        passiveLevels[c.id] = (passiveLevels[c.id] || 0) + 1;
-        PASSIVES[c.id].apply();
-      }
+      passiveLevels[c.id] = (passiveLevels[c.id] || 0) + 1;
+      PASSIVES[c.id].apply(passiveValue(c.id, c.rarity));
     } else if (c.kind === 'boon') {
       BOONS[c.id].apply(c.value);
       boonsTaken[c.id] = (boonsTaken[c.id] || 0) + c.value;
@@ -1508,31 +1534,34 @@
   // ============================================================
   // Armas
   // ============================================================
+  // Quantidade de projéteis: a parte inteira dos da arma + a parte inteira dos extras.
+  const shots = (w) => Math.max(1, Math.floor(w.s.count + 1e-9)) + Math.floor(player.extraProj + 1e-9);
+  const cooldown = (w) => Math.max(0.12, w.s.cd * w.s.cdMul * effCd());
+
   const WEAPON_UPDATE = {
-    missil(w, lv, dt) {
+    missil(w, dt) {
       w.timer -= dt;
       if (w.timer > 0) return;
       const target = nearestEnemy(player.x, player.y);
       if (!target) { w.timer = 0.1; return; }
-      w.timer = (lv >= 3 ? 0.7 : 0.95) * effCd();
+      w.timer = cooldown(w);
       Sound.play('ice');
-      const n = 1 + (lv >= 2) + (lv >= 4) + (lv >= 6) + player.extraProj;
-      const dmg = 8 + 3 * lv + (lv >= 6 ? 6 : 0);
+      const n = shots(w);
       const base = Math.atan2(target.y - player.y, target.x - player.x);
       for (let i = 0; i < n; i++) {
         const a = base + (i - (n - 1) / 2) * 0.16;
         projectiles.push({
           kind: 'missil', x: player.x, y: player.y - 14,
           vx: Math.cos(a) * 430, vy: Math.sin(a) * 430,
-          r: 6, dmg, pierce: lv >= 5 ? 2 : 0, life: 1.4, hit: new Set(),
+          r: 6, dmg: w.s.dmg, pierce: Math.floor(w.s.pierce + 1e-9), life: 1.4, hit: new Set(),
         });
       }
     },
 
-    arco(w, lv, dt) {
+    arco(w, dt) {
       w.timer -= dt;
       if (w.timer > 0) return;
-      const n = 1 + (lv >= 2) + (lv >= 4) + (lv >= 6) + player.extraProj;
+      const n = shots(w);
       // Cada flecha mira um inimigo diferente, do mais perto ao mais longe.
       const taken = new Set();
       const targets = [];
@@ -1543,87 +1572,80 @@
         targets.push(t);
       }
       if (!targets.length) { w.timer = 0.1; return; }
-      w.timer = (lv >= 3 ? 0.85 : 1.1) * effCd();
+      w.timer = cooldown(w);
       Sound.play('arrow');
-      const dmg = 12 + 4 * lv + (lv >= 6 ? 8 : 0);
-      const pierce = 2 + (lv >= 3 ? 1 : 0) + (lv >= 5 ? 2 : 0);
       for (let i = 0; i < n; i++) {
         const t = targets[i % targets.length];
         const a = Math.atan2(t.y - player.y, t.x - player.x) + rand(-0.5, 0.5);
         projectiles.push({
           kind: 'arrow', x: player.x, y: player.y - 12, speed: 560,
           vx: Math.cos(a) * 560, vy: Math.sin(a) * 560,
-          r: 5, dmg, pierce, life: 2, hit: new Set(), target: t, turn: 9,
+          r: 5, dmg: w.s.dmg, pierce: Math.floor(w.s.pierce + 1e-9), life: 2, hit: new Set(), target: t, turn: 9,
         });
       }
     },
 
-    facas(w, lv, dt) {
+    facas(w, dt) {
       w.timer -= dt;
       if (w.timer > 0) return;
       // Mira sozinha no inimigo mais próximo e corrige a rota em voo.
       const target = nearestEnemy(player.x, player.y);
       if (!target) { w.timer = 0.1; return; }
-      w.timer = (lv >= 3 ? 0.32 : 0.45) * effCd();
+      w.timer = cooldown(w);
       Sound.play('knife');
-      const n = 1 + (lv >= 2) + (lv >= 4) + (lv >= 6) + player.extraProj;
-      const dmg = 7 + 3 * lv + (lv >= 6 ? 5 : 0);
+      const n = shots(w);
       const base = Math.atan2(target.y - player.y, target.x - player.x);
       for (let i = 0; i < n; i++) {
         const a = base + (i - (n - 1) / 2) * 0.14 + rand(-0.04, 0.04);
         projectiles.push({
           kind: 'knife', x: player.x, y: player.y - 12, speed: 620,
           vx: Math.cos(a) * 620, vy: Math.sin(a) * 620,
-          r: 5, dmg, pierce: lv >= 5 ? 1 : 0, life: 0.8, hit: new Set(), target, turn: 6,
+          r: 5, dmg: w.s.dmg, pierce: Math.floor(w.s.pierce + 1e-9), life: 0.8, hit: new Set(), target, turn: 6,
         });
       }
     },
 
-    raio(w, lv, dt) {
+    raio(w, dt) {
       w.timer -= dt;
       if (w.timer > 0) return;
       const starts = shuffle(enemiesOnScreen());
       if (!starts.length) { w.timer = 0.1; return; }
-      w.timer = (lv >= 5 ? 1.5 : 2.2) * effCd();
+      w.timer = cooldown(w);
       Sound.play('zap');
-      const n = 1 + (lv >= 6 ? 1 : 0) + player.extraProj;
-      const bounces = 2 + lv;
-      const dmg = 20 + 8 * lv + (lv >= 3 ? 10 : 0);
+      const n = shots(w);
       for (let i = 0; i < n && i < starts.length; i++) {
-        chainLightning(starts[i], bounces, dmg, 170 * player.areaMul);
+        chainLightning(starts[i], Math.floor(w.s.bounces + 1e-9), w.s.dmg, 170 * player.areaMul);
       }
       shake = Math.max(shake, 3);
     },
 
-    fogo(w, lv, dt) {
+    fogo(w, dt) {
       w.timer -= dt;
       if (w.timer > 0) return;
       const options = enemiesOnScreen();
       if (!options.length) { w.timer = 0.1; return; }
-      w.timer = (lv >= 3 ? 1.6 : 2.1) * effCd();
+      w.timer = cooldown(w);
       Sound.play('fire');
-      const n = 1 + (lv >= 4 ? 1 : 0) + player.extraProj;
-      const radius = (60 + (lv >= 2 ? 15 : 0) + (lv >= 5 ? 25 : 0)) * player.areaMul;
-      const dmg = 22 + 9 * lv + (lv >= 5 ? 12 : 0);
+      const n = shots(w);
+      const radius = w.s.area * player.areaMul;
       for (let i = 0; i < n; i++) {
         const t = pick(options);
         const a = Math.atan2(t.y - player.y, t.x - player.x);
         projectiles.push({
           kind: 'fireball', x: player.x, y: player.y - 14,
           vx: Math.cos(a) * 380, vy: Math.sin(a) * 380,
-          r: 8, dmg, pierce: 0, life: 1.6, hit: new Set(),
-          tx: t.x, ty: t.y, radius, burn: lv >= 6,
+          r: 8, dmg: w.s.dmg, pierce: 0, life: 1.6, hit: new Set(),
+          tx: t.x, ty: t.y, radius, burn: w.s.burn >= 0.99 ? w.s.burn : 0,
         });
       }
     },
 
-    laminas(w, lv, dt) {
-      const n = 2 + (lv >= 3) + (lv >= 5) + player.extraProj;
-      const radius = 65 * player.areaMul;
-      const speed = 2.8 + (lv >= 6 ? 1.4 : 0);
-      const dmg = 5 + 2 * lv + (lv >= 4 ? 5 : 0);
+    laminas(w, dt) {
+      const n = Math.floor(w.s.count + 1e-9) + Math.floor(player.extraProj + 1e-9);
+      const radius = w.s.area * player.areaMul;
+      const dmg = w.s.dmg;
       const br = 10 * Math.sqrt(player.areaMul);
-      w.angle += speed * dt;
+      w.angle += w.s.spin * dt;
       w.radius = radius;
       w.blades = [];
       for (let i = 0; i < n; i++) {
@@ -1646,28 +1668,28 @@
       }
     },
 
-    aura(w, lv, dt) {
+    aura(w, dt) {
       w.timer -= dt;
       if (w.timer > 0) return;
-      w.timer = lv >= 5 ? 0.35 : 0.5;
-      const dmg = 4 + 2 * lv + (lv >= 5 ? 3 : 0);
-      areaDamage(player.x, player.y, auraRadius(lv), dmg, 0);
+      w.timer = Math.max(0.15, w.s.cd * w.s.cdMul);
+      areaDamage(player.x, player.y, auraRadius(w), w.s.dmg, 0);
     },
 
-    tremor(w, lv, dt) {
+    tremor(w, dt) {
       w.timer -= dt;
       if (w.timer > 0) return;
-      w.timer = (lv >= 3 ? 2.5 : 3.2) * effCd();
+      w.timer = cooldown(w);
       Sound.play('tremor');
       const ring = {
         x: player.x, y: player.y, r: 0,
-        maxR: (125 + (lv >= 4 ? 50 : 0)) * player.areaMul,
-        dmg: 15 + 7 * lv + (lv >= 2 ? 6 : 0) + (lv >= 5 ? 10 : 0),
-        knock: lv >= 5 ? 420 : 300,
+        maxR: w.s.area * player.areaMul,
+        dmg: w.s.dmg, knock: w.s.knock,
         hit: new Set(), delay: 0,
       };
       rings.push(ring);
-      if (lv >= 6) rings.push({ ...ring, hit: new Set(), delay: 0.35 });
+      // ondas extras saem uma depois da outra
+      const waves = Math.floor(w.s.count + 1e-9);
+      for (let i = 1; i < waves; i++) rings.push({ ...ring, hit: new Set(), delay: 0.35 * i });
       shake = Math.max(shake, 4);
       for (let i = 0; i < 10; i++) {
         const a = rand(0, TAU);
@@ -1676,12 +1698,12 @@
     },
   };
 
-  function auraRadius(lv) {
-    return (60 + 10 * lv) * player.areaMul;
+  function auraRadius(w) {
+    return w.s.area * player.areaMul;
   }
 
   function updateWeapons(dt) {
-    for (const id in weapons) WEAPON_UPDATE[id](weapons[id], weapons[id].level, dt);
+    for (const id in weapons) WEAPON_UPDATE[id](weapons[id], dt);
   }
 
   // Raio que pula de inimigo em inimigo, perdendo 10% de dano por salto.
@@ -1707,7 +1729,7 @@
     explosions.push({ x, y, r: radius, life: 0.4 });
     sparks(x, y, '#ffb347', 14, 320);
     smoke(x, y, 5, '#5a4a40');
-    if (burn) hazards.push({ x, y, r: radius * 0.8, life: 2.5, tick: 0, dmg: Math.round(dmg * 0.15) });
+    if (burn) hazards.push({ x, y, r: radius * 0.8, life: 2.5, tick: 0, dmg: Math.max(1, Math.round(dmg * 0.15 * burn)) });
     shake = Math.max(shake, 4);
   }
 
@@ -2247,7 +2269,7 @@
     for (const s of structures) if (onScreen(s.x, s.y, 160)) drawStructureGround(s);
 
     if (weapons.aura) {
-      const r = auraRadius(weapons.aura.level);
+      const r = auraRadius(weapons.aura);
       ctx.save();
       ctx.translate(player.x, player.y);
       ctx.scale(1, 0.75);
@@ -2601,6 +2623,6 @@
     get save() { return save; },
     get lowQuality() { return lowQuality; },
     get zoom() { return zoom; },
-    gainXp, startGame, addWeapon, spawnBoss, spawnEnemy, selectChar, persist,
+    gainXp, startGame, addWeapon, spawnBoss, spawnEnemy, selectChar, persist, rollRarity,
   };
 })();
