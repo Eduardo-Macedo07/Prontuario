@@ -329,14 +329,19 @@
   // ============================================================
   // Inimigos
   // ============================================================
+  // speed é uma fração da velocidade base do personagem: os inimigos andam
+  // um pouco mais devagar que você (o lobisomem só passa disso no bote).
   const ENEMY_TYPES = {
-    slime: { name: 'Gosma', r: 12, hp: 14, speed: 55, dmg: 8, xp: 1, color: '#5fd35f' },
-    bat: { name: 'Morcego', r: 9, hp: 8, speed: 115, dmg: 5, xp: 1, color: '#9a6ae0' },
-    skeleton: { name: 'Esqueleto', r: 13, hp: 32, speed: 72, dmg: 12, xp: 2, color: '#e8e2cf' },
-    brute: { name: 'Bruto', r: 22, hp: 130, speed: 46, dmg: 22, xp: 6, color: '#d0603a' },
-    boss: { name: 'Rei Ogro', r: 40, hp: 1600, speed: 62, dmg: 35, xp: 60, color: '#c02060', boss: true },
-    lich: { name: 'Lich', r: 34, hp: 1250, speed: 48, dmg: 30, xp: 60, color: '#4fc7b8', boss: true },
+    skeleton: { name: 'Esqueleto', r: 12, hp: 16, speed: 0.78, dmg: 8, xp: 1, color: '#e8e2cf' },
+    ghost: { name: 'Ceifador', r: 11, hp: 11, speed: 0.88, dmg: 6, xp: 1, color: '#7fd8ff' },
+    mummy: { name: 'Múmia', r: 14, hp: 42, speed: 0.55, dmg: 12, xp: 2, color: '#d8c9a3' },
+    werewolf: { name: 'Lobisomem', r: 15, hp: 36, speed: 0.74, dmg: 14, xp: 2, color: '#8a7a6a' },
+    skelknight: { name: 'Cavaleiro Esqueleto', r: 17, hp: 120, speed: 0.6, dmg: 20, xp: 6, color: '#9aa6b4' },
+    robo: { name: 'Robô Destruidor', r: 42, hp: 1700, speed: 0.5, dmg: 34, xp: 60, color: '#c3ccd8', boss: true },
+    boss: { name: 'Rei Ogro', r: 40, hp: 1600, speed: 0.6, dmg: 35, xp: 60, color: '#c02060', boss: true },
+    lich: { name: 'Lich', r: 34, hp: 1250, speed: 0.5, dmg: 30, xp: 60, color: '#4fc7b8', boss: true },
   };
+  const BOSS_ORDER = ['robo', 'boss', 'lich'];
 
   const MAX_ENEMIES = 320;
   const BOSS_INTERVAL = 180;
@@ -358,6 +363,7 @@
   let chains;
   let explosions;
   let hazards;
+  let strikes;
   let structures;
   let weapons;
   let passiveLevels;
@@ -405,6 +411,7 @@
     chains = [];
     explosions = [];
     hazards = [];
+    strikes = [];
     structures = [];
     weapons = {};
     passiveLevels = {};
@@ -1145,10 +1152,11 @@
   // ============================================================
   function pickEnemyType() {
     const r = Math.random();
-    if (time > 120 && r < 0.08) return 'brute';
-    if (time > 60 && r < 0.3) return 'skeleton';
-    if (time > 25 && r < 0.55) return 'bat';
-    return 'slime';
+    if (time > 120 && r < 0.08) return 'skelknight';
+    if (time > 60 && r < 0.28) return 'werewolf';
+    if (time > 25 && r < 0.48) return 'mummy';
+    if (r < 0.7) return 'skeleton';
+    return 'ghost';
   }
 
   function spawnPoint() {
@@ -1161,12 +1169,15 @@
     const T = ENEMY_TYPES[type];
     if (x === undefined) ({ x, y } = spawnPoint());
     const hp = T.hp * (1 + (time / 60) * 0.45) * (hpMul || 1);
+    const base = CHARACTERS[player.char].speed;
     const e = {
       type, x, y, r: T.r, hp, maxHp: hp,
-      speed: T.speed * (1 + Math.min(time / 600, 0.4)),
+      // fica sempre abaixo de 95% da velocidade base do personagem
+      speed: base * Math.min(0.95, T.speed * (1 + Math.min(time / 600, 0.15))),
       dmg: T.dmg * (1 + (time / 240) * 0.3),
       xp: T.xp, color: T.color, boss: !!T.boss,
       flash: 0, kbx: 0, kby: 0, orbitCd: 0, phase: rand(0, TAU), summonT: 3, dead: false,
+      lungeCd: rand(1, 3), windup: 0, dashT: 0, dashX: 0, dashY: 0, missileT: 2.5,
     };
     enemies.push(e);
     return e;
@@ -1174,7 +1185,7 @@
 
   function spawnBoss(x, y, extraMul) {
     bossesSpawned++;
-    const type = bossesSpawned % 2 === 0 ? 'lich' : 'boss';
+    const type = BOSS_ORDER[(bossesSpawned - 1) % BOSS_ORDER.length];
     // Cada chefão seguinte é mais forte que o anterior.
     const mul = (1 + (bossesSpawned - 1) * 0.5) * (extraMul || 1);
     const e = spawnEnemy(type, x, y, mul);
@@ -1195,7 +1206,7 @@
       nextSwarm += 50;
       const n = 24 + Math.floor(time / 15);
       const d = Math.hypot(W, H) / 2 + 20;
-      const type = time > 100 ? 'skeleton' : 'bat';
+      const type = time > 100 ? 'werewolf' : 'ghost';
       for (let i = 0; i < n && enemies.length < MAX_ENEMIES + 40; i++) {
         const a = (i / n) * TAU;
         spawnEnemy(type, player.x + Math.cos(a) * d, player.y + Math.sin(a) * d);
@@ -1302,10 +1313,49 @@
       dx /= d; dy /= d;
       let vx = dx * e.speed;
       let vy = dy * e.speed;
-      if (e.type === 'bat') {
-        const w = Math.sin(time * 6 + e.phase) * 50;
+      if (e.type === 'ghost') {
+        // flutua em zigue-zague
+        const w = Math.sin(time * 3 + e.phase) * 45;
         vx += -dy * w;
         vy += dx * w;
+      }
+      if (e.type === 'werewolf') {
+        // Agacha (aviso) e dá um bote rápido na direção do jogador.
+        e.lungeCd -= dt;
+        if (e.dashT > 0) {
+          e.dashT -= dt;
+          vx = e.dashX * e.speed * 3.2;
+          vy = e.dashY * e.speed * 3.2;
+        } else if (e.windup > 0) {
+          e.windup -= dt;
+          vx = 0;
+          vy = 0;
+          if (e.windup <= 0) {
+            e.dashT = 0.32;
+            e.dashX = dx;
+            e.dashY = dy;
+            smoke(e.x, e.y + 8, 2, '#8a7a64');
+          }
+        } else if (e.lungeCd <= 0 && d < 260) {
+          e.windup = 0.45;
+          e.lungeCd = rand(2.5, 4);
+        }
+      }
+      if (e.type === 'robo') {
+        // Marca áreas no chão; os mísseis caem depois de um tempo para dar chance de desviar.
+        e.missileT -= dt;
+        if (e.missileT <= 0) {
+          e.missileT = 3.4;
+          const n = 5 + Math.min(4, Math.floor(bossesSpawned / 2));
+          const lead = player.moving ? 90 : 0;
+          for (let i = 0; i < n; i++) {
+            const tx = player.x + player.dirX * lead + (i === 0 ? 0 : rand(-190, 190));
+            const ty = player.y + player.dirY * lead + (i === 0 ? 0 : rand(-150, 150));
+            strikes.push({ x: tx, y: ty, r: 58, t: 1.6 + i * 0.08, max: 1.6 + i * 0.08, dmg: e.dmg * 0.9 });
+          }
+          sparks(e.x, e.y - e.r, '#ff4a3a', 18, 260);
+          smoke(e.x, e.y - e.r, 6, '#5a5a60');
+        }
       }
       if (e.type === 'lich') {
         // O Lich invoca esqueletos ao seu redor.
@@ -1712,6 +1762,20 @@
     hazards = hazards.filter((h) => h.life > 0);
   }
 
+  function updateStrikes(dt) {
+    for (const s of strikes) {
+      s.t -= dt;
+      if (s.t > 0) continue;
+      explosions.push({ x: s.x, y: s.y, r: s.r, life: 0.4 });
+      sparks(s.x, s.y, '#ffb347', 16, 340);
+      smoke(s.x, s.y, 6, '#4a4040');
+      shake = Math.max(shake, 6);
+      const d = Math.hypot(player.x - s.x, player.y - s.y);
+      if (d < s.r + player.r * 0.5 && player.invuln <= 0 && state === 'playing') hurtPlayer(s.dmg);
+    }
+    strikes = strikes.filter((s) => s.t > 0);
+  }
+
   // ============================================================
   // Itens no chão (XP, moedas, corações e baús)
   // ============================================================
@@ -1790,6 +1854,10 @@
     player.invuln -= dt;
     heal(effRegen() * dt);
     updateTrail(dt);
+    // vagalumes de ambiente
+    if (!lowQuality && Math.random() < dt * 4) {
+      fx({ kind: 'dot', add: true, x: player.x + rand(-W / 2, W / 2), y: player.y + rand(-H / 2, H / 2), vx: rand(-14, 14), vy: rand(-14, 14), life: rand(2, 4), color: '#d8ff7a', size: rand(1.2, 2.2), drag: 1 });
+    }
 
     updateSpawning(dt);
     updateStructures(dt);
@@ -1798,6 +1866,7 @@
     updateRings(dt);
     updateHazards(dt);
     updateEnemies(dt);
+    updateStrikes(dt);
     enemies = enemies.filter((e) => !e.dead);
     if (state !== 'playing') return; // morreu durante este quadro
     updatePickups(dt);
@@ -1872,7 +1941,7 @@
 
   function drawEnemyFull(e) {
     Art.drawEnemy(ctx, e, player.x >= e.x ? 1 : -1);
-    if (e.boss || e.type === 'brute') {
+    if (e.boss || e.type === 'skelknight') {
       const bw = e.r * 2;
       const y = e.y + e.r + 8;
       ctx.fillStyle = 'rgba(0,0,0,0.75)';
@@ -2153,6 +2222,29 @@
       ctx.restore();
     }
 
+    // marcas vermelhas onde os mísseis do robô vão cair
+    for (const s of strikes) {
+      const k = 1 - s.t / s.max;
+      const pulse = 0.5 + Math.sin(time * 18) * 0.5;
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.scale(1, 0.7);
+      ctx.fillStyle = `rgba(255,40,50,${0.12 + k * 0.25})`;
+      ctx.beginPath();
+      ctx.arc(0, 0, s.r * k, 0, TAU);
+      ctx.fill();
+      ctx.strokeStyle = `rgba(255,70,70,${0.6 + pulse * 0.4})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, s.r, 0, TAU);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-12, 0); ctx.lineTo(12, 0);
+      ctx.moveTo(0, -12); ctx.lineTo(0, 12);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     for (const p of pickups) {
       if (p.kind === 'chest' || !onScreen(p.x, p.y, 30)) continue;
       if (p.kind === 'xp') Art.drawGem(ctx, p, time);
@@ -2166,9 +2258,16 @@
     for (const s of structures) if (s.kind === 'totem' && onScreen(s.x, s.y, 120)) list.push({ y: s.y, s });
     for (const p of pickups) if (p.kind === 'chest' && onScreen(p.x, p.y, 80)) list.push({ y: p.y, c: p });
     if (showPlayer) list.push({ y: player.y, player: true });
+    for (const pr of Art.propsInView(camX, camY, W, H)) list.push({ y: pr.y, prop: pr });
     list.sort((a, b) => a.y - b.y);
     for (const o of list) {
-      if (o.e) drawEnemyFull(o.e);
+      if (o.prop) {
+        // fica transparente quando o jogador está atrás dele
+        const p = o.prop;
+        const h = Art.PROP_HEIGHT[p.type] || 0;
+        const behind = showPlayer && h > 0 && player.y < p.y && player.y > p.y - h - 10 && Math.abs(player.x - p.x) < 34;
+        Art.drawProp(ctx, p, time, behind ? 0.45 : 1);
+      } else if (o.e) drawEnemyFull(o.e);
       else if (o.s) {
         ctx.globalAlpha = clamp(o.s.fade, 0, 1);
         Art.bonfireTop(ctx, o.s.x, o.s.y, time, BONFIRE_COLOR, !o.s.used);
@@ -2208,6 +2307,19 @@
     }
 
     for (const p of projectiles) if (onScreen(p.x, p.y, 40)) drawProjectile(p);
+
+    // mísseis do robô caindo
+    for (const s of strikes) {
+      if (s.t > 0.45) continue;
+      const k = s.t / 0.45;
+      const my = s.y - k * 520;
+      Art.glow(ctx, s.x, my - 14, 26, '#ff8a2a', 0.8);
+      Art.poly(ctx, [s.x - 5, my - 30, s.x + 5, my - 30, s.x + 5, my - 6, s.x, my + 4, s.x - 5, my - 6], Art.lin(ctx, s.x - 5, 0, s.x + 5, 0, '#e2e6ea', '#7c8590'), 1.5);
+      Art.poly(ctx, [s.x - 5, my - 10, s.x + 5, my - 10, s.x, my + 4], '#ff4a3a', 1.2);
+      Art.flame(ctx, s.x, my - 30, 5, 24, 0, '#ff7a1a', '#ffe08a');
+    }
+
+    Art.drawFog(ctx, camX, camY, W, H, time);
 
     for (const x of explosions) {
       const k = x.life / 0.4;

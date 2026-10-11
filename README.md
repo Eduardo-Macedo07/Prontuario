@@ -40,6 +40,17 @@ Todas as armas atacam e miram sozinhas.
 | Espaço de passiva (3º) | 150 | Alcançar o nível 15 |
 | Espaço de passiva (4º) | 500 | Sobreviver 10 minutos |
 
+## Inimigos
+
+Todos andam um pouco mais devagar que o seu personagem.
+
+- **Esqueleto** (com espada e escudo) e **Cavaleiro Esqueleto** (armadura, elmo com pluma, mais resistente)
+- **Múmia**: lenta e resistente
+- **Ceifador**: fantasma de manto e foice que flutua em zigue-zague
+- **Lobisomem**: agacha (aviso) e dá um bote rápido
+- **Chefões** (revezam): **Robô Destruidor** (marca áreas vermelhas no chão e lança mísseis; saia da marca),
+  **Rei Ogro** e **Lich** (invoca esqueletos)
+
 ## Personagens
 
 | Personagem | Características | Passiva |
@@ -53,6 +64,12 @@ Todas as armas atacam e miram sozinhas.
 Estilhaço de Gelo, Arco Caçador (flechas teleguiadas que perfuram), Facas (teleguiadas), Raio em Cadeia
 (ricocheteia), Bola de Fogo (explosão em área), Lâminas Orbitais (reduzem o dano recebido), Aura Sagrada e
 Tremor de Pedra.
+
+## Mapa
+
+Gerado sem fim: trilhas de terra contínuas, cemitérios com lápides, cruzes, velas e lanternas acesas,
+árvores, árvores secas, cercas quebradas, abóboras, crânios, pedras, névoa e vagalumes.
+Objetos altos ficam transparentes quando você passa atrás deles.
 
 ## Configurações
 
