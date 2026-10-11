@@ -1934,6 +1934,69 @@ const Art = (() => {
       g.textBaseline = 'middle';
       g.fillText('$', 0, 1);
     },
+    bumerangue(g) {
+      g.save();
+      g.rotate(-0.6);
+      g.beginPath();
+      g.moveTo(-18, 6);
+      g.quadraticCurveTo(0, -22, 18, 6);
+      g.lineTo(11, 9);
+      g.quadraticCurveTo(0, -8, -11, 9);
+      g.closePath();
+      g.fillStyle = lin(g, -18, 0, 18, 0, '#9a5ad0', '#4a2a7a');
+      g.fill();
+      outline(g, 2);
+      g.restore();
+      glow(g, 0, -4, 16, '#b07aff', 0.4);
+    },
+    meteoro(g) {
+      flame(g, 8, -8, 9, 26, 8, '#ff7a1a', '#ffe08a');
+      glow(g, -3, 5, 22, '#ff7a1a', 0.6);
+      rock(g, -3, 5, 11);
+      g.strokeStyle = '#ff9a3a';
+      g.lineWidth = 1.5;
+      g.beginPath(); g.moveTo(-8, 3); g.lineTo(-3, 8); g.lineTo(2, 4); g.stroke();
+    },
+    critdmg(g) {
+      glow(g, 0, 0, 26, '#ff4a3a', 0.6);
+      const pts = [];
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * TAU;
+        const r = i % 2 ? 9 : 20;
+        pts.push(Math.cos(a) * r, Math.sin(a) * r);
+      }
+      poly(g, pts, lin(g, 0, -20, 0, 20, '#ffd36b', '#ff4a3a'), 2);
+      g.fillStyle = '#fff';
+      g.font = '900 16px sans-serif';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText('!', 0, 1);
+    },
+    vampiro(g) {
+      glow(g, 0, 2, 24, '#ff2a4a', 0.5);
+      g.beginPath();
+      g.moveTo(0, -20);
+      g.bezierCurveTo(12, -4, 14, 4, 14, 8);
+      g.arc(0, 8, 14, 0, Math.PI);
+      g.bezierCurveTo(-14, 4, -12, -4, 0, -20);
+      g.closePath();
+      g.fillStyle = radial(g, 0, 4, 16, '#d8203a');
+      g.fill();
+      outline(g, 2);
+      shineAt(g, -5, 2, 3, 5);
+    },
+    sabedoria(g) { ICONS.xp(g); },
+    token(g) {
+      glow(g, 0, 0, 26, '#c77dff', 0.6);
+      ball(g, 0, 0, 16, '#9a5ad0', 2.2);
+      const pts = [];
+      for (let i = 0; i < 10; i++) {
+        const a = -Math.PI / 2 + (i / 10) * TAU;
+        const r = i % 2 ? 4.5 : 10;
+        pts.push(Math.cos(a) * r, Math.sin(a) * r);
+      }
+      poly(g, pts, '#f4e2ff', 1.2);
+    },
     lock(g) {
       g.strokeStyle = OUT;
       g.lineWidth = 7;

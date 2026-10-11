@@ -343,6 +343,33 @@ button.big { font-size: 26px; padding: 16px; }
   font-weight: 900; font-size: 18px; color: var(--gold); text-shadow: 0 2px 0 #000; z-index: 2;
 }
 .coinbadge .coin-ico { width: 20px; height: 20px; }
+.token-ico {
+  display: inline-block; width: 18px; height: 18px; transform: rotate(45deg); border-radius: 4px;
+  background: radial-gradient(circle at 35% 30%, #f4e2ff, #b07aff 45%, #5a2a9a);
+  border: 2px solid #1a1222; margin-left: 6px;
+}
+.coinbadge .tokenval { color: #d8b0ff; }
+b.tok { color: #d8b0ff; }
+
+/* ============================================================
+   Desafios
+   ============================================================ */
+#chalList { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; text-align: left; }
+.chal {
+  display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 14px;
+  background: rgba(20,16,32,.85); border: 2px solid #3d3556;
+}
+.chal.done { border-color: #b07aff; background: linear-gradient(90deg, rgba(90,42,154,.35), rgba(20,16,32,.85)); }
+.chal .cinfo { flex: 1; min-width: 0; }
+.chal .cname { font-weight: 900; color: #fff; }
+.chal .cdesc { font-size: 12px; color: #b8b0cc; }
+.chal .cbar { height: 7px; margin-top: 5px; border-radius: 4px; background: #0e0b16; overflow: hidden; border: 1px solid #000; }
+.chal .cbar i { display: block; height: 100%; background: linear-gradient(90deg, #7a3ad0, #d8b0ff); }
+.chal .cprog { font-size: 11px; color: #d8b0ff; font-weight: 800; margin-top: 2px; }
+.chal .creward { display: flex; align-items: center; gap: 4px; font-weight: 900; color: #d8b0ff; font-size: 18px; }
+.chal.done .creward::after { content: '✔'; color: #8fd3a0; margin-left: 4px; }
+button.buy.tokbuy { background: linear-gradient(#d8b0ff, #8a4ad8); color: #1a0a2a; box-shadow: 0 4px 0 #3a1a6a, 0 6px 14px rgba(0,0,0,.5); }
+.total.tokens b { color: #d8b0ff; }
 .btnrow { display: flex; gap: 10px; }
 .btnrow button { flex: 1; }
 button.danger { background: linear-gradient(#ff7a7a, #c0303a); color: #fff; box-shadow: 0 4px 0 #6a1018, 0 6px 14px rgba(0,0,0,.5); }
@@ -439,6 +466,8 @@ button.buy img { width: 24px; height: 24px; }
   .segbtn { flex: 1; padding: 8px 4px; font-size: 12px; }
   .pill { font-size: 13px; padding: 4px 9px; gap: 5px; }
   .coin-ico { width: 14px; height: 14px; }
+  .token-ico { width: 13px; height: 13px; }
+  #chalList { grid-template-columns: 1fr; }
   .lockbadge { top: 30px; }
   .lockbadge img { width: 36px; height: 36px; }
 }

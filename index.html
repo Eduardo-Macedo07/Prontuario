@@ -40,12 +40,13 @@
   <!-- Tela inicial -->
   <div id="home" class="overlay">
     <div class="homebox">
-      <div class="coinbadge"><span class="coin-ico"></span><span class="coinval">0</span></div>
+      <div class="coinbadge"><span class="coin-ico"></span><span class="coinval">0</span><span class="token-ico"></span><span class="tokenval">0</span></div>
       <h1 class="logo"><span>Survivor</span><span>Browser</span></h1>
       <canvas id="homeArt" width="720" height="260"></canvas>
       <p id="best" class="best"></p>
       <div class="homebtns">
         <button id="homePlay" class="big">Jogar</button>
+        <button id="homeChal" class="secondary">Desafios e Arsenal</button>
         <button id="homeShop" class="secondary">Loja</button>
         <button id="homeSettings" class="secondary">Configurações</button>
       </div>
@@ -73,11 +74,24 @@
   <!-- Loja -->
   <div id="shop" class="overlay hidden">
     <div class="panel wide">
-      <div class="coinbadge"><span class="coin-ico"></span><span class="coinval">0</span></div>
+      <div class="coinbadge"><span class="coin-ico"></span><span class="coinval">0</span><span class="token-ico"></span><span class="tokenval">0</span></div>
       <h2>Loja</h2>
       <p class="subtitle">Ganhe moedas nas partidas e cumpra objetivos para liberar novos itens</p>
       <div id="shoplist"></div>
       <button id="shopBack" class="secondary">Voltar</button>
+    </div>
+  </div>
+
+  <!-- Desafios e desbloqueios -->
+  <div id="challenges" class="overlay hidden">
+    <div class="panel wide">
+      <div class="coinbadge"><span class="coin-ico"></span><span class="coinval">0</span><span class="token-ico"></span><span class="tokenval">0</span></div>
+      <h2>Desafios</h2>
+      <p class="subtitle">Cumpra desafios para ganhar <b class="tok">moedas de desafio</b> e liberar armas e passivas novas</p>
+      <div id="chalList"></div>
+      <h3 class="shophead">Arsenal bloqueado</h3>
+      <div id="unlockList" class="shoprow"></div>
+      <button id="chalBack" class="secondary">Voltar</button>
     </div>
   </div>
 

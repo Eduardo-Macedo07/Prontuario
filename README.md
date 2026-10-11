@@ -44,6 +44,35 @@ Todas as armas atacam e miram sozinhas.
 | Espaço de passiva (3º) | 150 | Alcançar o nível 15 |
 | Espaço de passiva (4º) | 500 | Sobreviver 10 minutos |
 
+## Desafios e moedas de desafio
+
+Na tela **Desafios e Arsenal** ficam 12 desafios. Cada um dá **moedas de desafio** (roxas), usadas para liberar
+armas e passivas que começam bloqueadas.
+
+| Desafio | Recompensa |
+| --- | --- |
+| Intocável: sobreviver 2 minutos seguidos sem levar dano | 2 |
+| Massacre: derrotar 2.000 inimigos no total | 3 |
+| Fúria: derrotar 500 inimigos numa partida | 2 |
+| Sobrevivente: sobreviver 10 minutos | 3 |
+| Veterano: alcançar o nível 20 | 2 |
+| Caçador de Elites: derrotar 15 mini-chefes | 2 |
+| Mata-Gigantes: derrotar o Rei Ogro em menos de 30 s | 3 |
+| Desviador: derrotar o Robô sem levar míssil | 2 |
+| Caça-Lich: derrotar o Lich em menos de 40 s | 3 |
+| Trinca de Chefões: 3 chefões numa partida | 3 |
+| Lendário: escolher uma carta lendária | 1 |
+| Mestre de Armas: levar uma arma ao nível 10 | 2 |
+
+| Bloqueado | Custo |
+| --- | --- |
+| Raio em Cadeia, Bola de Fogo (armas) | 3 cada |
+| Bumerangue (arma) | 4 |
+| Chuva de Meteoros (arma) | 5 |
+| Projéteis (passiva) | 4 |
+| Dano Crítico, Vampirismo (passivas) | 3 cada |
+| Sabedoria (passiva) | 2 |
+
 ## Inimigos
 
 Todos andam um pouco mais devagar que o seu personagem.
@@ -52,8 +81,13 @@ Todos andam um pouco mais devagar que o seu personagem.
 - **Múmia**: lenta e resistente
 - **Ceifador**: fantasma de manto e foice que flutua em zigue-zague
 - **Lobisomem**: agacha (aviso) e dá um bote rápido
-- **Chefões** (revezam): **Robô Destruidor** (marca áreas vermelhas no chão e lança mísseis; saia da marca),
-  **Rei Ogro** e **Lich** (invoca esqueletos)
+- **Mini-chefes**: a cada 15 inimigos nasce um elite (coroa e brilho dourado), maior, com 5x a vida e
+  recompensas melhores
+- **Chefões** (revezam, com pouca vida mas ataques perigosos e sempre avisados no chão):
+  - **Robô Destruidor**: marca áreas vermelhas e lança mísseis; saia da marca
+  - **Rei Ogro**: para, marca uma faixa na sua direção e solta uma onda de choque por ela (depois, três em leque)
+  - **Lich**: marca 3 colunas na sua direção e ateia fogo nelas; saia ou fique no vão entre elas.
+    Também invoca esqueletos
 
 ## Personagens
 
@@ -66,13 +100,15 @@ Todos andam um pouco mais devagar que o seu personagem.
 ## Passivas
 
 Vida Máxima, Velocidade de Movimento, Dano, Velocidade de Ataque, Alcance de Coleta, Regeneração, Armadura,
-Projéteis, Chance de Crítico, Área e Sorte.
+Projéteis, Chance de Crítico, Área e Sorte. Liberadas com moedas de desafio: Dano Crítico, Vampirismo e
+Sabedoria.
 
 ## Arsenal (cada arma até o nível 10)
 
 Estilhaço de Gelo, Arco Caçador (flechas teleguiadas que perfuram), Facas (teleguiadas), Raio em Cadeia
 (ricocheteia), Bola de Fogo (explosão em área), Lâminas Orbitais (reduzem o dano recebido), Aura Sagrada e
-Tremor de Pedra.
+Tremor de Pedra. Liberadas com moedas de desafio: Bumerangue (vai e volta atravessando tudo) e Chuva de
+Meteoros.
 
 ## Mapa
 
