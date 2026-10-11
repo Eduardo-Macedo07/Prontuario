@@ -332,18 +332,27 @@
   // speed é uma fração da velocidade base do personagem: os inimigos andam
   // um pouco mais devagar que você (o lobisomem só passa disso no bote).
   const ENEMY_TYPES = {
-    skeleton: { name: 'Esqueleto', r: 12, hp: 16, speed: 0.78, dmg: 8, xp: 1, color: '#e8e2cf' },
-    ghost: { name: 'Ceifador', r: 11, hp: 11, speed: 0.88, dmg: 6, xp: 1, color: '#7fd8ff' },
-    mummy: { name: 'Múmia', r: 14, hp: 42, speed: 0.55, dmg: 12, xp: 2, color: '#d8c9a3' },
-    werewolf: { name: 'Lobisomem', r: 15, hp: 36, speed: 0.74, dmg: 14, xp: 2, color: '#8a7a6a' },
-    skelknight: { name: 'Cavaleiro Esqueleto', r: 17, hp: 120, speed: 0.6, dmg: 20, xp: 6, color: '#9aa6b4' },
-    robo: { name: 'Robô Destruidor', r: 42, hp: 1700, speed: 0.5, dmg: 34, xp: 60, color: '#c3ccd8', boss: true },
-    boss: { name: 'Rei Ogro', r: 40, hp: 1600, speed: 0.6, dmg: 35, xp: 60, color: '#c02060', boss: true },
-    lich: { name: 'Lich', r: 34, hp: 1250, speed: 0.5, dmg: 30, xp: 60, color: '#4fc7b8', boss: true },
+    skeleton: { name: 'Esqueleto', r: 12, hp: 16, speed: 0.58, dmg: 8, xp: 1, color: '#e8e2cf' },
+    ghost: { name: 'Ceifador', r: 11, hp: 11, speed: 0.66, dmg: 6, xp: 1, color: '#7fd8ff' },
+    mummy: { name: 'Múmia', r: 14, hp: 42, speed: 0.42, dmg: 12, xp: 2, color: '#d8c9a3' },
+    werewolf: { name: 'Lobisomem', r: 15, hp: 36, speed: 0.55, dmg: 14, xp: 2, color: '#8a7a6a' },
+    skelknight: { name: 'Cavaleiro Esqueleto', r: 17, hp: 120, speed: 0.46, dmg: 20, xp: 6, color: '#9aa6b4' },
+    robo: { name: 'Robô Destruidor', r: 42, hp: 1700, speed: 0.4, dmg: 34, xp: 60, color: '#c3ccd8', boss: true },
+    boss: { name: 'Rei Ogro', r: 40, hp: 1600, speed: 0.45, dmg: 35, xp: 60, color: '#c02060', boss: true },
+    lich: { name: 'Lich', r: 34, hp: 1250, speed: 0.4, dmg: 30, xp: 60, color: '#4fc7b8', boss: true },
   };
   const BOSS_ORDER = ['robo', 'boss', 'lich'];
 
   const MAX_ENEMIES = 320;
+  const FIRST_SWARM = 60;
+
+  // Inimigos por segundo: 0,5 até a primeira horda; depois cresce devagar e vai acelerando.
+  // Ex.: 1 min = 0,6 · 2 min = 1,75 · 3 min = 3,4 · 5 min = 8,2 · 10 min = 29
+  function spawnRate(t) {
+    if (t < FIRST_SWARM) return 0.5;
+    const m = (t - FIRST_SWARM) / 60;
+    return 0.6 + m * 0.9 + m * m * 0.25;
+  }
   const BOSS_INTERVAL = 180;
 
   // ============================================================
@@ -421,7 +430,7 @@
     runCoins = 0;
     spawnAcc = 0;
     nextBoss = BOSS_INTERVAL;
-    nextSwarm = 50;
+    nextSwarm = FIRST_SWARM;
     bossesSpawned = 0;
     pendingLevels = 0;
     pendingChests = 0;
@@ -1199,8 +1208,8 @@
     const base = CHARACTERS[player.char].speed;
     const e = {
       type, x, y, r: T.r, hp, maxHp: hp,
-      // fica sempre abaixo de 95% da velocidade base do personagem
-      speed: base * Math.min(0.95, T.speed * (1 + Math.min(time / 600, 0.15))),
+      // fica sempre abaixo de 80% da velocidade base do personagem
+      speed: base * Math.min(0.8, T.speed * (1 + Math.min(time / 600, 0.1))),
       dmg: T.dmg * (1 + (time / 240) * 0.3),
       xp: T.xp, color: T.color, boss: !!T.boss,
       flash: 0, kbx: 0, kby: 0, orbitCd: 0, phase: rand(0, TAU), summonT: 3, dead: false,
@@ -1222,7 +1231,8 @@
   }
 
   function updateSpawning(dt) {
-    const rate = 1 + time / 18;
+    // Começo tranquilo (pouquinhos até a primeira horda), depois acelera aos poucos.
+    const rate = spawnRate(time);
     spawnAcc += rate * dt;
     while (spawnAcc >= 1) {
       spawnAcc -= 1;
@@ -1232,7 +1242,7 @@
     if (time >= nextSwarm) {
       // Enxame: um anel de inimigos fechando em volta do jogador.
       nextSwarm += 50;
-      const n = 24 + Math.floor(time / 15);
+      const n = 12 + Math.floor(time / 12);
       const d = Math.hypot(W, H) / 2 + 20;
       const type = time > 100 ? 'werewolf' : 'ghost';
       for (let i = 0; i < n && enemies.length < MAX_ENEMIES + 40; i++) {
@@ -1356,8 +1366,8 @@
         e.lungeCd -= dt;
         if (e.dashT > 0) {
           e.dashT -= dt;
-          vx = e.dashX * e.speed * 3.2;
-          vy = e.dashY * e.speed * 3.2;
+          vx = e.dashX * e.speed * 2.8;
+          vy = e.dashY * e.speed * 2.8;
         } else if (e.windup > 0) {
           e.windup -= dt;
           vx = 0;
