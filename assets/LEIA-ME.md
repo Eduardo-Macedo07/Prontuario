@@ -3,7 +3,20 @@
 Hoje tudo no jogo é desenhado por código. Qualquer personagem, inimigo ou objeto do cenário
 pode ser trocado por uma imagem PNG, sem mexer no código.
 
-## Passo a passo
+## Enviando por PDF
+
+O jeito mais fácil: use o [`modelo-sprites.pdf`](modelo-sprites.pdf) (uma página por sprite, com a arte atual
+como referência e as regras na capa). Monte um PDF igual, com a sua imagem PNG transparente em cada página
+e o código do sprite no começo do título. Depois rode:
+
+```
+python3 ferramentas/pdf_para_sprites.py seu-arquivo.pdf
+```
+
+A ferramenta salva cada imagem em `assets/sprites/` e ativa a linha certa em `assets/sprites.js`.
+Para refazer o modelo depois de mudar a arte: `python3 ferramentas/gerar_pdf_modelo.py`.
+
+## Passo a passo (sem PDF)
 
 1. Abra o modelo correspondente em `assets/modelos/` (ex.: `mago.png`).
 2. Desenhe a sua versão **no mesmo tamanho de imagem**, com fundo transparente, por cima do modelo

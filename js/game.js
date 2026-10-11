@@ -505,7 +505,8 @@
   });
 
   // Joystick virtual: encoste o dedo (ou clique e arraste o mouse) em qualquer lugar e arraste.
-  const STICK_R = 60;
+  // A base fica parada onde você tocou; só a bolinha acompanha o dedo, até a borda.
+  const STICK_R = 85;
   const stick = { active: false, id: null, ox: 0, oy: 0, x: 0, y: 0, used: false };
 
   canvas.addEventListener('pointerdown', (e) => {
@@ -522,14 +523,6 @@
     if (!stick.active || e.pointerId !== stick.id) return;
     stick.x = e.clientX / zoom;
     stick.y = e.clientY / zoom;
-    // Se o dedo vai além do limite, a base acompanha (não precisa voltar ao centro).
-    const dx = stick.x - stick.ox;
-    const dy = stick.y - stick.oy;
-    const d = Math.hypot(dx, dy);
-    if (d > STICK_R) {
-      stick.ox = stick.x - (dx / d) * STICK_R;
-      stick.oy = stick.y - (dy / d) * STICK_R;
-    }
   });
   const endStick = (e) => {
     if (e.pointerId !== stick.id) return;
@@ -1889,8 +1882,9 @@
       const dx = stick.x - stick.ox;
       const dy = stick.y - stick.oy;
       const d = Math.hypot(dx, dy);
-      if (d > 8) {
-        const k = Math.min(1, d / STICK_R);
+      if (d > 10) {
+        // 60% do raio já é velocidade máxima, para não precisar esticar tanto o dedo
+        const k = Math.min(1, d / (STICK_R * 0.6));
         mx = (dx / d) * k;
         my = (dy / d) * k;
       }
@@ -2479,8 +2473,13 @@
       ctx.lineWidth = 3;
       ctx.strokeStyle = 'rgba(255,255,255,0.6)';
       ctx.stroke();
+      // a bolinha para na borda da base
+      const dx = stick.x - stick.ox;
+      const dy = stick.y - stick.oy;
+      const d = Math.hypot(dx, dy);
+      const k = d > STICK_R ? STICK_R / d : 1;
       ctx.globalAlpha = 0.85;
-      Art.ball(ctx, stick.x, stick.y, 24, '#ffd36b', 2.5);
+      Art.ball(ctx, stick.ox + dx * k, stick.oy + dy * k, 34, '#ffd36b', 3);
       ctx.restore();
     } else if (isTouch && !stick.used && state === 'playing') {
       // dica até o jogador tocar a primeira vez
