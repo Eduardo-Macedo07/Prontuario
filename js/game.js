@@ -2198,20 +2198,56 @@
   const shots = (w) => Math.max(1, Math.floor(w.s.count + 1e-9)) + Math.floor(player.extraProj + 1e-9);
   const cooldown = (w) => Math.max(0.12, w.s.cd * w.s.cdMul * effCd());
 
+  // ---------- Mira ----------
+  // Os disparos saem um pouco acima dos pés do personagem.
+  const AIM_Y = 13;
+
+  // Alvo preferido: o inimigo mais perto, dando prioridade a quem está na frente
+  // (para onde o personagem está andando ou olhando).
+  function aimScore(e) {
+    const dx = e.x - player.x;
+    const dy = e.y - player.y;
+    const d = Math.hypot(dx, dy) || 1;
+    const front = (dx * player.dirX + dy * player.dirY) / d; // 1 = na frente, -1 = atrás
+    return d * (1 - 0.3 * front);
+  }
+
+  function aimTarget(exclude, maxDist) {
+    let best = null;
+    let bs = Infinity;
+    for (const e of enemies) {
+      if (e.dead || (exclude && exclude.has(e))) continue;
+      if (maxDist && Math.hypot(e.x - player.x, e.y - player.y) > maxDist) continue;
+      const sc = aimScore(e);
+      if (sc < bs) { bs = sc; best = e; }
+    }
+    return best;
+  }
+
+  // Vários alvos diferentes, do preferido para o menos preferido.
+  function aimTargets(n, maxDist) {
+    const list = enemiesOnScreen().filter((e) => !maxDist || Math.hypot(e.x - player.x, e.y - player.y) <= maxDist);
+    list.sort((a, b) => aimScore(a) - aimScore(b));
+    return list.slice(0, n);
+  }
+
+  // Ângulo do ponto de disparo até o centro do inimigo.
+  const aimAngle = (t) => Math.atan2(t.y - (player.y - AIM_Y), t.x - player.x);
+
   const WEAPON_UPDATE = {
     missil(w, dt) {
       w.timer -= dt;
       if (w.timer > 0) return;
-      const target = nearestEnemy(player.x, player.y);
+      const target = aimTarget();
       if (!target) { w.timer = 0.1; return; }
       w.timer = cooldown(w);
       Sound.play('ice');
       const n = shots(w);
-      const base = Math.atan2(target.y - player.y, target.x - player.x);
+      const base = aimAngle(target);
       for (let i = 0; i < n; i++) {
         const a = base + (i - (n - 1) / 2) * 0.16;
         projectiles.push({
-          kind: 'missil', x: player.x, y: player.y - 14,
+          kind: 'missil', x: player.x, y: player.y - AIM_Y,
           vx: Math.cos(a) * 430, vy: Math.sin(a) * 430,
           r: 6, dmg: w.s.dmg, pierce: Math.floor(w.s.pierce + 1e-9), life: 1.4, hit: new Set(),
         });
@@ -2223,22 +2259,17 @@
       if (w.timer > 0) return;
       const n = shots(w);
       // Cada flecha mira um inimigo diferente, do mais perto ao mais longe.
-      const taken = new Set();
-      const targets = [];
-      for (let i = 0; i < n; i++) {
-        const t = nearestEnemy(player.x, player.y, taken);
-        if (!t) break;
-        taken.add(t);
-        targets.push(t);
-      }
+      let targets = aimTargets(n);
+      if (!targets.length) { const t = aimTarget(); targets = t ? [t] : []; }
       if (!targets.length) { w.timer = 0.1; return; }
       w.timer = cooldown(w);
       Sound.play('arrow');
       for (let i = 0; i < n; i++) {
         const t = targets[i % targets.length];
-        const a = Math.atan2(t.y - player.y, t.x - player.x) + rand(-0.5, 0.5);
+        // flechas extras no mesmo alvo saem um pouco abertas
+        const a = aimAngle(t) + (i >= targets.length ? rand(-0.25, 0.25) : 0);
         projectiles.push({
-          kind: 'arrow', x: player.x, y: player.y - 12, speed: 560,
+          kind: 'arrow', x: player.x, y: player.y - AIM_Y, speed: 560,
           vx: Math.cos(a) * 560, vy: Math.sin(a) * 560,
           r: 5, dmg: w.s.dmg, pierce: Math.floor(w.s.pierce + 1e-9), life: 2, hit: new Set(), target: t, turn: 9,
         });
@@ -2249,16 +2280,16 @@
       w.timer -= dt;
       if (w.timer > 0) return;
       // Mira sozinha no inimigo mais próximo e corrige a rota em voo.
-      const target = nearestEnemy(player.x, player.y);
+      const target = aimTarget();
       if (!target) { w.timer = 0.1; return; }
       w.timer = cooldown(w);
       Sound.play('knife');
       const n = shots(w);
-      const base = Math.atan2(target.y - player.y, target.x - player.x);
+      const base = aimAngle(target);
       for (let i = 0; i < n; i++) {
-        const a = base + (i - (n - 1) / 2) * 0.14 + rand(-0.04, 0.04);
+        const a = base + (i - (n - 1) / 2) * 0.14;
         projectiles.push({
-          kind: 'knife', x: player.x, y: player.y - 12, speed: 620,
+          kind: 'knife', x: player.x, y: player.y - AIM_Y, speed: 620,
           vx: Math.cos(a) * 620, vy: Math.sin(a) * 620,
           r: 5, dmg: w.s.dmg, pierce: Math.floor(w.s.pierce + 1e-9), life: 0.8, hit: new Set(), target, turn: 6,
         });
@@ -2268,7 +2299,7 @@
     raio(w, dt) {
       w.timer -= dt;
       if (w.timer > 0) return;
-      const starts = shuffle(enemiesOnScreen());
+      const starts = aimTargets(shots(w));
       if (!starts.length) { w.timer = 0.1; return; }
       w.timer = cooldown(w);
       Sound.play('zap');
@@ -2288,11 +2319,12 @@
       Sound.play('fire');
       const n = shots(w);
       const radius = w.s.area * player.areaMul;
+      const targets = aimTargets(n);
       for (let i = 0; i < n; i++) {
-        const t = pick(options);
-        const a = Math.atan2(t.y - player.y, t.x - player.x);
+        const t = targets[i % targets.length];
+        const a = aimAngle(t);
         projectiles.push({
-          kind: 'fireball', x: player.x, y: player.y - 14,
+          kind: 'fireball', x: player.x, y: player.y - AIM_Y,
           vx: Math.cos(a) * 380, vy: Math.sin(a) * 380,
           r: 8, dmg: w.s.dmg, pierce: 0, life: 1.6, hit: new Set(),
           tx: t.x, ty: t.y, radius, burn: w.s.burn >= 0.99 ? w.s.burn : 0,
@@ -2363,21 +2395,21 @@
     metralhadora(w, dt) {
       w.timer -= dt;
       if (w.timer > 0) return;
-      const target = nearestEnemy(player.x, player.y, null, 520);
+      const target = aimTarget(null, 520);
       if (!target) { w.timer = 0.1; return; }
       w.timer = cooldown(w);
       Sound.play('knife');
       const n = shots(w);
-      const base = Math.atan2(target.y - player.y, target.x - player.x);
+      const base = aimAngle(target);
       for (let i = 0; i < n; i++) {
-        const a = base + (i - (n - 1) / 2) * 0.12 + rand(-0.06, 0.06);
+        const a = base + (i - (n - 1) / 2) * 0.1 + rand(-0.025, 0.025);
         projectiles.push({
-          kind: 'bullet', x: player.x + Math.cos(base) * 14, y: player.y - 14,
+          kind: 'bullet', x: player.x, y: player.y - AIM_Y,
           vx: Math.cos(a) * 760, vy: Math.sin(a) * 760, speed: 760,
           r: 4, dmg: w.s.dmg, pierce: 0, bounces: Math.floor(w.s.bounces + 1e-9), life: 0.9, hit: new Set(),
         });
       }
-      fx({ kind: 'dot', add: true, x: player.x + Math.cos(base) * 20, y: player.y - 14 + Math.sin(base) * 20, life: 0.06, color: '#ffe08a', size: 6 });
+      fx({ kind: 'dot', add: true, x: player.x + Math.cos(base) * 20, y: player.y - AIM_Y + Math.sin(base) * 20, life: 0.06, color: '#ffe08a', size: 6 });
     },
 
     espadao(w, dt) {
@@ -2401,7 +2433,7 @@
       w.timer = cooldown(w);
       Sound.play('whistle');
       // fileira de bombas atravessando o alvo
-      const t = pick(options);
+      const t = aimTarget();
       const a = Math.atan2(t.y - player.y, t.x - player.x) + Math.PI / 2 + rand(-0.4, 0.4);
       const n = shots(w);
       const radius = w.s.area * player.areaMul;
@@ -2416,16 +2448,16 @@
     bumerangue(w, dt) {
       w.timer -= dt;
       if (w.timer > 0) return;
-      const target = nearestEnemy(player.x, player.y);
+      const target = aimTarget();
       if (!target) { w.timer = 0.1; return; }
       w.timer = cooldown(w);
       Sound.play('knife');
       const n = shots(w);
-      const base = Math.atan2(target.y - player.y, target.x - player.x);
+      const base = aimAngle(target);
       for (let i = 0; i < n; i++) {
         const a = base + (i - (n - 1) / 2) * 0.5;
         projectiles.push({
-          kind: 'boomerang', x: player.x, y: player.y - 12,
+          kind: 'boomerang', x: player.x, y: player.y - AIM_Y,
           vx: Math.cos(a) * 520, vy: Math.sin(a) * 520,
           r: 12, dmg: w.s.dmg, pierce: Infinity, life: 5, hit: new Set(),
           dist: 0, range: w.s.range, back: false,
@@ -2441,10 +2473,11 @@
       w.timer = cooldown(w);
       const n = shots(w);
       const radius = w.s.area * player.areaMul;
+      const targets = aimTargets(n);
       for (let i = 0; i < n; i++) {
-        const t = pick(options);
+        const t = targets[i % targets.length];
         const fall = 0.65 + i * 0.12;
-        meteors.push({ x: t.x + rand(-20, 20), y: t.y + rand(-20, 20), r: radius, t: fall, max: fall, dmg: w.s.dmg });
+        meteors.push({ x: t.x, y: t.y, r: radius, t: fall, max: fall, dmg: w.s.dmg });
       }
     },
   });
@@ -2490,7 +2523,10 @@
     let diff = desired - cur;
     while (diff > Math.PI) diff -= TAU;
     while (diff < -Math.PI) diff += TAU;
-    const a = cur + clamp(diff, -p.turn * dt, p.turn * dt);
+    // perto do alvo vira bem mais rápido, para não ficar dando voltas em volta dele
+    const d = Math.hypot(target.x - p.x, target.y - p.y);
+    const turn = p.turn * (d < 160 ? 1 + (160 - d) / 25 : 1);
+    const a = cur + clamp(diff, -turn * dt, turn * dt);
     p.vx = Math.cos(a) * p.speed;
     p.vy = Math.sin(a) * p.speed;
   }
