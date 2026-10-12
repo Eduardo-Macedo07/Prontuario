@@ -82,7 +82,10 @@ def fit_to_model(img, code, kind):
     """Escala e ponto de apoio para o desenho ficar do tamanho e na altura do modelo."""
     model_path = os.path.join(MODELS_DIR, f"{code}.png")
     if not os.path.exists(model_path):
-        return None
+        # personagem sem modelo próprio usa o do mago como referência de tamanho
+        if kind != "personagem":
+            return None
+        model_path = os.path.join(MODELS_DIR, "mago.png")
     model = Image.open(model_path).convert("RGBA")
     mt, mb = content_box(model)
     nt, nb = content_box(img)

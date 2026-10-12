@@ -15,6 +15,8 @@ window.SPRITES = {
   mago:     { file: 'mago.png', frames: 4, fps: 8, scale: 1.013, anchorY: 0.888 },
   maniaco:  { file: 'maniaco.png', frames: 4, fps: 10, scale: 1.069, anchorY: 0.891 },
   golem:    { file: 'golem.png', frames: 4, fps: 6, scale: 0.789, anchorY: 0.874 },
+  mercenario: { file: 'mercenario.png', frames: 4, fps: 9, scale: 0.997, anchorY: 0.891 },
+  berserker:  { file: 'berserker.png', frames: 4, fps: 7, scale: 1.1, anchorY: 0.891 },
 
   // ---------- Inimigos ----------
   skeleton:   { file: 'esqueleto.png', frames: 4, fps: 8, scale: 0.61, anchorY: 0.609 },

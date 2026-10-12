@@ -30,7 +30,7 @@ Para refazer o modelo depois de mudar a arte: `python3 ferramentas/gerar_pdf_mod
 
 | Tipo | Quadros | Tamanho de cada quadro |
 | --- | --- | --- |
-| Personagens (mago, maniaco, golem) | 4, lado a lado (ciclo de caminhada) | 160 × 160 |
+| Personagens (mago, maniaco, golem, mercenario, berserker) | 4, lado a lado (ciclo de caminhada) | 160 × 160 |
 | Inimigos | 4, lado a lado | o mesmo do modelo (varia com o tamanho do inimigo) |
 | Objetos do cenário | 1 | 160 × 170 |
 
