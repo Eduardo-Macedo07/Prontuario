@@ -174,7 +174,7 @@
     { id: 'wslot1', kind: 'wslot', name: 'Espaço de arma', price: 200, desc: '+1 espaço de arma (4 no total).', req: { type: 'time', n: 300, text: 'Sobreviva 5 minutos' } },
     { id: 'wslot2', kind: 'wslot', name: 'Espaço de arma', price: 600, desc: '+1 espaço de arma (5 no total).', req: { type: 'bosses', n: 3, text: 'Derrote 3 chefões no total' }, needs: 'wslot1' },
     { id: 'pslot1', kind: 'pslot', name: 'Espaço de passiva', price: 150, desc: '+1 espaço de passiva (3 no total).', req: { type: 'level', n: 15, text: 'Alcance o nível 15' } },
-    { id: 'pslot2', kind: 'pslot', name: 'Espaço de passiva', price: 500, desc: '+1 espaço de passiva (4 no total).', req: { type: 'time', n: 600, text: 'Sobreviva 10 minutos' }, needs: 'pslot1' },
+    { id: 'pslot2', kind: 'pslot', name: 'Espaço de passiva', price: 500, desc: '+1 espaço de passiva (4 no total).', req: { type: 'time', n: 420, text: 'Sobreviva 7 minutos' }, needs: 'pslot1' },
   ];
 
   const BASE_WEAPON_SLOTS = 3; // a arma inicial + 2
@@ -214,7 +214,7 @@
       val: () => save.stats.kills + (inRun ? kills : 0) },
     { id: 'furia', name: 'Fúria', desc: 'Derrote 500 inimigos numa só partida', reward: 2, goal: 500,
       val: () => Math.max(save.stats.bestKills, inRun ? kills : 0) },
-    { id: 'sobrevivente', name: 'Sobrevivente', desc: 'Sobreviva 10 minutos', reward: 3, goal: 600, time: true,
+    { id: 'sobrevivente', name: 'Sobrevivente', desc: 'Sobreviva 7 minutos', reward: 3, goal: 420, time: true,
       val: () => Math.max(save.stats.bestTime, inRun ? time : 0) },
     { id: 'veterano', name: 'Veterano', desc: 'Alcance o nível 20', reward: 2, goal: 20,
       val: () => Math.max(save.stats.bestLevel, inRun ? player.level : 0) },
@@ -459,7 +459,7 @@
     robo: { name: 'Robô Destruidor', r: 42, hp: 1100, speed: 0.32, dmg: 34, xp: 60, color: '#c3ccd8', boss: true },
     boss: { name: 'Rei Ogro', r: 40, hp: 1000, speed: 0.36, dmg: 35, xp: 60, color: '#c02060', boss: true },
     lich: { name: 'Lich', r: 34, hp: 850, speed: 0.32, dmg: 30, xp: 60, color: '#4fc7b8', boss: true },
-    // Chefões finais (aparecem aos 10 minutos)
+    // Chefões finais (aparecem aos 7 minutos ou no Altar Maior)
     ceifador: { name: 'Ceifador Ancestral', r: 46, hp: 1800, speed: 0.34, dmg: 34, xp: 120, color: '#c77dff', boss: true, final: true },
     titan: { name: 'Titã de Magma', r: 50, hp: 2000, speed: 0.3, dmg: 38, xp: 120, color: '#ff6a1a', boss: true, final: true },
     rainha: { name: 'Rainha do Gelo', r: 40, hp: 1700, speed: 0.34, dmg: 32, xp: 120, color: '#9af0ff', boss: true, final: true },
@@ -467,7 +467,8 @@
   // ============================================================
   // Fases e dificuldades
   // ============================================================
-  const STAGE_TIME = 600; // aos 10 minutos chega o chefão final
+  const STAGE_TIME = 420; // aos 7 minutos chega o chefão final (ou antes, pelo Altar Maior)
+  const SUMMON_TIME = 2; // segundos entre ativar um altar e o chefão nascer
   const STAGES = {
     cemiterio: {
       name: 'Cemitério Sombrio', biome: 'grass', accent: '#8fd3a0', final: 'ceifador',
@@ -554,6 +555,7 @@
   let eshots; // projéteis dos inimigos (bolas de neve, cristais)
   let epools; // chão em chamas deixado pelos slimes
   let spins; // giros do espadão
+  let summons; // chefões sendo invocados nos altares
   let run; // dados da partida usados pelos desafios
   let structures;
   let weapons;
@@ -615,6 +617,7 @@
     eshots = [];
     epools = [];
     spins = [];
+    summons = [];
     structures = [];
     weapons = {};
     passiveLevels = {};
@@ -1119,6 +1122,8 @@
     addWeapon(CHARACTERS[selectedChar].weapon, 0);
     // Uma fogueira perto do início para o jogador descobrir a mecânica.
     spawnStructure('totem', 380);
+    // Altar Maior: invoca o chefão final quando você quiser
+    spawnStructure('grandaltar', 1000);
     inRun = true;
     setState('playing');
   }
@@ -1526,6 +1531,8 @@
       if (crowded) continue;
       if (kind === 'totem') {
         structures.push({ kind, x, y, r: 55, charge: 0, need: 1.5, used: false, fade: 1 });
+      } else if (kind === 'grandaltar') {
+        structures.push({ kind, x, y, r: 95, charge: 0, need: 4, used: false, fade: 1 });
       } else {
         structures.push({ kind, x, y, r: 70, charge: 0, need: 2.5, used: false, fade: 1 });
       }
@@ -1537,7 +1544,7 @@
     structTimer -= dt;
     if (structTimer <= 0) {
       structTimer = 3;
-      structures = structures.filter((s) => Math.hypot(s.x - player.x, s.y - player.y) < 2600 && s.fade > 0);
+      structures = structures.filter((s) => s.kind === 'grandaltar' || (Math.hypot(s.x - player.x, s.y - player.y) < 2600 && s.fade > 0));
       const totems = structures.filter((s) => s.kind === 'totem' && !s.used).length;
       const altars = structures.filter((s) => s.kind === 'altar' && !s.used).length;
       if (totems < 2) spawnStructure('totem');
@@ -1552,12 +1559,14 @@
           fx({ kind: 'dot', add: true, x: s.x + rand(-10, 10), y: s.y - rand(5, 25), vx: rand(-15, 15), vy: rand(-70, -35), life: rand(0.6, 1.2), color: BONFIRE_COLOR, size: rand(1.5, 3), drag: 0.98 });
         } else if (s.kind === 'totem' && s.used && Math.random() < dt * 3) {
           smoke(s.x, s.y - 10, 1, '#6a6460');
+        } else if (s.kind === 'grandaltar' && !s.used && Math.random() < dt * 14) {
+          fx({ kind: 'dot', add: true, x: s.x + rand(-90, 90), y: s.y + rand(-40, 40), vx: 0, vy: rand(-60, -30), life: rand(0.8, 1.4), color: Math.random() < 0.7 ? '#c77dff' : '#ffd36b', size: rand(1.5, 3), drag: 0.99 });
         } else if (s.kind === 'altar' && !s.used && Math.random() < dt * 10) {
           fx({ kind: 'dot', add: true, x: s.x + rand(-50, 50), y: s.y + rand(-20, 20), vx: 0, vy: rand(-50, -25), life: rand(0.6, 1.1), color: '#ff3355', size: rand(1.5, 3), drag: 0.99 });
         }
       }
       if (s.used) {
-        s.fade -= dt * 0.08;
+        if (s.kind !== 'grandaltar') s.fade -= dt * 0.08;
         continue;
       }
       const inside = Math.hypot(s.x - player.x, s.y - player.y) < s.r;
@@ -1565,6 +1574,7 @@
       if (s.charge >= s.need) {
         s.used = true;
         if (s.kind === 'totem') activateTotem(s);
+        else if (s.kind === 'grandaltar') activateGrandAltar(s);
         else activateAltar(s);
       }
     }
@@ -1584,8 +1594,46 @@
     ringFx(s.x, s.y, 140, '#ff3355');
     smoke(s.x, s.y, 10, '#3a2028');
     shake = 12;
-    spawnBoss(s.x + rand(-40, 40), s.y - 90, 1.3);
-    showBanner('Você invocou um chefão!', '#ff3355');
+    // o chefão aparece só depois de um tempo, para dar tempo de se posicionar
+    summons.push({ x: s.x, y: s.y - 90, t: SUMMON_TIME, max: SUMMON_TIME, final: false });
+    showBanner('Um chefão está vindo!', '#ff3355');
+  }
+
+  function activateGrandAltar(s) {
+    Sound.play('altar');
+    sparks(s.x, s.y - 60, '#c77dff', 80, 420);
+    ringFx(s.x, s.y, 200, '#c77dff');
+    smoke(s.x, s.y, 12, '#2a1a36');
+    shake = 16;
+    run.finalSpawned = true; // o relógio não invoca outro
+    summons.push({ x: s.x, y: s.y + 150, t: SUMMON_TIME + 0.5, max: SUMMON_TIME + 0.5, final: true });
+    showBanner('O chefão final está vindo!', '#c77dff');
+  }
+
+  // Invocações em andamento: círculo no chão e coluna de luz até o chefão nascer.
+  function updateSummons(dt) {
+    for (const m of summons) {
+      m.t -= dt;
+      const color = m.final ? '#c77dff' : '#ff3355';
+      if (Math.random() < dt * 30) {
+        const a = rand(0, TAU);
+        const d = rand(10, 70);
+        fx({ kind: 'dot', add: true, x: m.x + Math.cos(a) * d, y: m.y + Math.sin(a) * d * 0.6, vy: rand(-160, -60), life: rand(0.4, 0.8), color, size: rand(2, 4), drag: 0.98 });
+      }
+      if (m.t <= 0) {
+        sparks(m.x, m.y, color, 50, 380);
+        ringFx(m.x, m.y, 120, color);
+        shake = Math.max(shake, 10);
+        if (m.final) {
+          run.finalSpawned = false;
+          spawnFinal(m.x, m.y);
+        } else {
+          spawnBoss(m.x, m.y, 1.3);
+          showBanner('Você invocou um chefão!', '#ff3355');
+        }
+      }
+    }
+    summons = summons.filter((m) => m.t > 0);
   }
 
   // ============================================================
@@ -1605,16 +1653,16 @@
   function spawnEnemy(type, x, y, hpMul) {
     const T = ENEMY_TYPES[type];
     if (x === undefined) ({ x, y } = spawnPoint());
-    // Fica mais forte com o tempo (10 min = 8x a vida) e com a dificuldade.
+    // Fica mais forte com o tempo (7 min = 8x a vida) e com a dificuldade.
     const D = DIFFS[run.diff];
     const m = time / 60;
-    const hp = T.hp * (1 + m * 0.5 + m * m * 0.02) * D.hp * (hpMul || 1);
+    const hp = T.hp * (1 + m * 0.7 + m * m * 0.04) * D.hp * (hpMul || 1);
     const base = CHARACTERS[player.char].speed;
     const e = {
       type, x, y, r: T.r, hp, maxHp: hp,
       // fica sempre abaixo de 60% da velocidade base do personagem
       speed: base * Math.min(0.6, T.speed * (1 + Math.min(time / 600, 0.1))),
-      dmg: T.dmg * (1 + m * 0.1) * D.dmg,
+      dmg: T.dmg * (1 + m * 0.14) * D.dmg,
       xp: T.xp, color: T.color, boss: !!T.boss, final: !!T.final, armor: T.armor || 1,
       flash: 0, kbx: 0, kby: 0, orbitCd: 0, phase: rand(0, TAU), summonT: 3, dead: false,
       lungeCd: rand(1, 3), windup: 0, dashT: 0, dashX: 0, dashY: 0, missileT: 2.5,
@@ -1637,6 +1685,18 @@
     return e;
   }
 
+  function spawnFinal(x, y) {
+    run.finalSpawned = true;
+    const e = spawnEnemy(STAGES[run.stage].final, x, y);
+    e.bornAt = time;
+    smoke(x, y, 16, '#2a1a24');
+    Sound.play('boss');
+    showBanner(`${ENEMY_TYPES[e.type].name} chegou! Derrote-o para vencer.`, '#ff4f6a');
+    shake = 12;
+    for (const s of structures) if (s.kind === 'grandaltar') s.used = true;
+    return e;
+  }
+
   function spawnBoss(x, y, extraMul) {
     bossesSpawned++;
     const order = STAGES[run.stage].bosses;
@@ -1652,8 +1712,8 @@
 
   function updateSpawning(dt) {
     // Começo tranquilo (pouquinhos até a primeira horda), depois acelera aos poucos.
-    // depois dos 10 minutos, enquanto o chefão final vive, a horda aperta
-    const rate = spawnRate(time) * DIFFS[run.diff].spawn * (time > STAGE_TIME ? 1.6 : 1);
+    // enquanto o chefão final vive, a horda aperta
+    const rate = spawnRate(time) * DIFFS[run.diff].spawn * (run.finalSpawned ? 1.6 : 1);
     spawnAcc += rate * dt;
     while (spawnAcc >= 1) {
       spawnAcc -= 1;
@@ -1680,17 +1740,11 @@
     }
 
     if (!run.finalSpawned && time >= STAGE_TIME) {
-      run.finalSpawned = true;
       const p = spawnPoint();
-      const e = spawnEnemy(STAGES[run.stage].final, p.x, p.y);
-      e.bornAt = time;
-      smoke(p.x, p.y, 16, '#2a1a24');
-      Sound.play('boss');
-      showBanner(`${ENEMY_TYPES[e.type].name} chegou! Derrote-o para vencer.`, '#ff4f6a');
-      shake = 12;
+      spawnFinal(p.x, p.y);
     }
 
-    if (time >= nextBoss && time < STAGE_TIME - 20) {
+    if (time >= nextBoss && time < STAGE_TIME - 20 && !run.finalSpawned) {
       nextBoss += BOSS_INTERVAL;
       const p = spawnPoint();
       spawnBoss(p.x, p.y);
@@ -1759,7 +1813,8 @@
       run.eliteKills++;
       dropXp(e.x, e.y, e.xp);
       for (let i = 0; i < 3; i++) pickups.push({ kind: 'coin', x: e.x + rand(-24, 24), y: e.y + rand(-24, 24), v: coinValue() });
-      if (Math.random() < 0.3) pickups.push({ kind: 'heart', x: e.x + 20, y: e.y, v: 25 });
+      if (Math.random() < 0.15) pickups.push({ kind: 'heart', x: e.x + 20, y: e.y, v: 25 });
+      if (Math.random() < 0.04) pickups.push({ kind: 'magnet', x: e.x - 20, y: e.y });
       if (Math.random() < 0.08 * (1 + effLuck() * 0.2)) pickups.push({ kind: 'chest', x: e.x, y: e.y });
       sparks(e.x, e.y, '#ffd36b', 22, 300);
       shake = Math.max(shake, 5);
@@ -1767,7 +1822,8 @@
       dropXp(e.x, e.y, e.xp);
       if (e.type === 'fireslime' && Math.random() < 0.35) epools.push({ x: e.x, y: e.y, r: 28, life: 2.6, dmg: e.dmg * 0.7 });
       const luck = 1 + effLuck() * 0.1;
-      if (Math.random() < 0.012 * (1 + effLuck() * 0.25)) pickups.push({ kind: 'heart', x: e.x, y: e.y, v: 25 });
+      if (Math.random() < 0.0015 * (1 + effLuck() * 0.1)) pickups.push({ kind: 'magnet', x: e.x, y: e.y });
+      else if (Math.random() < 0.005 * (1 + effLuck() * 0.15)) pickups.push({ kind: 'heart', x: e.x, y: e.y, v: 25 });
       else if (Math.random() < 0.05 * luck) pickups.push({ kind: 'coin', x: e.x + rand(-8, 8), y: e.y + rand(-8, 8), v: coinValue() });
     }
   }
@@ -2730,6 +2786,13 @@
           runCoins += p.v * player.coinMul;
           Sound.play('coin');
           sparks(player.x, player.y - 10, '#ffd36b', 4, 140);
+        } else if (p.kind === 'magnet') {
+          // puxa todo o XP do mapa de uma vez
+          for (const q of pickups) if (q.kind === 'xp') q.pulled = true;
+          Sound.play('chest');
+          ringFx(player.x, player.y, 160, '#ff4a5a');
+          sparks(player.x, player.y - 10, '#ff4a5a', 20, 260);
+          addText(player.x, player.y - 50, 'Ímã!', '#ff6a7a', true);
         } else if (p.kind === 'chest') {
           pendingChests++;
           Sound.play('chest');
@@ -2788,6 +2851,7 @@
 
     updateSpawning(dt);
     updateStructures(dt);
+    updateSummons(dt);
     updateWeapons(dt);
     updateProjectiles(dt);
     updateRings(dt);
@@ -2938,11 +3002,13 @@
 
   function drawStructureLabel(s) {
     const d = Math.hypot(s.x - player.x, s.y - player.y);
-    if (s.used || d > 240) return;
-    const label = s.kind === 'totem' ? 'Fogueira' : 'Altar de Invocação';
-    const sub = s.kind === 'totem' ? 'Fique perto para escolher uma bênção' : 'Invoca um chefão';
-    const color = s.kind === 'totem' ? BONFIRE_COLOR : '#ff3355';
-    const y = s.y - (s.kind === 'totem' ? 100 : 64);
+    if (s.used || d > 280) return;
+    const grand = s.kind === 'grandaltar';
+    const label = s.kind === 'totem' ? 'Fogueira' : grand ? 'Altar Maior' : 'Altar de Invocação';
+    const sub = s.kind === 'totem' ? 'Fique perto para escolher uma bênção'
+      : grand ? 'Fique no centro para invocar o chefão final agora' : 'Invoca um chefão';
+    const color = s.kind === 'totem' ? BONFIRE_COLOR : grand ? '#c77dff' : '#ff3355';
+    const y = s.y - (s.kind === 'totem' ? 100 : grand ? 200 : 64);
     ctx.globalAlpha = clamp((240 - d) / 80, 0, 1);
     ctx.textAlign = 'center';
     ctx.lineWidth = 4;
@@ -2971,12 +3037,14 @@
       ctx.stroke();
       ctx.setLineDash([]);
       Art.bonfireGround(ctx, s.x, s.y, time, BONFIRE_COLOR, !s.used);
+    } else if (s.kind === 'grandaltar') {
+      Art.grandAltarGround(ctx, s.x, s.y, s.r, time, s.used, s.charge / s.need);
     } else {
       Art.altar(ctx, s.x, s.y, s.r, time, s.used);
     }
     if (!s.used && s.charge > 0) {
       const k = s.charge / s.need;
-      Art.glow(ctx, s.x, s.y, s.r * 1.5, s.kind === 'totem' ? BONFIRE_COLOR : '#ff3355', k * 0.6);
+      Art.glow(ctx, s.x, s.y, s.r * 1.5, s.kind === 'totem' ? BONFIRE_COLOR : s.kind === 'grandaltar' ? '#c77dff' : '#ff3355', k * 0.6);
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 5;
       ctx.beginPath();
@@ -3002,7 +3070,7 @@
       const t = Math.min((W / 2 - m) / (Math.abs(c) || 1e-6), ((H - top - m) / 2) / (Math.abs(n) || 1e-6));
       const sx = W / 2 + c * t;
       const sy = (top + H - m) / 2 + n * t;
-      const color = s.kind === 'totem' ? BONFIRE_COLOR : '#ff3355';
+      const color = s.kind === 'totem' ? BONFIRE_COLOR : s.kind === 'grandaltar' ? '#c77dff' : '#ff3355';
       const pulse = 1 + Math.sin(time * 5) * 0.08;
       Art.glow(ctx, sx, sy, 26, color, 0.5);
       ctx.save();
@@ -3259,7 +3327,29 @@
     for (const h of hazards) {
       Art.glow(ctx, h.x, h.y, h.r * 1.4, '#ff5a1a', 0.5 * clamp(h.life, 0, 1));
     }
-    for (const s of structures) if (onScreen(s.x, s.y, 160)) drawStructureGround(s);
+    for (const s of structures) if (onScreen(s.x, s.y, 220)) drawStructureGround(s);
+
+    // invocações: círculo crescendo no chão
+    for (const m of summons) {
+      const k = 1 - m.t / m.max;
+      const c = m.final ? '199,125,255' : '255,51,85';
+      ctx.save();
+      ctx.translate(m.x, m.y);
+      ctx.scale(1, 0.6);
+      ctx.fillStyle = `rgba(${c},${0.12 + k * 0.25})`;
+      ctx.beginPath();
+      ctx.arc(0, 0, 80 * k, 0, TAU);
+      ctx.fill();
+      ctx.strokeStyle = `rgba(${c},${0.6 + Math.sin(time * 16) * 0.3})`;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([12, 8]);
+      ctx.lineDashOffset = -time * 40;
+      ctx.beginPath();
+      ctx.arc(0, 0, 80, 0, TAU);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
 
     if (weapons.aura) {
       const r = auraRadius(weapons.aura);
@@ -3361,13 +3451,16 @@
       if (p.kind === 'chest' || !onScreen(p.x, p.y, 30)) continue;
       if (p.kind === 'xp') Art.drawGem(ctx, p, time);
       else if (p.kind === 'coin') Art.drawCoin(ctx, p, time);
+      else if (p.kind === 'magnet') Art.drawMagnetPickup(ctx, p, time);
       else Art.drawHeart(ctx, p, time);
     }
 
     // ---------- Camada de objetos, ordenada de cima para baixo ----------
     const list = [];
     for (const e of enemies) if (onScreen(e.x, e.y, 80)) list.push({ y: e.y, e });
-    for (const s of structures) if (s.kind === 'totem' && onScreen(s.x, s.y, 120)) list.push({ y: s.y, s });
+    for (const s of structures) {
+      if ((s.kind === 'totem' && onScreen(s.x, s.y, 120)) || (s.kind === 'grandaltar' && onScreen(s.x, s.y, 260))) list.push({ y: s.y, s });
+    }
     for (const p of pickups) if (p.kind === 'chest' && onScreen(p.x, p.y, 80)) list.push({ y: p.y, c: p });
     if (showPlayer) list.push({ y: player.y, player: true });
     for (const pr of Art.propsInView(camX, camY, W, H)) list.push({ y: pr.y, prop: pr });
@@ -3380,6 +3473,7 @@
         const behind = showPlayer && h > 0 && player.y < p.y && player.y > p.y - h - 10 && Math.abs(player.x - p.x) < 34;
         Art.drawProp(ctx, p, time, behind ? 0.45 : 1);
       } else if (o.e) drawEnemyFull(o.e);
+      else if (o.s && o.s.kind === 'grandaltar') Art.grandAltarTop(ctx, o.s.x, o.s.y, o.s.r, time, o.s.used);
       else if (o.s) {
         ctx.globalAlpha = clamp(o.s.fade, 0, 1);
         Art.bonfireTop(ctx, o.s.x, o.s.y, time, BONFIRE_COLOR, !o.s.used);
@@ -3458,6 +3552,23 @@
       Art.flame(ctx, mx + 10, my - 14, 10, 34 + k * 20, 0, '#ff7a1a', '#ffe08a');
       Art.glow(ctx, mx, my, 30, '#ff7a1a', 0.7);
       Art.ball(ctx, mx, my, 10, '#7a4a32', 1.6, false);
+    }
+
+    // coluna de luz das invocações
+    for (const m of summons) {
+      const k = 1 - m.t / m.max;
+      const col = m.final ? '#c77dff' : '#ff3355';
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const w = 20 + k * 40;
+      const gr = ctx.createLinearGradient(m.x - w, 0, m.x + w, 0);
+      gr.addColorStop(0, Art.rgba(col, 0));
+      gr.addColorStop(0.5, Art.rgba(col, 0.25 + k * 0.4));
+      gr.addColorStop(1, Art.rgba(col, 0));
+      ctx.fillStyle = gr;
+      ctx.fillRect(m.x - w, m.y - 600, w * 2, 600);
+      ctx.restore();
+      Art.glow(ctx, m.x, m.y, 60 + k * 60, col, 0.4 + k * 0.4);
     }
 
     // chamas das poças dos slimes
@@ -3638,7 +3749,7 @@
     $('hptext').textContent = Math.ceil(player.hp) + ' / ' + player.maxHp;
     $('timer').textContent = fmtTime(time);
     const left = STAGE_TIME - time;
-    const sb = run.victory ? 'Vitória!' : run.finalSpawned ? 'Derrote o chefão final!' : `Chefão final em ${fmtTime(Math.max(0, left))}`;
+    const sb = run.victory ? 'Vitória!' : run.finalSpawned ? 'Derrote o chefão final!' : `Chefão final em ${fmtTime(Math.max(0, left))} · ou invoque no Altar Maior`;
     if ($('stagebar').textContent !== sb) $('stagebar').textContent = sb;
     $('stagebar').classList.toggle('alert', run.finalSpawned || left < 30);
     $('kills').textContent = kills;
@@ -3734,5 +3845,7 @@
     get eshots() { return eshots; },
     get strikes() { return strikes; },
     setTime(v) { time = v; },
+    get summons() { return summons; },
+    get pickups() { return pickups; },
   };
 })();

@@ -1605,6 +1605,142 @@ const Art = (() => {
     }
   }
 
+  // ---------- Altar Maior (invoca o chefão final) ----------
+  // Parte do chão: plataforma de dois degraus com círculos de runas girando.
+  function grandAltarGround(g, x, y, r, t, used, charge) {
+    const main = used ? '#6a6070' : '#c77dff';
+    const gold = used ? '#7a7270' : '#ffd36b';
+    if (!used) glow(g, x, y, r * 2.4, '#9a4aff', 0.28 + Math.sin(t * 2.5) * 0.08);
+    // degrau de baixo e de cima
+    for (const [rr, c0, c1, h] of [[r * 1.12, '#2a2236', '#120e1a', 10], [r * 0.82, '#3a3048', '#1a1424', 8]]) {
+      g.beginPath();
+      g.ellipse(x, y + h, rr, rr * 0.55, 0, 0, TAU);
+      g.fillStyle = '#0a0810';
+      g.fill();
+      g.beginPath();
+      g.ellipse(x, y, rr, rr * 0.55, 0, 0, TAU);
+      g.fillStyle = lin(g, x, y - rr, x, y + rr, c0, c1);
+      g.fill();
+      outline(g, 2.5);
+      // blocos de pedra na borda
+      g.strokeStyle = 'rgba(0,0,0,0.45)';
+      g.lineWidth = 1.5;
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * TAU;
+        g.beginPath();
+        g.moveTo(x + Math.cos(a) * rr * 0.86, y + Math.sin(a) * rr * 0.55 * 0.86);
+        g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr * 0.55);
+        g.stroke();
+      }
+    }
+    g.save();
+    g.translate(x, y);
+    g.scale(1, 0.55);
+    const op = g.globalCompositeOperation;
+    if (!used) g.globalCompositeOperation = 'lighter';
+    // anel externo de runas e anel interno girando ao contrário
+    for (const [rr, dir, n, w] of [[r * 0.74, 1, 18, 2.5], [r * 0.5, -1.6, 12, 2]]) {
+      g.strokeStyle = used ? 'rgba(120,110,130,0.6)' : rgba(main, 0.8);
+      g.lineWidth = w;
+      g.beginPath();
+      g.arc(0, 0, rr, 0, TAU);
+      g.stroke();
+      g.fillStyle = used ? '#6a6070' : gold;
+      for (let i = 0; i < n; i++) {
+        const a = t * 0.5 * dir + (i / n) * TAU;
+        g.save();
+        g.translate(Math.cos(a) * (rr + 7), Math.sin(a) * (rr + 7));
+        g.rotate(a);
+        g.fillRect(-4, -1, 8, 2);
+        g.fillRect(-1, -4, 2, 8);
+        g.fillRect(2, -3, 2, 2);
+        g.restore();
+      }
+    }
+    // hexagrama no centro
+    g.strokeStyle = used ? 'rgba(120,110,130,0.6)' : rgba(gold, 0.85);
+    g.lineWidth = 2.5;
+    for (const off of [0, Math.PI]) {
+      g.beginPath();
+      for (let i = 0; i <= 3; i++) {
+        const a = off - Math.PI / 2 + (i / 3) * TAU + t * 0.2;
+        g.lineTo(Math.cos(a) * r * 0.42, Math.sin(a) * r * 0.42);
+      }
+      g.stroke();
+    }
+    if (!used && charge > 0) {
+      g.fillStyle = rgba('#c77dff', 0.25 * charge);
+      g.beginPath();
+      g.arc(0, 0, r * 0.74, 0, TAU);
+      g.fill();
+    }
+    g.globalCompositeOperation = op;
+    g.restore();
+  }
+
+  // Parte de cima: obelisco com cristal flutuando e seis pilares com chamas roxas.
+  function grandAltarTop(g, x, y, r, t, used) {
+    const flameO = used ? '#5a5060' : '#9a4aff';
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * TAU + Math.PI / 6;
+      const px = x + Math.cos(a) * r * 1.0;
+      const py = y + Math.sin(a) * r * 0.55;
+      if (py > y) continue; // pilares da frente são desenhados depois
+      pillar(g, px, py, t, i, used, flameO);
+    }
+    // obelisco
+    const h = r * 0.95;
+    poly(g, [x - 13, y + 2, x + 13, y + 2, x + 9, y - h, x, y - h - 16, x - 9, y - h], lin(g, x - 13, 0, x + 13, 0, '#4a4058', '#1a1424'), 2.2);
+    g.strokeStyle = used ? '#5a5060' : '#ffd36b';
+    g.lineWidth = 1.5;
+    for (let i = 0; i < 4; i++) {
+      const yy = y - 14 - i * (h / 4.5);
+      g.beginPath();
+      g.moveTo(x - 5, yy); g.lineTo(x + 5, yy - 4);
+      g.moveTo(x, yy + 2); g.lineTo(x, yy - 6);
+      g.stroke();
+    }
+    if (!used) {
+      // cristal girando acima do obelisco
+      const cy = y - h - 46 + Math.sin(t * 2) * 6;
+      glow(g, x, cy, 60, '#b07aff', 0.7);
+      const w = 11 * Math.abs(Math.cos(t * 1.5)) + 3;
+      poly(g, [x, cy - 22, x + w, cy, x, cy + 22, x - w, cy], lin(g, x - w, cy - 22, x + w, cy + 22, '#f4e2ff', '#7a3ad0'), 1.8);
+      for (let i = 0; i < 3; i++) {
+        const a = t * 2 + (i / 3) * TAU;
+        ball(g, x + Math.cos(a) * 26, cy + Math.sin(a) * 9, 3, '#ffd36b', 1, false);
+      }
+    }
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * TAU + Math.PI / 6;
+      const px = x + Math.cos(a) * r * 1.0;
+      const py = y + Math.sin(a) * r * 0.55;
+      if (py <= y) continue;
+      pillar(g, px, py, t, i, used, flameO);
+    }
+  }
+
+  function pillar(g, px, py, t, i, used, flameO) {
+    poly(g, [px - 8, py, px - 7, py - 40, px + 7, py - 40, px + 8, py], lin(g, px - 8, 0, px + 8, 0, '#5a5068', '#241e2e'), 1.8);
+    poly(g, [px - 11, py - 40, px + 11, py - 40, px + 9, py - 47, px - 9, py - 47], '#6a6078', 1.6);
+    poly(g, [px - 10, py + 2, px + 10, py + 2, px + 9, py - 4, px - 9, py - 4], '#4a4058', 1.4);
+    if (!used) {
+      glow(g, px, py - 56, 24, flameO, 0.6);
+      flame(g, px, py - 46, 6, 22 + Math.sin(t * 11 + i) * 5, Math.sin(t * 7 + i) * 2, flameO, '#f4e2ff');
+    }
+  }
+
+  // ---------- Ímã que puxa todo o XP do mapa ----------
+  function drawMagnetPickup(g, p, t) {
+    const s = 1 + Math.sin(t * 5) * 0.1;
+    glow(g, p.x, p.y, 26, '#ff4a5a', 0.45 + Math.sin(t * 5) * 0.15);
+    const spr = sprite('pickup:magnet', 44, (pg) => {
+      pg.scale(0.62, 0.62);
+      ICONS.magnet(pg);
+    });
+    blit(g, spr, p.x, p.y - 4, s, s, Math.sin(t * 3) * 0.2);
+  }
+
   // ============================================================
   // Chão (gerado em blocos e guardado em cache)
   // ============================================================
@@ -2860,7 +2996,7 @@ const Art = (() => {
     mix, light, dark, rgba,
     outline, ball, oval, poly, path, lin, shadow, glow, flame, sprite, blit,
     drawHero, drawHeroSilhouette, heroIcon, hasSheet: (id) => !!SHEETS[id], drawEnemy, drawGem, drawHeart, drawChest, drawCoin,
-    bonfireGround, bonfireTop, altar,
+    bonfireGround, bonfireTop, altar, grandAltarGround, grandAltarTop, drawMagnetPickup,
     drawGround, drawFog, propsInView, drawProp, PROP_HEIGHT, vignette, icon, setLowQuality, setBiome, stagePreview,
   };
 })();

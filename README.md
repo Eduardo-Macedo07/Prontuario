@@ -20,9 +20,10 @@ Todas as armas atacam e miram sozinhas.
 
 ## Fases e dificuldades
 
-Escolha a fase antes do personagem. Cada fase dura **10 minutos**: nesse momento chega o **chefão final**,
-e derrotá-lo conclui a fase (enquanto ele vive, a horda fica ainda mais intensa). A vida e o dano dos
-inimigos crescem com o tempo (aos 10 minutos têm cerca de 8x a vida do começo).
+Escolha a fase antes do personagem. Aos **7 minutos** chega o **chefão final**, e derrotá-lo conclui a fase
+(enquanto ele vive, a horda fica ainda mais intensa). Se quiser enfrentá-lo antes, fique no centro do
+**Altar Maior** (o altar roxo com obelisco e cristal, sempre presente no mapa). A vida e o dano dos inimigos
+crescem com o tempo (aos 7 minutos têm cerca de 8x a vida do começo).
 
 | Fase | Inimigos | Chefão final |
 | --- | --- | --- |
@@ -48,7 +49,10 @@ libera a próxima fase.
   e 6% lendário) e às vezes dá uma 4ª opção.
 - **Fogueiras:** fique perto para escolher 1 de 3 bênçãos (não ocupam espaço). Elas vão de fraca a lendária,
   e quanto mais Sorte, mais fortes.
-- **Altares:** invocam um chefão. Todo chefão deixa um baú com recompensas raras.
+- **Altares:** invocam um chefão, que aparece 2 segundos depois (dá tempo de se posicionar). Todo chefão
+  deixa um baú com recompensas raras.
+- **Corações e ímãs:** corações caem raramente dos inimigos; o **ímã** é bem mais raro e puxa todo o XP do
+  mapa de uma vez.
 - **Moedas:** caem dos inimigos e somam bônus por tempo, chefões e abates ao fim da partida.
 
 ## Loja
@@ -62,7 +66,7 @@ libera a próxima fase.
 | Espaço de arma (4º) | 200 | Sobreviver 5 minutos |
 | Espaço de arma (5º) | 600 | Derrotar 3 chefões no total |
 | Espaço de passiva (3º) | 150 | Alcançar o nível 15 |
-| Espaço de passiva (4º) | 500 | Sobreviver 10 minutos |
+| Espaço de passiva (4º) | 500 | Sobreviver 7 minutos |
 
 ## Desafios e moedas de desafio
 
@@ -74,7 +78,7 @@ armas e passivas que começam bloqueadas.
 | Intocável: sobreviver 2 minutos seguidos sem levar dano | 2 |
 | Massacre: derrotar 2.000 inimigos no total | 3 |
 | Fúria: derrotar 500 inimigos numa partida | 2 |
-| Sobrevivente: sobreviver 10 minutos | 3 |
+| Sobrevivente: sobreviver 7 minutos | 3 |
 | Veterano: alcançar o nível 20 | 2 |
 | Caçador de Elites: derrotar 15 mini-chefes | 2 |
 | Mata-Gigantes: derrotar o Rei Ogro em menos de 30 s | 3 |
