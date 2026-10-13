@@ -2784,17 +2784,35 @@ const Art = (() => {
     },
     coin(g) {
       glow(g, 0, 0, 26, '#ffd36b', 0.5);
-      ball(g, 0, 0, 16, '#f2c443', 2.2);
-      g.strokeStyle = '#a8761e';
-      g.lineWidth = 2;
+      ornateCoin(g, 18);
+    },
+    reroll(g) {
+      glow(g, 0, 0, 24, '#7fe0ff', 0.5);
+      g.strokeStyle = OUT;
+      g.lineWidth = 7;
       g.beginPath();
-      g.arc(0, 0, 10.5, 0, TAU);
+      g.arc(0, 0, 13, -2.6, 1.9);
       g.stroke();
-      g.fillStyle = '#a8761e';
-      g.font = '900 15px sans-serif';
-      g.textAlign = 'center';
-      g.textBaseline = 'middle';
-      g.fillText('$', 0, 1);
+      g.strokeStyle = '#7fe0ff';
+      g.lineWidth = 4;
+      g.stroke();
+      poly(g, [-14, -14, -2, -12, -10, -3], '#7fe0ff', 1.6);
+    },
+    banish(g) {
+      glow(g, 0, 0, 24, '#ff4a5a', 0.5);
+      ball(g, 0, 0, 15, '#3a1420', 2);
+      g.strokeStyle = '#ff4a5a';
+      g.lineWidth = 4;
+      g.beginPath();
+      g.arc(0, 0, 10, 0, TAU);
+      g.moveTo(-7, -7); g.lineTo(7, 7);
+      g.stroke();
+    },
+    skip(g) {
+      glow(g, 0, 0, 24, '#ffd36b', 0.4);
+      poly(g, [-14, -11, -2, 0, -14, 11], '#ffd36b', 1.8);
+      poly(g, [-2, -11, 10, 0, -2, 11], '#ffd36b', 1.8);
+      poly(g, [11, -11, 15, -11, 15, 11, 11, 11], '#ffd36b', 1.6);
     },
     bumerangue(g) {
       g.save();
@@ -2915,19 +2933,80 @@ const Art = (() => {
   };
 
   // Moeda girando no chão.
-  const coinSprite = () => sprite('coin', 24, (g) => {
-    ball(g, 0, 0, 7, '#f2c443', 1.6);
-    g.strokeStyle = '#a8761e';
-    g.lineWidth = 1.2;
+  // Moeda dourada rebuscada: borda de contas, coroa de louros e uma coroa no centro.
+  function ornateCoin(g, r) {
+    ball(g, 0, r * 0.08, r, '#9a6a14', r * 0.12, false);
     g.beginPath();
-    g.arc(0, 0, 4.5, 0, TAU);
+    g.arc(0, 0, r, 0, TAU);
+    const gr = g.createRadialGradient(-r * 0.35, -r * 0.4, r * 0.1, 0, 0, r);
+    gr.addColorStop(0, '#fff6c8');
+    gr.addColorStop(0.45, '#f6c843');
+    gr.addColorStop(1, '#b07818');
+    g.fillStyle = gr;
+    g.fill();
+    outline(g, r * 0.12);
+    // contas na borda
+    g.fillStyle = '#fff1a8';
+    for (let i = 0; i < 20; i++) {
+      const a = (i / 20) * TAU;
+      g.beginPath();
+      g.arc(Math.cos(a) * r * 0.86, Math.sin(a) * r * 0.86, r * 0.055, 0, TAU);
+      g.fill();
+    }
+    g.strokeStyle = '#a8761e';
+    g.lineWidth = r * 0.07;
+    g.beginPath();
+    g.arc(0, 0, r * 0.74, 0, TAU);
     g.stroke();
-  });
+    // louros dos dois lados
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < 5; i++) {
+        const a = Math.PI / 2 + side * (0.35 + i * 0.32);
+        const x = Math.cos(a) * r * 0.58;
+        const y = Math.sin(a) * r * 0.58;
+        g.save();
+        g.translate(x, y);
+        g.rotate(a + side * 1.2);
+        g.fillStyle = '#c8901e';
+        g.beginPath();
+        g.ellipse(0, 0, r * 0.13, r * 0.06, 0, 0, TAU);
+        g.fill();
+        g.restore();
+      }
+    }
+    // coroa no centro
+    const c = r * 0.32;
+    poly(g, [-c, c * 0.55, -c, -c * 0.25, -c * 0.5, c * 0.15, 0, -c * 0.7, c * 0.5, c * 0.15, c, -c * 0.25, c, c * 0.55],
+      lin(g, 0, -c, 0, c, '#fffbe0', '#d89a20'), r * 0.07);
+    for (const x of [-c, 0, c]) {
+      g.fillStyle = '#ff4a6a';
+      g.beginPath();
+      g.arc(x, x === 0 ? -c * 0.72 : -c * 0.28, r * 0.06, 0, TAU);
+      g.fill();
+    }
+    shineAt(g, -r * 0.42, -r * 0.48, r * 0.22, r * 0.11);
+  }
 
+  const coinSprite = () => sprite('coin2', 40, (g) => ornateCoin(g, 14));
+
+  // Moeda caída no chão: grande, girando, com brilho e um facho de luz para chamar atenção.
   function drawCoin(g, p, t) {
-    const spin = Math.max(0.2, Math.abs(Math.cos(t * 5 + p.x * 0.05)));
-    glow(g, p.x, p.y, 12, '#ffd36b', 0.35);
-    blit(g, coinSprite(), p.x, p.y + Math.sin(t * 4 + p.y) * 1.5, spin, 1);
+    const spin = Math.max(0.15, Math.abs(Math.cos(t * 3 + p.x * 0.05)));
+    const y = p.y - 6 + Math.sin(t * 3 + p.y) * 2.5;
+    const op = g.globalCompositeOperation;
+    g.globalCompositeOperation = 'lighter';
+    const gr = g.createLinearGradient(p.x - 12, 0, p.x + 12, 0);
+    gr.addColorStop(0, 'rgba(255,211,107,0)');
+    gr.addColorStop(0.5, `rgba(255,211,107,${0.25 + Math.sin(t * 4) * 0.08})`);
+    gr.addColorStop(1, 'rgba(255,211,107,0)');
+    g.fillStyle = gr;
+    g.fillRect(p.x - 12, y - 120, 24, 120);
+    g.globalCompositeOperation = op;
+    glow(g, p.x, y, 34, '#ffd36b', 0.55 + Math.sin(t * 5) * 0.15);
+    blit(g, coinSprite(), p.x, y, spin, 1);
+    // brilhinho girando
+    const a = t * 2;
+    glow(g, p.x + Math.cos(a) * 18, y + Math.sin(a) * 10, 7, '#ffffff', 0.8);
   }
 
   // Silhueta escura de um personagem (para os bloqueados).

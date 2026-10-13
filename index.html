@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=202610121635">
+  <link rel="stylesheet" href="style.css?v=202610130139">
 </head>
 <body>
   <canvas id="game"></canvas>
@@ -41,13 +41,13 @@
   <!-- Tela inicial -->
   <div id="home" class="overlay">
     <div class="homebox">
-      <div class="coinbadge"><span class="coin-ico"></span><span class="coinval">0</span><span class="token-ico"></span><span class="tokenval">0</span></div>
+      <div class="coinbadge"><span class="coin-ico"></span><span class="coinval">0</span></div>
       <h1 class="logo"><span>Survivor</span><span>Browser</span></h1>
       <canvas id="homeArt" width="720" height="260"></canvas>
       <p id="best" class="best"></p>
       <div class="homebtns">
         <button id="homePlay" class="big">Jogar</button>
-        <button id="homeChal" class="secondary">Desafios e Arsenal</button>
+        <button id="homeChal" class="secondary">Desafios</button>
         <button id="homeShop" class="secondary">Loja</button>
         <button id="homeSettings" class="secondary">Configurações</button>
       </div>
@@ -88,9 +88,9 @@
   <!-- Loja -->
   <div id="shop" class="overlay hidden">
     <div class="panel wide">
-      <div class="coinbadge"><span class="coin-ico"></span><span class="coinval">0</span><span class="token-ico"></span><span class="tokenval">0</span></div>
+      <div class="coinbadge"><span class="coin-ico"></span><span class="coinval">0</span></div>
       <h2>Loja</h2>
-      <p class="subtitle">Ganhe moedas nas partidas e cumpra objetivos para liberar novos itens</p>
+      <p class="subtitle">Moedas douradas são raras: caem de chefões, mini-chefes e, às vezes, de inimigos comuns. Desafios também dão moedas.</p>
       <div id="shoplist"></div>
       <button id="shopBack" class="secondary">Voltar</button>
     </div>
@@ -99,12 +99,10 @@
   <!-- Desafios e desbloqueios -->
   <div id="challenges" class="overlay hidden">
     <div class="panel wide">
-      <div class="coinbadge"><span class="coin-ico"></span><span class="coinval">0</span><span class="token-ico"></span><span class="tokenval">0</span></div>
+      <div class="coinbadge"><span class="coin-ico"></span><span class="coinval">0</span></div>
       <h2>Desafios</h2>
-      <p class="subtitle">Cumpra desafios para ganhar <b class="tok">moedas de desafio</b> e liberar armas e passivas novas</p>
+      <p class="subtitle">Cumpra desafios para ganhar <b class="tok">moedas douradas</b> e gaste na Loja</p>
       <div id="chalList"></div>
-      <h3 class="shophead">Arsenal bloqueado</h3>
-      <div id="unlockList" class="shoprow"></div>
       <button id="chalBack" class="secondary">Voltar</button>
     </div>
   </div>
@@ -124,6 +122,7 @@
       <h2 id="choiceTitle">Subiu de nível!</h2>
       <p id="choiceSub" class="subtitle">Escolha uma recompensa</p>
       <div id="cards"></div>
+      <div id="choiceTools"></div>
     </div>
   </div>
 
@@ -147,9 +146,9 @@
     </div>
   </div>
 
-  <script src="assets/sprites.js?v=202610121635" onerror="window.SPRITES = window.SPRITES || {}"></script>
-  <script src="js/audio.js?v=202610121635"></script>
-  <script src="js/art.js?v=202610121635"></script>
-  <script src="js/game.js?v=202610121635"></script>
+  <script src="assets/sprites.js?v=202610130139" onerror="window.SPRITES = window.SPRITES || {}"></script>
+  <script src="js/audio.js?v=202610130139"></script>
+  <script src="js/art.js?v=202610130139"></script>
+  <script src="js/game.js?v=202610130139"></script>
 </body>
 </html>

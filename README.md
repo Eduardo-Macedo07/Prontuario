@@ -2,7 +2,7 @@
 
 Jogo de navegador no estilo *roguelite* com visão de cima (inspirado em Megabonk e Vampire Survivors).
 Sobreviva às hordas, colete gemas de XP, suba de nível e escolha recompensas. Se morrer, começa de novo,
-mas as moedas ganhas ficam para comprar personagens e espaços na Loja.
+mas as moedas douradas ganhas ficam para comprar personagens, armas, passivas e mais na Loja.
 
 ## Como jogar
 
@@ -31,8 +31,8 @@ crescem com o tempo (aos 7 minutos têm cerca de 8x a vida do começo).
 | **Vulcão Ardente** (lava) | Slime flamejante (pode deixar o chão em chamas), esqueleto negro (rápido), bombardeiro (para perto de você e explode: saia do círculo), golem de cinzas | Titã de Magma: chuva de meteoros marcados e 3 faixas de fogo |
 | **Picos Gelados** (neve) | Iaque das neves (investida), abominável (arremessa bolas de neve), troll gelado (regenera), guarda cristalino (armadura, atira cristais) | Rainha do Gelo: estrela de 6 faixas de gelo e estacas caindo em volta de você |
 
-Cada fase tem 3 dificuldades: **Normal**, **Difícil** (1,6x vida, 1,35x dano, mais inimigos, 1,6x moedas) e
-**Pesadelo** (2,5x vida, 1,75x dano, 2,4x moedas). Vencer uma dificuldade libera a seguinte; vencer o Normal
+Cada fase tem 3 dificuldades: **Normal**, **Difícil** (1,6x vida, 1,35x dano, mais inimigos, 1,6x chance de moedas) e
+**Pesadelo** (2,5x vida, 1,75x dano, 2,4x chance de moedas). Vencer uma dificuldade libera a seguinte; vencer o Normal
 libera a próxima fase.
 
 ## Progressão
@@ -53,27 +53,37 @@ libera a próxima fase.
   deixa um baú com recompensas raras.
 - **Corações e ímãs:** corações caem raramente dos inimigos; o **ímã** é bem mais raro e puxa todo o XP do
   mapa de uma vez.
-- **Moedas:** caem dos inimigos e somam bônus por tempo, chefões e abates ao fim da partida.
+- **Moeda dourada (única moeda do jogo):** rara e grande, com um facho de luz para ser vista de longe.
+  Cai dos chefões (1; o chefão final dá 2 + 1 por dificuldade), às vezes dos mini-chefes e muito raramente
+  dos inimigos comuns. Uma partida completa rende umas 9; uma muito boa, umas 14. Dificuldade alta, Sorte e a
+  bênção Ganância aumentam a chance. Desafios também dão moedas.
+- **Sem limite de nível do personagem.** O limite é das cartas: cada arma vai até o nível 10 e cada passiva
+  até o 5 (Projéteis, 3). Com tudo no máximo, as cartas viram cura ou +5% de dano.
+- **Alcance:** cada arma só ataca quando há um inimigo dentro do alcance dela.
 
 ## Loja
 
+Uma loja só, tudo em moedas douradas. O que é mais forte custa mais.
+
 | Item | Preço | Objetivo |
 | --- | --- | --- |
-| Maníaco | 250 | — |
-| Golem de Pedra | 400 | Derrotar 1 chefão |
-| Mercenário | 450 | Alcançar o nível 12 |
-| Berserker | 650 | Concluir o Cemitério |
-| Espaço de arma (4º) | 200 | Sobreviver 5 minutos |
-| Espaço de arma (5º) | 600 | Derrotar 3 chefões no total |
-| Espaço de passiva (3º) | 150 | Alcançar o nível 15 |
-| Espaço de passiva (4º) | 500 | Sobreviver 7 minutos |
+| Maníaco / Golem de Pedra / Mercenário / Berserker | 6 / 9 / 11 / 14 | — / 1 chefão / nível 12 / concluir o Cemitério |
+| Armas: Aura Sagrada, Bumerangue, Bola de Fogo, Bombardeio, Raio em Cadeia, Chuva de Meteoros | 3, 4, 7, 7, 8, 9 | — |
+| Passivas: Regeneração, Sabedoria, Vampirismo, Dano Crítico, Projéteis | 2, 3, 5, 7, 12 | — |
+| Atualizar (troca as opções) / Atualizar II | 3 / 6 | 2 usos por partida cada |
+| Banir (remove uma arma ou passiva da partida) / Banir II | 4 / 8 | 2 usos por partida cada |
+| Pular (pula a escolha) / Pular II | 2 / 4 | 2 usos por partida cada |
+| Espaço de arma (4º / 5º) | 5 / 12 | sobreviver 5 min / 3 chefões no total |
+| Espaço de passiva (3º / 4º) | 4 / 10 | nível 15 / sobreviver 7 min |
 
-## Desafios e moedas de desafio
+Na tela de subir de nível, os botões **Atualizar** (tecla `R`), **Banir** (clique em Banir e depois na carta) e
+**Pular** aparecem depois de comprados.
 
-Na tela **Desafios e Arsenal** ficam 12 desafios. Cada um dá **moedas de desafio** (roxas), usadas para liberar
-armas e passivas que começam bloqueadas.
+## Desafios
 
-| Desafio | Recompensa |
+Cada desafio concluído dá moedas douradas na hora.
+
+| Desafio | Moedas |
 | --- | --- |
 | Intocável: sobreviver 2 minutos seguidos sem levar dano | 2 |
 | Massacre: derrotar 2.000 inimigos no total | 3 |
@@ -89,16 +99,6 @@ armas e passivas que começam bloqueadas.
 | Mestre de Armas: levar uma arma ao nível 10 | 2 |
 | Concluir o Cemitério / o Vulcão / os Picos Gelados | 3 / 3 / 4 |
 | Concluir qualquer fase no Pesadelo | 5 |
-
-| Bloqueado | Custo |
-| --- | --- |
-| Raio em Cadeia, Bola de Fogo (armas) | 3 cada |
-| Bumerangue (arma) | 4 |
-| Chuva de Meteoros (arma) | 5 |
-| Bombardeio (arma) | 4 |
-| Projéteis (passiva) | 4 |
-| Dano Crítico, Vampirismo (passivas) | 3 cada |
-| Sabedoria (passiva) | 2 |
 
 ## Inimigos
 
@@ -129,15 +129,15 @@ Todos andam um pouco mais devagar que o seu personagem.
 ## Passivas
 
 Vida Máxima, Velocidade de Movimento, Dano, Velocidade de Ataque, Alcance de Coleta, Regeneração, Armadura,
-Projéteis, Chance de Crítico, Área e Sorte. Liberadas com moedas de desafio: Dano Crítico, Vampirismo e
-Sabedoria.
+Projéteis, Chance de Crítico, Área e Sorte. Compradas na Loja: Regeneração, Sabedoria, Vampirismo, Dano
+Crítico e Projéteis.
 
 ## Arsenal (cada arma até o nível 10)
 
 Estilhaço de Gelo, Arco Caçador (flechas teleguiadas que perfuram), Facas (teleguiadas), Raio em Cadeia
 (ricocheteia), Bola de Fogo (explosão em área), Lâminas Orbitais (reduzem o dano recebido), Aura Sagrada e
-Tremor de Pedra. Liberadas com moedas de desafio: Bumerangue (vai e volta atravessando tudo) e Chuva de
-Meteoros. Também: Metralhadora, Espadão e Bombardeio (este liberado com moedas de desafio).
+Tremor de Pedra. Também: Metralhadora e Espadão. Compradas na Loja: Aura Sagrada, Bumerangue, Bola de
+Fogo, Bombardeio, Raio em Cadeia e Chuva de Meteoros.
 
 ## Mapa
 

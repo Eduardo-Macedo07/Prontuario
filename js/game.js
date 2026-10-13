@@ -73,7 +73,8 @@
       stage: 'cemiterio', // fase escolhida
       diff: 0, // dificuldade escolhida (0 Normal, 1 Difícil, 2 Pesadelo)
       stages: {}, // por fase: quantas dificuldades já foram concluídas
-      tokens: 0, // moedas de desafio
+      version: 2, // 2 = moeda única
+      tokens: 0, // (antigo) moedas de desafio
       challenges: {}, // desafios concluídos
       unlocks: {}, // armas e passivas liberadas com moedas de desafio
       stats: { bestTime: 0, bestLevel: 0, bestKills: 0, bosses: 0, kills: 0, runs: 0, elites: 0 },
@@ -93,7 +94,16 @@
     const s = defaultSave();
     try {
       const raw = JSON.parse(localStorage.getItem(SAVE_KEY));
-      if (raw) return merge(s, raw);
+      if (raw) {
+        const m = merge(s, raw);
+        // versão 2: moeda única. Converte as moedas antigas e as de desafio.
+        if (!raw.version) {
+          m.coins = Math.floor(m.coins / 60) + (m.tokens || 0);
+          m.tokens = 0;
+          m.version = 2;
+        }
+        return m;
+      }
       // traz o recorde da versão antiga do jogo
       const old = JSON.parse(localStorage.getItem('jogoteste.recorde'));
       if (old) {
@@ -164,18 +174,28 @@
   };
 
   // ============================================================
-  // Loja: personagens e espaços extras, com objetivos para liberar
+  // Loja única: tudo custa moedas douradas (raras, umas 9 por partida completa)
   // ============================================================
   const SHOP = [
-    { id: 'maniaco', kind: 'char', name: 'Maníaco', price: 250, desc: 'Desbloqueia o bobo da corte psicopata.' },
-    { id: 'golem', kind: 'char', name: 'Golem de Pedra', price: 400, desc: 'Desbloqueia o colosso de pedra.', req: { type: 'bosses', n: 1, text: 'Derrote 1 chefão' } },
-    { id: 'mercenario', kind: 'char', name: 'Mercenário', price: 450, desc: 'Desbloqueia o soldado da metralhadora.', req: { type: 'level', n: 12, text: 'Alcance o nível 12' } },
-    { id: 'berserker', kind: 'char', name: 'Berserker', price: 650, desc: 'Desbloqueia o bárbaro do espadão.', req: { type: 'stage', id: 'cemiterio', text: 'Conclua o Cemitério' } },
-    { id: 'wslot1', kind: 'wslot', name: 'Espaço de arma', price: 200, desc: '+1 espaço de arma (4 no total).', req: { type: 'time', n: 300, text: 'Sobreviva 5 minutos' } },
-    { id: 'wslot2', kind: 'wslot', name: 'Espaço de arma', price: 600, desc: '+1 espaço de arma (5 no total).', req: { type: 'bosses', n: 3, text: 'Derrote 3 chefões no total' }, needs: 'wslot1' },
-    { id: 'pslot1', kind: 'pslot', name: 'Espaço de passiva', price: 150, desc: '+1 espaço de passiva (3 no total).', req: { type: 'level', n: 15, text: 'Alcance o nível 15' } },
-    { id: 'pslot2', kind: 'pslot', name: 'Espaço de passiva', price: 500, desc: '+1 espaço de passiva (4 no total).', req: { type: 'time', n: 420, text: 'Sobreviva 7 minutos' }, needs: 'pslot1' },
+    { id: 'maniaco', kind: 'char', name: 'Maníaco', price: 6, desc: 'Desbloqueia o bobo da corte psicopata.' },
+    { id: 'golem', kind: 'char', name: 'Golem de Pedra', price: 9, desc: 'Desbloqueia o colosso de pedra.', req: { type: 'bosses', n: 1, text: 'Derrote 1 chefão' } },
+    { id: 'mercenario', kind: 'char', name: 'Mercenário', price: 11, desc: 'Desbloqueia o soldado da metralhadora.', req: { type: 'level', n: 12, text: 'Alcance o nível 12' } },
+    { id: 'berserker', kind: 'char', name: 'Berserker', price: 14, desc: 'Desbloqueia o bárbaro do espadão.', req: { type: 'stage', id: 'cemiterio', text: 'Conclua o Cemitério' } },
+    { id: 'wslot1', kind: 'wslot', name: 'Espaço de arma', price: 5, desc: '+1 espaço de arma (4 no total).', req: { type: 'time', n: 300, text: 'Sobreviva 5 minutos' } },
+    { id: 'wslot2', kind: 'wslot', name: 'Espaço de arma', price: 12, desc: '+1 espaço de arma (5 no total).', req: { type: 'bosses', n: 3, text: 'Derrote 3 chefões no total' }, needs: 'wslot1' },
+    { id: 'pslot1', kind: 'pslot', name: 'Espaço de passiva', price: 4, desc: '+1 espaço de passiva (3 no total).', req: { type: 'level', n: 15, text: 'Alcance o nível 15' } },
+    { id: 'pslot2', kind: 'pslot', name: 'Espaço de passiva', price: 10, desc: '+1 espaço de passiva (4 no total).', req: { type: 'time', n: 420, text: 'Sobreviva 7 minutos' }, needs: 'pslot1' },
+    // opções na hora de subir de nível (cargas por partida)
+    { id: 'reroll1', kind: 'option', icon: 'reroll', name: 'Atualizar', price: 3, desc: 'Troca as 3 opções de recompensa. 2 usos por partida.' },
+    { id: 'reroll2', kind: 'option', icon: 'reroll', name: 'Atualizar II', price: 6, desc: '+2 usos de Atualizar por partida.', needs: 'reroll1' },
+    { id: 'banish1', kind: 'option', icon: 'banish', name: 'Banir', price: 4, desc: 'Remove uma arma ou passiva da partida inteira. 2 usos por partida.' },
+    { id: 'banish2', kind: 'option', icon: 'banish', name: 'Banir II', price: 8, desc: '+2 usos de Banir por partida.', needs: 'banish1' },
+    { id: 'skip1', kind: 'option', icon: 'skip', name: 'Pular', price: 2, desc: 'Pula a escolha sem pegar nada. 2 usos por partida.' },
+    { id: 'skip2', kind: 'option', icon: 'skip', name: 'Pular II', price: 4, desc: '+2 usos de Pular por partida.', needs: 'skip1' },
   ];
+
+  // Usos por partida de cada opção, conforme o que foi comprado.
+  const optionUses = (base) => (save.bought[base + '1'] ? 2 : 0) + (save.bought[base + '2'] ? 2 : 0);
 
   const BASE_WEAPON_SLOTS = 3; // a arma inicial + 2
   const BASE_PASSIVE_SLOTS = 2;
@@ -236,11 +256,11 @@
     if (save.challenges[id]) return;
     const c = CHALLENGES.find((x) => x.id === id);
     save.challenges[id] = true;
-    save.tokens += c.reward;
-    if (run) run.tokens += c.reward;
+    save.coins += c.reward;
+    if (run) run.chalCoins += c.reward;
     persist();
     Sound.play('chest');
-    showBanner(`Desafio concluído: ${c.name}! +${c.reward} moedas de desafio`, '#c77dff');
+    showBanner(`Desafio concluído: ${c.name}! +${c.reward} ${c.reward === 1 ? 'moeda' : 'moedas'}`, '#ffd36b');
   }
 
   function checkChallenges() {
@@ -275,13 +295,13 @@
       ups: [[['count', 1]], [['dmg', 3]], [['cd', 0.08]], [['count', 1]], [['pierce', 1]], [['dmg', 4]], [['cd', 0.08]], [['count', 1]], [['dmg', 5]]],
     },
     raio: {
-      name: 'Raio em Cadeia', color: '#ffd23f', max: 10, unit: ['raio', 'raios'], lock: 3,
+      name: 'Raio em Cadeia', color: '#ffd23f', max: 10, unit: ['raio', 'raios'], lock: 8,
       desc: 'Raio que ricocheteia entre os inimigos.',
       base: { dmg: 28, cd: 2.2, count: 1, bounces: 3 },
       ups: [[['bounces', 1]], [['dmg', 8]], [['bounces', 1]], [['cd', 0.1]], [['bounces', 1]], [['count', 1]], [['dmg', 10]], [['bounces', 2]], [['cd', 0.1]]],
     },
     fogo: {
-      name: 'Bola de Fogo', color: '#ff7a1a', max: 10, unit: ['bola de fogo', 'bolas de fogo'], lock: 3,
+      name: 'Bola de Fogo', color: '#ff7a1a', max: 10, unit: ['bola de fogo', 'bolas de fogo'], lock: 7,
       desc: 'Bola de fogo que explode em área.',
       base: { dmg: 31, cd: 2.1, count: 1, area: 60, burn: 0 },
       ups: [[['area', 15]], [['dmg', 9]], [['cd', 0.1]], [['count', 1]], [['area', 20]], [['dmg', 12]], [['burn', 1]], [['cd', 0.1]], [['count', 1]]],
@@ -293,7 +313,7 @@
       ups: [[['reduction', 0.04]], [['count', 1]], [['dmg', 3]], [['reduction', 0.04]], [['area', 12]], [['count', 1]], [['reduction', 0.05]], [['spin', 1]], [['dmg', 5]]],
     },
     aura: {
-      name: 'Aura Sagrada', color: '#ffe27a', max: 10, unit: ['aura', 'auras'],
+      name: 'Aura Sagrada', color: '#ffe27a', max: 10, unit: ['aura', 'auras'], lock: 3,
       desc: 'Campo que fere inimigos próximos.',
       base: { dmg: 6, area: 70, cd: 0.5 },
       ups: [[['area', 10]], [['dmg', 2]], [['area', 10]], [['dmg', 3]], [['cd', 0.1]], [['area', 12]], [['dmg', 3]], [['area', 12]], [['dmg', 4]]],
@@ -317,7 +337,7 @@
       ups: [[['dmg', 12]], [['area', 15]], [['cd', 0.1]], [['dmg', 14]], [['knock', 120]], [['count', 1]], [['area', 20]], [['dmg', 18]], [['cd', 0.1]]],
     },
     bombardeio: {
-      name: 'Bombardeio', color: '#ff7a1a', max: 10, unit: ['bomba', 'bombas'], lock: 4,
+      name: 'Bombardeio', color: '#ff7a1a', max: 10, unit: ['bomba', 'bombas'], lock: 7,
       desc: 'Uma fileira de bombas cai explodindo sobre os inimigos.',
       base: { dmg: 28, cd: 3.6, count: 4, area: 55 },
       ups: [[['count', 1]], [['dmg', 9]], [['area', 10]], [['cd', 0.1]], [['count', 2]], [['dmg', 12]], [['area', 12]], [['cd', 0.1]], [['count', 2]]],
@@ -329,7 +349,7 @@
       ups: [[['dmg', 4]], [['range', 40]], [['count', 1]], [['cd', 0.08]], [['dmg', 5]], [['count', 1]], [['range', 50]], [['dmg', 6]], [['count', 1]]],
     },
     meteoro: {
-      name: 'Chuva de Meteoros', color: '#ff9a3a', max: 10, unit: ['meteoro', 'meteoros'], lock: 5,
+      name: 'Chuva de Meteoros', color: '#ff9a3a', max: 10, unit: ['meteoro', 'meteoros'], lock: 9,
       desc: 'Meteoros caem do céu sobre os inimigos e explodem.',
       base: { dmg: 40, cd: 3.2, count: 2, area: 70 },
       ups: [[['count', 1]], [['dmg', 12]], [['area', 15]], [['cd', 0.1]], [['count', 1]], [['dmg', 15]], [['area', 20]], [['cd', 0.1]], [['count', 2]]],
@@ -371,19 +391,19 @@
     might: { name: 'Dano', max: 5, v: 0.12, text: (v) => `+${pct(v)} de dano em todas as armas`, apply: (v) => { player.dmgMul += v; } },
     haste: { name: 'Velocidade de Ataque', max: 5, v: 0.08, text: (v) => `Todas as armas atacam ${pct(v)} mais rápido`, apply: (v) => { player.cdMul = Math.max(0.25, player.cdMul * (1 - v)); } },
     magnet: { name: 'Alcance de Coleta', max: 5, v: 0.3, text: (v) => `+${pct(v)} de alcance para puxar XP e moedas`, apply: (v) => { player.magnet *= 1 + v; } },
-    regen: { name: 'Regeneração', max: 5, v: 0.5, text: (v) => `+${fmtNum(v)} de vida por segundo`, apply: (v) => { player.regen += v; } },
+    regen: { name: 'Regeneração', max: 5, v: 0.5, lock: 2, text: (v) => `+${fmtNum(v)} de vida por segundo`, apply: (v) => { player.regen += v; } },
     armor: { name: 'Armadura', max: 5, v: 1, text: (v) => `-${fmtNum(v)} de dano recebido por golpe`, apply: (v) => { player.armor += v; } },
     multi: {
-      name: 'Projéteis', max: 3, lock: 4, v: 1, table: [1, 1.5, 2, 4],
+      name: 'Projéteis', max: 3, lock: 12, v: 1, table: [1, 1.5, 2, 4],
       text: (v) => `+${fmtNum(v)} ${plural(v, ['projétil', 'projéteis'])} em todas as armas (frações somam até virar um inteiro)`,
       apply: (v) => { player.extraProj += v; },
     },
     precisao: { name: 'Chance de Crítico', max: 5, v: 0.06, text: (v) => `+${pct(v)} de chance de crítico`, apply: (v) => { player.crit = Math.min(1, player.crit + v); } },
     area: { name: 'Área', max: 5, v: 0.1, text: (v) => `+${pct(v)} de área (aura, explosões, lâminas, ondas)`, apply: (v) => { player.areaMul += v; } },
     sorte: { name: 'Sorte', max: 5, v: 1, text: (v) => `+${fmtNum(v)} de Sorte: cartas raras, épicas e lendárias aparecem mais`, apply: (v) => { player.luck += v; } },
-    critdmg: { name: 'Dano Crítico', max: 5, v: 0.25, lock: 3, text: (v) => `Críticos causam +${pct(v)} de dano`, apply: (v) => { player.critMul += v; } },
-    vampiro: { name: 'Vampirismo', max: 5, v: 0.04, lock: 3, text: (v) => `+${pct(v)} de chance de curar 3 de vida ao derrotar um inimigo`, apply: (v) => { player.lifesteal += v; } },
-    sabedoria: { name: 'Sabedoria', max: 5, v: 0.1, lock: 2, text: (v) => `+${pct(v)} de XP ganho`, apply: (v) => { player.xpMul += v; } },
+    critdmg: { name: 'Dano Crítico', max: 5, v: 0.25, lock: 7, text: (v) => `Críticos causam +${pct(v)} de dano`, apply: (v) => { player.critMul += v; } },
+    vampiro: { name: 'Vampirismo', max: 5, v: 0.04, lock: 5, text: (v) => `+${pct(v)} de chance de curar 3 de vida ao derrotar um inimigo`, apply: (v) => { player.lifesteal += v; } },
+    sabedoria: { name: 'Sabedoria', max: 5, v: 0.1, lock: 3, text: (v) => `+${pct(v)} de XP ganho`, apply: (v) => { player.xpMul += v; } },
   };
 
   // Armas e passivas com "lock" começam bloqueadas e são liberadas com moedas de desafio.
@@ -410,7 +430,7 @@
     regen: { name: 'Brasas Vivas', icon: 'regen', base: 0.3, text: (v) => `+${v.toFixed(1).replace('.', ',')} de vida por segundo`, apply: (v) => { player.regen += v; } },
     xp: { name: 'Sabedoria', icon: 'xp', base: 0.08, text: (v) => `+${pct(v)} de XP ganho`, apply: (v) => { player.xpMul += v; } },
     ima: { name: 'Atração', icon: 'magnet', base: 0.15, text: (v) => `+${pct(v)} de alcance do ímã`, apply: (v) => { player.magnet *= 1 + v; } },
-    moedas: { name: 'Ganância', icon: 'coin', base: 0.15, text: (v) => `+${pct(v)} de moedas`, apply: (v) => { player.coinMul += v; } },
+    moedas: { name: 'Ganância', icon: 'coin', base: 0.15, text: (v) => `+${pct(v)} de chance de achar moedas douradas`, apply: (v) => { player.coinMul += v; } },
     armadura: { name: 'Pele de Pedra', icon: 'armor', base: 0.6, text: (v) => `+${v.toFixed(1).replace('.', ',')} de armadura`, apply: (v) => { player.armor += v; } },
     sorte: { name: 'Bênção da Sorte', icon: 'sorte', base: 0.5, text: (v) => `+${v.toFixed(1).replace('.', ',')} de Sorte`, apply: (v) => { player.luck += v; } },
   };
@@ -596,7 +616,8 @@
       bossKills: 0,
     };
     run = {
-      lastHurt: 0, bestHitless: 0, eliteKills: 0, spawned: 0, tokens: 0, checkT: 0,
+      lastHurt: 0, bestHitless: 0, eliteKills: 0, spawned: 0, chalCoins: 0, checkT: 0,
+      rerolls: optionUses('reroll'), banishes: optionUses('banish'), skips: optionUses('skip'), banned: new Set(),
       stage: STAGES[save.stage] ? save.stage : 'cemiterio', diff: save.diff || 0,
       finalSpawned: false, victory: false, victoryT: 0,
     };
@@ -757,7 +778,8 @@
     else if (state === 'settings' && k === 'escape') setState(settingsReturn);
     else if (state === 'playing' && (k === 'escape' || k === 'p')) setState('paused');
     else if (state === 'paused' && (k === 'escape' || k === 'p')) setState('playing');
-    else if (state === 'levelup' && ['1', '2', '3', '4'].includes(k)) choose(Number(k) - 1);
+    else if (state === 'levelup' && ['1', '2', '3', '4'].includes(k)) (banishMode ? banishChoice : choose)(Number(k) - 1);
+    else if (state === 'levelup' && k === 'r') rerollChoices();
     else if (state === 'dead' && (k === 'r' || k === 'enter')) startGame();
   }
 
@@ -784,7 +806,6 @@
 
   function updateWallet() {
     document.querySelectorAll('.coinval').forEach((el) => { el.textContent = save.coins; });
-    document.querySelectorAll('.tokenval').forEach((el) => { el.textContent = save.tokens; });
   }
 
   function toast(text) {
@@ -946,10 +967,29 @@
   }
 
   // ---------- Loja ----------
+  // Itens da loja: personagens, espaços, opções de nível, armas e passivas.
+  function shopItems() {
+    const items = SHOP.slice();
+    for (const id in WEAPONS) {
+      const d = WEAPONS[id];
+      if (d.lock) items.push({ id, kind: 'weapon', name: d.name, price: d.lock, desc: d.desc, color: d.color });
+    }
+    for (const id in PASSIVES) {
+      const d = PASSIVES[id];
+      if (d.lock) items.push({ id, kind: 'passive', name: d.name, price: d.lock, desc: d.text(passiveValue(id, 0)), color: '#8fd3a0' });
+    }
+    return items;
+  }
+
+  const isOwned = (item) => (item.kind === 'char' ? save.chars[item.id]
+    : item.kind === 'weapon' || item.kind === 'passive' ? save.unlocks[item.id] : save.bought[item.id]);
+
   function renderShop() {
     const box = $('shoplist');
     box.innerHTML = '';
-    const groups = [['Personagens', 'char'], ['Espaços de arma', 'wslot'], ['Espaços de passiva', 'pslot']];
+    const groups = [['Personagens', 'char'], ['Armas', 'weapon'], ['Passivas', 'passive'],
+      ['Opções ao subir de nível', 'option'], ['Espaços de arma', 'wslot'], ['Espaços de passiva', 'pslot']];
+    const all = shopItems();
     for (const [title, kind] of groups) {
       const h = document.createElement('h3');
       h.className = 'shophead';
@@ -957,18 +997,22 @@
       box.appendChild(h);
       const row = document.createElement('div');
       row.className = 'shoprow';
-      for (const item of SHOP.filter((i) => i.kind === kind)) {
-        const owned = item.kind === 'char' ? save.chars[item.id] : save.bought[item.id];
+      // do mais barato para o mais caro
+      for (const item of all.filter((i) => i.kind === kind).sort((a, b) => a.price - b.price)) {
+        const owned = isOwned(item);
         const needsOk = !item.needs || save.bought[item.needs];
         const ok = reqMet(item.req);
         const afford = save.coins >= item.price;
-        const icon = item.kind === 'char' ? Art.heroIcon(item.id) : Art.icon(item.kind === 'wslot' ? 'might' : 'armor');
+        const icon = item.kind === 'char' ? Art.heroIcon(item.id)
+          : Art.icon(item.kind === 'wslot' ? 'might' : item.kind === 'pslot' ? 'armor' : item.icon || item.id);
+        const accent = item.kind === 'char' ? CHARACTERS[item.id].accent
+          : item.color || (item.kind === 'wslot' ? '#ffd36b' : item.kind === 'option' ? '#7fe0ff' : '#8fd3a0');
         const card = document.createElement('div');
         card.className = 'card shopitem' + (owned ? ' owned' : '') + (!owned && (!ok || !needsOk) ? ' blocked' : '');
-        card.style.setProperty('--accent', item.kind === 'char' ? CHARACTERS[item.id].accent : item.kind === 'wslot' ? '#ffd36b' : '#8fd3a0');
+        card.style.setProperty('--accent', accent);
         let status;
         if (owned) status = '<div class="owned-tag">Comprado</div>';
-        else if (!needsOk) status = '<div class="req">Compre o espaço anterior primeiro</div>';
+        else if (!needsOk) status = '<div class="req">Compre o anterior primeiro</div>';
         else {
           const reqHtml = item.req
             ? `<div class="req ${ok ? 'ok' : ''}">${ok ? '✔' : '🔒'} ${item.req.text}${ok ? '' : ` <b>(${reqProgress(item.req)})</b>`}</div>`
@@ -990,10 +1034,11 @@
   }
 
   function buy(item) {
-    if (save.coins < item.price || !reqMet(item.req) || (item.needs && !save.bought[item.needs])) return;
+    if (isOwned(item) || save.coins < item.price || !reqMet(item.req) || (item.needs && !save.bought[item.needs])) return;
     save.coins -= item.price;
     Sound.play('buy');
-    save.bought[item.id] = true;
+    if (item.kind === 'weapon' || item.kind === 'passive') save.unlocks[item.id] = true;
+    else save.bought[item.id] = true;
     if (item.kind === 'char') save.chars[item.id] = true;
     persist();
     toast(`${item.name} desbloqueado!`);
@@ -1016,44 +1061,11 @@
       row.className = 'chal' + (done ? ' done' : '');
       row.innerHTML = `
         <div class="cinfo"><div class="cname">${c.name}</div><div class="cdesc">${c.desc}</div>${prog}</div>
-        <div class="creward"><span class="token-ico"></span>${c.reward}</div>`;
+        <div class="creward"><span class="coin-ico"></span>${c.reward}</div>`;
       list.appendChild(row);
     }
 
-    const box = $('unlockList');
-    box.innerHTML = '';
-    const items = [
-      ...Object.keys(WEAPONS).filter((id) => WEAPONS[id].lock).map((id) => ({ id, def: WEAPONS[id], kind: 'Arma' })),
-      ...Object.keys(PASSIVES).filter((id) => PASSIVES[id].lock).map((id) => ({ id, def: PASSIVES[id], kind: 'Passiva' })),
-    ];
-    for (const it of items) {
-      const owned = !!save.unlocks[it.id];
-      const desc = it.def.desc || it.def.text(passiveValue(it.id, 0));
-      const card = document.createElement('div');
-      card.className = 'card shopitem' + (owned ? ' owned' : '');
-      card.style.setProperty('--accent', it.def.color || '#8fd3a0');
-      card.innerHTML = `
-        <div class="shopicon"><img src="${Art.icon(it.id)}" alt=""></div>
-        <div class="tag">${it.kind}</div>
-        <div class="name">${it.def.name}</div>
-        <div class="desc">${desc}</div>
-        ${owned ? '<div class="owned-tag">Liberado</div>'
-          : `<button class="buy tokbuy" ${save.tokens >= it.def.lock ? '' : 'disabled'}><span class="token-ico"></span>${it.def.lock}</button>`}`;
-      const btn = card.querySelector('.buy');
-      if (btn) btn.addEventListener('click', () => unlockItem(it));
-      box.appendChild(card);
-    }
     updateWallet();
-  }
-
-  function unlockItem(it) {
-    if (save.unlocks[it.id] || save.tokens < it.def.lock) return;
-    save.tokens -= it.def.lock;
-    save.unlocks[it.id] = true;
-    persist();
-    Sound.play('buy');
-    toast(`${it.def.name} liberado! Já aparece nas cartas.`);
-    renderChallenges();
   }
 
   // ---------- Configurações ----------
@@ -1105,7 +1117,7 @@
       ['Redução de dano', pct(bladeReduction())],
       ['Regeneração', `${effRegen().toFixed(1)}/s`],
       ['Sorte', +effLuck().toFixed(1)],
-      ['XP e moedas', `${pct(player.xpMul)} · ${pct(player.coinMul)}`],
+      ['XP e chance de moedas', `${pct(player.xpMul)} · ${pct(player.coinMul)}`],
       ['Espaços', `armas ${Object.keys(weapons).length}/${weaponSlots()} · passivas ${Object.keys(passiveLevels).length}/${passiveSlots()}`],
     ];
     $('pstats').innerHTML = rows.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('');
@@ -1141,20 +1153,8 @@
 
   // Fecha a partida: soma moedas, atualiza recordes e objetivos.
   function endRun() {
-    const minutes = Math.floor(time / 60);
-    const parts = [
-      ['Moedas coletadas', Math.round(runCoins)],
-      [`Tempo (${minutes} min)`, minutes * 10],
-      [`Chefões (${player.bossKills})`, player.bossKills * 25],
-      [`Abates (${kills})`, Math.floor(kills / 25)],
-    ];
-    if (run.victory) parts.push(['Fase concluída', 150 * (run.diff + 1)]);
-    const D = DIFFS[run.diff];
-    if (D.coins > 1) {
-      const sum = parts.reduce((a, [, v]) => a + v, 0);
-      parts.push([`Bônus ${D.name} (x${fmtNum(D.coins)})`, Math.round(sum * (D.coins - 1))]);
-    }
-    const total = parts.reduce((a, [, v]) => a + v, 0);
+    // As moedas só vêm do chão (raras) e dos desafios (já somadas quando concluídos).
+    const total = Math.round(runCoins);
     const st = save.stats;
     const newRecord = time > st.bestTime;
     st.bestTime = Math.max(st.bestTime, time);
@@ -1169,7 +1169,9 @@
     inRun = false;
     checkChallenges();
     persist();
-    return { parts, total, newRecord, tokens: run.tokens };
+    const parts = [['Moedas coletadas', total]];
+    if (run.chalCoins) parts.push(['Desafios concluídos', run.chalCoins]);
+    return { parts, total: total + run.chalCoins, newRecord };
   }
 
   // Venceu o chefão final: libera a próxima dificuldade e a próxima fase.
@@ -1189,7 +1191,7 @@
   }
 
   function showResult(won, firstClear) {
-    const { parts, total, newRecord, tokens } = endRun();
+    const { parts, total, newRecord } = endRun();
     const idx = STAGE_IDS.indexOf(run.stage);
     let unlockMsg = '';
     if (won && firstClear) {
@@ -1211,7 +1213,7 @@
       <h3 class="earnhead">Moedas ganhas</h3>
       ${parts.map(([k, v]) => `<div><span>${k}</span><b>+${v}</b></div>`).join('')}
       <div class="total"><span>Total</span><b><img src="${Art.icon('coin')}" alt="">+${total}</b></div>
-      ${tokens ? `<div class="total tokens"><span>Moedas de desafio</span><b><img src="${Art.icon('token')}" alt="">+${tokens}</b></div>` : ''}`;
+      `;
     setState('dead');
   }
 
@@ -1329,14 +1331,14 @@
     const passivesFull = Object.keys(passiveLevels).length >= passiveSlots();
     for (const id in WEAPONS) {
       const lv = weapons[id] ? weapons[id].level : 0;
-      if (lv >= WEAPONS[id].max) continue;
+      if (lv >= WEAPONS[id].max || run.banned.has(id)) continue;
       if (lv === 0 && !isUnlocked(WEAPONS[id], id)) continue;
       if (lv === 0 && weaponsFull) continue;
       pool.push({ kind: 'weapon', id, lv });
     }
     for (const id in PASSIVES) {
       const lv = passiveLevels[id] || 0;
-      if (lv >= PASSIVES[id].max) continue;
+      if (lv >= PASSIVES[id].max || run.banned.has(id)) continue;
       if (lv === 0 && !isUnlocked(PASSIVES[id], id)) continue;
       if (lv === 0 && passivesFull) continue;
       pool.push({ kind: 'passive', id, lv });
@@ -1365,7 +1367,14 @@
     const mode = pendingLevels > 0 ? 'level' : pendingChests > 0 ? 'chest' : 'shrine';
     currentChoices = mode === 'shrine' ? buildBoons() : buildChoices(mode === 'chest');
     currentChoices.mode = mode;
+    banishMode = false;
     if (mode === 'level') Sound.play('levelup');
+    renderChoices();
+    setState('levelup');
+  }
+
+  function renderChoices() {
+    const mode = currentChoices.mode;
     $('choiceTitle').textContent = mode === 'chest' ? 'Baú do tesouro!' : mode === 'shrine' ? 'Fogueira acesa' : 'Subiu de nível!';
     $('choiceSub').textContent = mode === 'chest' ? 'Recompensas raras ou melhores garantidas'
       : mode === 'shrine' ? 'Escolha uma bênção (não ocupa espaço). A Sorte deixa as bênçãos mais fortes.'
@@ -1407,7 +1416,7 @@
         cls = tier.cls;
         ribbon = tier.name;
       } else if (c.kind === 'gold') {
-        name = 'Saco de Moedas'; tag = 'Tudo no máximo'; desc = '+25 moedas.'; color = '#ffd36b';
+        name = 'Poder Bruto'; tag = 'Tudo no máximo'; desc = '+5% de dano em todas as armas.'; color = '#ffd36b'; iconId = 'might';
       } else {
         name = 'Poção'; tag = 'Consumível'; desc = 'Recupera 40 de vida.'; color = '#ff4f6a';
       }
@@ -1427,10 +1436,76 @@
         <div class="tag">${tag}</div>
         <div class="desc">${desc}</div>
         <div class="key">${isTouch ? 'Toque para escolher' : 'Clique ou tecla ' + (i + 1)}</div>`;
-      card.addEventListener('click', () => choose(i));
+      card.addEventListener('click', () => (banishMode ? banishChoice(i) : choose(i)));
       cards.appendChild(card);
     });
-    setState('levelup');
+    cards.classList.toggle('banishing', banishMode);
+    renderChoiceTools();
+  }
+
+  // ---------- Atualizar, Banir e Pular (comprados na Loja) ----------
+  let banishMode = false;
+
+  function renderChoiceTools() {
+    const box = $('choiceTools');
+    box.innerHTML = '';
+    if (currentChoices.mode === 'shrine') return;
+    const tools = [
+      ['reroll', 'Atualizar', run.rerolls, rerollChoices],
+      ['banish', banishMode ? 'Cancelar' : 'Banir', run.banishes, toggleBanish],
+      ['skip', 'Pular', run.skips, skipChoice],
+    ];
+    for (const [icon, label, uses, fn] of tools) {
+      if (!optionUses(icon)) continue; // ainda não comprado
+      const b = document.createElement('button');
+      b.className = 'tool' + (icon === 'banish' && banishMode ? ' active' : '');
+      b.innerHTML = `<img src="${Art.icon(icon)}" alt="">${label} <b>${uses}</b>`;
+      b.disabled = uses <= 0 && !(icon === 'banish' && banishMode);
+      b.addEventListener('click', fn);
+      box.appendChild(b);
+    }
+  }
+
+  function rerollChoices() {
+    if (state !== 'levelup' || run.rerolls <= 0) return;
+    run.rerolls--;
+    banishMode = false;
+    const mode = currentChoices.mode;
+    currentChoices = buildChoices(mode === 'chest');
+    currentChoices.mode = mode;
+    Sound.play('select');
+    renderChoices();
+  }
+
+  function toggleBanish() {
+    if (state !== 'levelup' || (run.banishes <= 0 && !banishMode)) return;
+    banishMode = !banishMode;
+    Sound.play('click');
+    renderChoices();
+  }
+
+  // A arma ou passiva banida some da partida; a carta é trocada por outra.
+  function banishChoice(i) {
+    const c = currentChoices[i];
+    banishMode = false;
+    if (!c || (c.kind !== 'weapon' && c.kind !== 'passive') || run.banishes <= 0) { renderChoices(); return; }
+    run.banishes--;
+    run.banned.add(c.id);
+    Sound.play('denied');
+    const shown = new Set(currentChoices.map((o) => o.id));
+    const fresh = buildChoices(currentChoices.mode === 'chest').find((o) => !shown.has(o.id) && (o.kind === 'weapon' || o.kind === 'passive'));
+    if (fresh) currentChoices[i] = fresh;
+    else currentChoices.splice(i, 1);
+    if (!currentChoices.length) currentChoices.push({ kind: 'heal', id: 'heal', rarity: 0 });
+    toast(`${(c.kind === 'weapon' ? WEAPONS : PASSIVES)[c.id].name} banido desta partida`);
+    renderChoices();
+  }
+
+  function skipChoice() {
+    if (state !== 'levelup' || run.skips <= 0) return;
+    run.skips--;
+    banishMode = false;
+    finishChoice();
   }
 
   function choose(i) {
@@ -1445,13 +1520,17 @@
     } else if (c.kind === 'boon') {
       BOONS[c.id].apply(c.value);
       boonsTaken[c.id] = (boonsTaken[c.id] || 0) + c.value;
-    } else if (c.kind === 'gold') runCoins += 25;
+    } else if (c.kind === 'gold') player.dmgMul += 0.05;
     else heal(40);
+    sparks(player.x, player.y - 15, '#ffd36b', 16, 260);
+    Sound.play('select');
+    finishChoice();
+  }
+
+  function finishChoice() {
     if (currentChoices.mode === 'chest') pendingChests--;
     else if (currentChoices.mode === 'shrine') pendingShrines--;
     else pendingLevels--;
-    sparks(player.x, player.y - 15, '#ffd36b', 16, 260);
-    Sound.play('select');
     if (pendingLevels > 0 || pendingChests > 0 || pendingShrines > 0) openChoices();
     else setState('playing');
   }
@@ -1770,9 +1849,9 @@
     if (e.hp <= 0) killEnemy(e);
   }
 
-  function coinValue() {
-    return 1 + Math.floor(time / 180);
-  }
+  // Chance de uma moeda dourada cair: maior na dificuldade alta, com Sorte e com a bênção Ganância.
+  const coinChance = (base) => base * DIFFS[run.diff].coins * player.coinMul * (1 + effLuck() * 0.08);
+  const dropCoin = (x, y) => pickups.push({ kind: 'coin', x, y, v: 1 });
 
   function killEnemy(e) {
     e.dead = true;
@@ -1787,7 +1866,9 @@
     }
     if (e.boss) {
       for (let i = 0; i < 12; i++) dropXp(e.x + rand(-50, 50), e.y + rand(-50, 50), 5);
-      for (let i = 0; i < 8; i++) pickups.push({ kind: 'coin', x: e.x + rand(-60, 60), y: e.y + rand(-60, 60), v: coinValue() * 3 });
+      // chefão: 1 moeda; chefão final: 2 + 1 por nível de dificuldade
+      const nCoins = e.final ? 2 + run.diff : 1;
+      for (let i = 0; i < nCoins; i++) dropCoin(e.x - 40 + i * 30, e.y + 30);
       pickups.push({ kind: 'chest', x: e.x, y: e.y });
       pickups.push({ kind: 'heart', x: e.x + 34, y: e.y, v: 50 });
       player.bossKills++;
@@ -1812,7 +1893,7 @@
     } else if (e.elite) {
       run.eliteKills++;
       dropXp(e.x, e.y, e.xp);
-      for (let i = 0; i < 3; i++) pickups.push({ kind: 'coin', x: e.x + rand(-24, 24), y: e.y + rand(-24, 24), v: coinValue() });
+      if (Math.random() < coinChance(0.06)) dropCoin(e.x + 20, e.y + 10);
       if (Math.random() < 0.15) pickups.push({ kind: 'heart', x: e.x + 20, y: e.y, v: 25 });
       if (Math.random() < 0.04) pickups.push({ kind: 'magnet', x: e.x - 20, y: e.y });
       if (Math.random() < 0.08 * (1 + effLuck() * 0.2)) pickups.push({ kind: 'chest', x: e.x, y: e.y });
@@ -1821,10 +1902,9 @@
     } else {
       dropXp(e.x, e.y, e.xp);
       if (e.type === 'fireslime' && Math.random() < 0.35) epools.push({ x: e.x, y: e.y, r: 28, life: 2.6, dmg: e.dmg * 0.7 });
-      const luck = 1 + effLuck() * 0.1;
       if (Math.random() < 0.0015 * (1 + effLuck() * 0.1)) pickups.push({ kind: 'magnet', x: e.x, y: e.y });
       else if (Math.random() < 0.005 * (1 + effLuck() * 0.15)) pickups.push({ kind: 'heart', x: e.x, y: e.y, v: 25 });
-      else if (Math.random() < 0.05 * luck) pickups.push({ kind: 'coin', x: e.x + rand(-8, 8), y: e.y + rand(-8, 8), v: coinValue() });
+      else if (Math.random() < coinChance(0.0007)) dropCoin(e.x, e.y);
     }
   }
 
@@ -2231,6 +2311,11 @@
     return list.slice(0, n);
   }
 
+  // Alcance de cada arma: ela só dispara quando há um inimigo dentro dele.
+  // (calculado pela distância que o projétil percorre antes de sumir)
+  const RANGE = { missil: 560, arco: 620, facas: 450, raio: 420, fogo: 540, metralhadora: 520, meteoro: 470, bombardeio: 470 };
+  const weaponRange = (id, w) => (id === 'bumerangue' ? w.s.range + 40 : RANGE[id]);
+
   // Ângulo do ponto de disparo até o centro do inimigo.
   const aimAngle = (t) => Math.atan2(t.y - (player.y - AIM_Y), t.x - player.x);
 
@@ -2238,7 +2323,7 @@
     missil(w, dt) {
       w.timer -= dt;
       if (w.timer > 0) return;
-      const target = aimTarget();
+      const target = aimTarget(null, RANGE.missil);
       if (!target) { w.timer = 0.1; return; }
       w.timer = cooldown(w);
       Sound.play('ice');
@@ -2259,8 +2344,8 @@
       if (w.timer > 0) return;
       const n = shots(w);
       // Cada flecha mira um inimigo diferente, do mais perto ao mais longe.
-      let targets = aimTargets(n);
-      if (!targets.length) { const t = aimTarget(); targets = t ? [t] : []; }
+      let targets = aimTargets(n, RANGE.arco);
+      if (!targets.length) { const t = aimTarget(null, RANGE.arco); targets = t ? [t] : []; }
       if (!targets.length) { w.timer = 0.1; return; }
       w.timer = cooldown(w);
       Sound.play('arrow');
@@ -2280,7 +2365,7 @@
       w.timer -= dt;
       if (w.timer > 0) return;
       // Mira sozinha no inimigo mais próximo e corrige a rota em voo.
-      const target = aimTarget();
+      const target = aimTarget(null, RANGE.facas);
       if (!target) { w.timer = 0.1; return; }
       w.timer = cooldown(w);
       Sound.play('knife');
@@ -2299,7 +2384,7 @@
     raio(w, dt) {
       w.timer -= dt;
       if (w.timer > 0) return;
-      const starts = aimTargets(shots(w));
+      const starts = aimTargets(shots(w), RANGE.raio);
       if (!starts.length) { w.timer = 0.1; return; }
       w.timer = cooldown(w);
       Sound.play('zap');
@@ -2313,13 +2398,12 @@
     fogo(w, dt) {
       w.timer -= dt;
       if (w.timer > 0) return;
-      const options = enemiesOnScreen();
-      if (!options.length) { w.timer = 0.1; return; }
+      const n = shots(w);
+      const targets = aimTargets(n, RANGE.fogo);
+      if (!targets.length) { w.timer = 0.1; return; }
       w.timer = cooldown(w);
       Sound.play('fire');
-      const n = shots(w);
       const radius = w.s.area * player.areaMul;
-      const targets = aimTargets(n);
       for (let i = 0; i < n; i++) {
         const t = targets[i % targets.length];
         const a = aimAngle(t);
@@ -2370,6 +2454,8 @@
     tremor(w, dt) {
       w.timer -= dt;
       if (w.timer > 0) return;
+      // só estremece quando algum inimigo está dentro da onda
+      if (!nearestEnemy(player.x, player.y, null, w.s.area * player.areaMul)) { w.timer = 0.1; return; }
       w.timer = cooldown(w);
       Sound.play('tremor');
       const ring = {
@@ -2395,7 +2481,7 @@
     metralhadora(w, dt) {
       w.timer -= dt;
       if (w.timer > 0) return;
-      const target = aimTarget(null, 520);
+      const target = aimTarget(null, RANGE.metralhadora);
       if (!target) { w.timer = 0.1; return; }
       w.timer = cooldown(w);
       Sound.play('knife');
@@ -2428,12 +2514,11 @@
     bombardeio(w, dt) {
       w.timer -= dt;
       if (w.timer > 0) return;
-      const options = enemiesOnScreen();
-      if (!options.length) { w.timer = 0.1; return; }
+      // fileira de bombas atravessando o alvo
+      const t = aimTarget(null, RANGE.bombardeio);
+      if (!t) { w.timer = 0.1; return; }
       w.timer = cooldown(w);
       Sound.play('whistle');
-      // fileira de bombas atravessando o alvo
-      const t = aimTarget();
       const a = Math.atan2(t.y - player.y, t.x - player.x) + Math.PI / 2 + rand(-0.4, 0.4);
       const n = shots(w);
       const radius = w.s.area * player.areaMul;
@@ -2448,7 +2533,7 @@
     bumerangue(w, dt) {
       w.timer -= dt;
       if (w.timer > 0) return;
-      const target = aimTarget();
+      const target = aimTarget(null, weaponRange('bumerangue', w));
       if (!target) { w.timer = 0.1; return; }
       w.timer = cooldown(w);
       Sound.play('knife');
@@ -2468,12 +2553,11 @@
     meteoro(w, dt) {
       w.timer -= dt;
       if (w.timer > 0) return;
-      const options = enemiesOnScreen();
-      if (!options.length) { w.timer = 0.1; return; }
-      w.timer = cooldown(w);
       const n = shots(w);
+      const targets = aimTargets(n, RANGE.meteoro);
+      if (!targets.length) { w.timer = 0.1; return; }
+      w.timer = cooldown(w);
       const radius = w.s.area * player.areaMul;
-      const targets = aimTargets(n);
       for (let i = 0; i < n; i++) {
         const t = targets[i % targets.length];
         const fall = 0.65 + i * 0.12;
@@ -2819,9 +2903,11 @@
           Sound.play('gem');
           if (Math.random() < 0.3) sparks(player.x, player.y - 10, '#7fe0ff', 2, 120);
         } else if (p.kind === 'coin') {
-          runCoins += p.v * player.coinMul;
-          Sound.play('coin');
-          sparks(player.x, player.y - 10, '#ffd36b', 4, 140);
+          runCoins += p.v;
+          Sound.play('chest');
+          sparks(player.x, player.y - 10, '#ffd36b', 24, 260);
+          ringFx(player.x, player.y, 60, '#ffd36b');
+          addText(player.x, player.y - 50, '+1 moeda dourada', '#ffd36b', true);
         } else if (p.kind === 'magnet') {
           // puxa todo o XP do mapa de uma vez
           for (const q of pickups) if (q.kind === 'xp') q.pulled = true;
