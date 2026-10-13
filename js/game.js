@@ -631,10 +631,11 @@
       lastHurt: 0, bestHitless: 0, eliteKills: 0, spawned: 0, chalCoins: 0, checkT: 0,
       rerolls: optionUses('reroll'), banishes: optionUses('banish'), skips: optionUses('skip'), banned: new Set(),
       stage: STAGES[save.stage] ? save.stage : 'cemiterio', diff: save.diff || 0,
+      stageStart: 0, // quando começou a dificuldade atual (o portal reinicia a contagem)
       finalSpawned: false, cleared: false, clearTime: 0, firstClear: false, nextOver: 0, overIdx: 0,
     };
     if (!diffUnlocked(run.stage, run.diff)) { run.stage = 'cemiterio'; run.diff = 0; }
-    Art.setBiome(STAGES[run.stage].biome);
+    Art.setBiome(STAGES[run.stage].biome, run.diff);
     enemies = [];
     projectiles = [];
     pickups = [];
@@ -726,7 +727,12 @@
   function updateMusic() {
     if (state === 'dead') Sound.music('off');
     else if (!inRun) Sound.music('menu');
-    else Sound.music(enemies.some((e) => e.boss) ? 'boss' : 'game');
+    else {
+      // cada dificuldade tem sua música: normal, sombria (Difícil) e rock pesado (Pesadelo)
+      const base = ['game', 'dark', 'metal'][run.diff];
+      const boss = enemies.some((e) => e.boss);
+      Sound.music(base === 'game' ? (boss ? 'boss' : 'game') : base + (boss ? 'boss' : ''));
+    }
     Sound.duck(inRun && state !== 'playing');
   }
 
@@ -866,7 +872,7 @@
       }).join('');
       const prev = STAGE_IDS[STAGE_IDS.indexOf(id) - 1];
       card.innerHTML = `
-        <div class="preview"><img src="${Art.stagePreview(S.biome)}" alt="">${open ? '' : `<div class="lockbadge"><img src="${Art.icon('lock')}" alt=""><span>Conclua ${STAGES[prev].name}</span></div>`}</div>
+        <div class="preview"><img src="${Art.stagePreview(S.biome, save.stage === id ? save.diff : 0)}" alt="">${open ? '' : `<div class="lockbadge"><img src="${Art.icon('lock')}" alt=""><span>Conclua ${STAGES[prev].name}</span></div>`}</div>
         <div class="name">${S.name}</div>
         <div class="desc">${S.desc}</div>
         <div class="desc boss">Chefão final: <b>${ENEMY_TYPES[S.final].name}</b></div>
@@ -1214,7 +1220,51 @@
     persist();
     Sound.play('levelup');
     player.invuln = Math.max(player.invuln, 2);
-    setTimeout(() => showBanner('Fase concluída! Agora sobreviva: a Ameaça vai subir.', '#ffd36b'), 2700);
+    if (run.diff < 2) {
+      // portal para a próxima dificuldade, levando tudo que foi conquistado
+      const a = rand(0, TAU);
+      structures.push({ kind: 'portal', x: player.x + Math.cos(a) * 320, y: player.y + Math.sin(a) * 240, r: 60, charge: 0, need: 2.5, used: false, fade: 1 });
+      setTimeout(() => showBanner(`Um portal para o ${DIFFS[run.diff + 1].name} se abriu!`, DIFFS[run.diff + 1].color), 2700);
+    } else {
+      setTimeout(() => showBanner('Fase concluída! Agora sobreviva: a Ameaça vai subir.', '#ffd36b'), 2700);
+    }
+  }
+
+  // Entrou no portal: mesma fase na dificuldade seguinte, com as mesmas armas, passivas e bênçãos.
+  function enterPortal() {
+    run.diff++;
+    run.stageStart = time;
+    run.finalSpawned = false;
+    run.cleared = false;
+    run.firstClear = false;
+    const D = DIFFS[run.diff];
+    // limpa o mapa (o XP que estava no chão vai direto para o jogador)
+    let xp = 0;
+    for (const p of pickups) if (p.kind === 'xp') xp += p.v;
+    pickups = pickups.filter((p) => p.kind === 'coin' || p.kind === 'chest');
+    for (const p of pickups) { p.x = player.x + rand(-60, 60); p.y = player.y + rand(-60, 60); }
+    enemies = [];
+    lanes = [];
+    strikes = [];
+    eshots = [];
+    epools = [];
+    summons = [];
+    meteors = [];
+    structures = [];
+    nextBoss = time + BOSS_INTERVAL;
+    nextSwarm = time + 60;
+    Art.setBiome(STAGES[run.stage].biome, run.diff);
+    spawnStructure('totem', 380);
+    spawnStructure('grandaltar', 1000);
+    if (xp) gainXp(xp);
+    player.invuln = 3;
+    levelFx = 1;
+    shake = 14;
+    Sound.play('boss');
+    sparks(player.x, player.y - 20, D.color, 80, 460);
+    ringFx(player.x, player.y, 240, D.color);
+    showBanner(`${STAGES[run.stage].name} · ${D.name}!`, D.color);
+    updateMusic();
   }
 
   // Nível de Ameaça depois de vencer o chefão final: sobe 1 a cada 30 segundos.
@@ -1663,7 +1713,7 @@
     structTimer -= dt;
     if (structTimer <= 0) {
       structTimer = 3;
-      structures = structures.filter((s) => s.kind === 'grandaltar' || (Math.hypot(s.x - player.x, s.y - player.y) < 2600 && s.fade > 0));
+      structures = structures.filter((s) => s.kind === 'grandaltar' || s.kind === 'portal' || (Math.hypot(s.x - player.x, s.y - player.y) < 2600 && s.fade > 0));
       const totems = structures.filter((s) => s.kind === 'totem' && !s.used).length;
       const altars = structures.filter((s) => s.kind === 'altar' && !s.used).length;
       if (totems < 2) spawnStructure('totem');
@@ -1678,6 +1728,9 @@
           fx({ kind: 'dot', add: true, x: s.x + rand(-10, 10), y: s.y - rand(5, 25), vx: rand(-15, 15), vy: rand(-70, -35), life: rand(0.6, 1.2), color: BONFIRE_COLOR, size: rand(1.5, 3), drag: 0.98 });
         } else if (s.kind === 'totem' && s.used && Math.random() < dt * 3) {
           smoke(s.x, s.y - 10, 1, '#6a6460');
+        } else if (s.kind === 'portal' && Math.random() < dt * 20) {
+          const a = rand(0, TAU);
+          fx({ kind: 'dot', add: true, x: s.x + Math.cos(a) * s.r, y: s.y + Math.sin(a) * s.r * 0.45, vx: -Math.cos(a) * 40, vy: rand(-90, -40), life: rand(0.6, 1.1), color: DIFFS[Math.min(2, run.diff + 1)].color, size: rand(1.5, 3.5), drag: 0.98 });
         } else if (s.kind === 'grandaltar' && !s.used && Math.random() < dt * 14) {
           fx({ kind: 'dot', add: true, x: s.x + rand(-90, 90), y: s.y + rand(-40, 40), vx: 0, vy: rand(-60, -30), life: rand(0.8, 1.4), color: Math.random() < 0.7 ? '#c77dff' : '#ffd36b', size: rand(1.5, 3), drag: 0.99 });
         } else if (s.kind === 'altar' && !s.used && Math.random() < dt * 10) {
@@ -1694,6 +1747,7 @@
         s.used = true;
         if (s.kind === 'totem') activateTotem(s);
         else if (s.kind === 'grandaltar') activateGrandAltar(s);
+        else if (s.kind === 'portal') { enterPortal(); return; }
         else activateAltar(s);
       }
     }
@@ -1860,12 +1914,13 @@
       Sound.play('swarm');
     }
 
-    if (!run.finalSpawned && time >= STAGE_TIME) {
+    const stageT = time - run.stageStart;
+    if (!run.finalSpawned && stageT >= STAGE_TIME) {
       const p = spawnPoint();
       spawnFinal(p.x, p.y);
     }
 
-    if (time >= nextBoss && time < STAGE_TIME - 20 && !run.finalSpawned) {
+    if (time >= nextBoss && stageT < STAGE_TIME - 20 && !run.finalSpawned) {
       nextBoss += BOSS_INTERVAL;
       const p = spawnPoint();
       spawnBoss(p.x, p.y);
@@ -3058,6 +3113,12 @@
     const b = STAGES[run.stage].biome;
     const x = player.x + rand(-W / 2, W / 2);
     const y = player.y + rand(-H / 2, H / 2);
+    // Difícil: almas roxas subindo; Pesadelo: cinzas vermelhas caindo
+    if (run.diff === 1 && Math.random() < dt * 8) {
+      fx({ kind: 'dot', add: true, x, y, vx: rand(-10, 10), vy: rand(-35, -15), life: rand(2, 3.5), color: Math.random() < 0.5 ? '#b07aff' : '#7a4ad0', size: rand(1.5, 3), drag: 1 });
+    } else if (run.diff === 2 && Math.random() < dt * 14) {
+      fx({ kind: 'dot', add: true, x, y: player.y - H / 2 + rand(-40, H * 0.5), vx: rand(-25, 5), vy: rand(25, 55), life: rand(2, 3.5), color: Math.random() < 0.6 ? '#ff2a2a' : '#5a0a10', size: rand(1.2, 2.6), drag: 1 });
+    }
     if (b === 'grass' && Math.random() < dt * 4) {
       fx({ kind: 'dot', add: true, x, y, vx: rand(-14, 14), vy: rand(-14, 14), life: rand(2, 4), color: '#d8ff7a', size: rand(1.2, 2.2), drag: 1 });
     } else if (b === 'lava' && Math.random() < dt * 10) {
@@ -3177,11 +3238,14 @@
     const d = Math.hypot(s.x - player.x, s.y - player.y);
     if (s.used || d > 280) return;
     const grand = s.kind === 'grandaltar';
-    const label = s.kind === 'totem' ? 'Fogueira' : grand ? 'Altar Maior' : 'Altar de Invocação';
+    const portalS = s.kind === 'portal';
+    const next = DIFFS[Math.min(2, run.diff + 1)];
+    const label = s.kind === 'totem' ? 'Fogueira' : grand ? 'Altar Maior' : portalS ? `Portal: ${next.name}` : 'Altar de Invocação';
     const sub = s.kind === 'totem' ? 'Fique perto para escolher uma bênção'
-      : grand ? 'Fique no centro para invocar o chefão final agora' : 'Invoca um chefão';
-    const color = s.kind === 'totem' ? BONFIRE_COLOR : grand ? '#c77dff' : '#ff3355';
-    const y = s.y - (s.kind === 'totem' ? 100 : grand ? 200 : 64);
+      : grand ? 'Fique no centro para invocar o chefão final agora'
+        : portalS ? 'Entre para ir à próxima dificuldade (mantém armas e bônus)' : 'Invoca um chefão';
+    const color = s.kind === 'totem' ? BONFIRE_COLOR : grand ? '#c77dff' : portalS ? next.color : '#ff3355';
+    const y = s.y - (s.kind === 'totem' ? 100 : grand ? 200 : portalS ? 150 : 64);
     ctx.globalAlpha = clamp((240 - d) / 80, 0, 1);
     ctx.textAlign = 'center';
     ctx.lineWidth = 4;
@@ -3210,6 +3274,9 @@
       ctx.stroke();
       ctx.setLineDash([]);
       Art.bonfireGround(ctx, s.x, s.y, time, BONFIRE_COLOR, !s.used);
+    } else if (s.kind === 'portal') {
+      ctx.globalAlpha = 1;
+      return;
     } else if (s.kind === 'grandaltar') {
       Art.grandAltarGround(ctx, s.x, s.y, s.r, time, s.used, s.charge / s.need);
     } else {
@@ -3243,7 +3310,7 @@
       const t = Math.min((W / 2 - m) / (Math.abs(c) || 1e-6), ((H - top - m) / 2) / (Math.abs(n) || 1e-6));
       const sx = W / 2 + c * t;
       const sy = (top + H - m) / 2 + n * t;
-      const color = s.kind === 'totem' ? BONFIRE_COLOR : s.kind === 'grandaltar' ? '#c77dff' : '#ff3355';
+      const color = s.kind === 'totem' ? BONFIRE_COLOR : s.kind === 'grandaltar' ? '#c77dff' : s.kind === 'portal' ? DIFFS[Math.min(2, run.diff + 1)].color : '#ff3355';
       const pulse = 1 + Math.sin(time * 5) * 0.08;
       Art.glow(ctx, sx, sy, 26, color, 0.5);
       ctx.save();
@@ -3632,7 +3699,7 @@
     const list = [];
     for (const e of enemies) if (onScreen(e.x, e.y, 80)) list.push({ y: e.y, e });
     for (const s of structures) {
-      if ((s.kind === 'totem' && onScreen(s.x, s.y, 120)) || (s.kind === 'grandaltar' && onScreen(s.x, s.y, 260))) list.push({ y: s.y, s });
+      if ((s.kind === 'totem' && onScreen(s.x, s.y, 120)) || ((s.kind === 'grandaltar' || s.kind === 'portal') && onScreen(s.x, s.y, 260))) list.push({ y: s.y, s });
     }
     for (const p of pickups) if (p.kind === 'chest' && onScreen(p.x, p.y, 80)) list.push({ y: p.y, c: p });
     if (showPlayer) list.push({ y: player.y, player: true });
@@ -3647,6 +3714,7 @@
         Art.drawProp(ctx, p, time, behind ? 0.45 : 1);
       } else if (o.e) drawEnemyFull(o.e);
       else if (o.s && o.s.kind === 'grandaltar') Art.grandAltarTop(ctx, o.s.x, o.s.y, o.s.r, time, o.s.used);
+      else if (o.s && o.s.kind === 'portal') Art.portal(ctx, o.s.x, o.s.y, o.s.r, time, DIFFS[Math.min(2, run.diff + 1)].color, o.s.charge / o.s.need);
       else if (o.s) {
         ctx.globalAlpha = clamp(o.s.fade, 0, 1);
         Art.bonfireTop(ctx, o.s.x, o.s.y, time, BONFIRE_COLOR, !o.s.used);
@@ -3921,7 +3989,7 @@
     $('hpghost').style.width = (100 * Math.max(hpGhost, player.hp / player.maxHp)) + '%';
     $('hptext').textContent = Math.ceil(player.hp) + ' / ' + player.maxHp;
     $('timer').textContent = fmtTime(time);
-    const left = STAGE_TIME - time;
+    const left = STAGE_TIME - (time - run.stageStart);
     const sb = run.cleared
       ? `☠ Ameaça ${threat()} · inimigos +${Math.round((threatHp() - 1) * 100)}% vida · sobe em ${fmtTime(30 - ((time - run.clearTime) % 30))}`
       : run.finalSpawned ? 'Derrote o chefão final!' : `Chefão final em ${fmtTime(Math.max(0, left))} · ou invoque no Altar Maior`;

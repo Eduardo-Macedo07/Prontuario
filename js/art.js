@@ -1730,6 +1730,69 @@ const Art = (() => {
     }
   }
 
+  // ---------- Portal para a próxima dificuldade ----------
+  function portal(g, x, y, r, t, color, charge) {
+    glow(g, x, y - r * 0.6, r * 2.6, color, 0.5 + Math.sin(t * 3) * 0.1);
+    // círculo no chão
+    g.save();
+    g.translate(x, y);
+    g.scale(1, 0.45);
+    g.strokeStyle = rgba(color, 0.7);
+    g.lineWidth = 4;
+    g.setLineDash([14, 10]);
+    g.lineDashOffset = -t * 40;
+    g.beginPath();
+    g.arc(0, 0, r, 0, TAU);
+    g.stroke();
+    g.setLineDash([]);
+    g.restore();
+    // arco de pedra
+    const h = r * 2;
+    for (const side of [-1, 1]) {
+      poly(g, [x + side * r * 0.95, y + 4, x + side * r * 0.7, y + 4, x + side * r * 0.62, y - h * 0.8, x + side * r * 0.85, y - h * 0.85], lin(g, x - r, 0, x + r, 0, '#4a4058', '#1a1424'), 2);
+    }
+    // vórtice
+    g.save();
+    g.translate(x, y - h * 0.48);
+    g.beginPath();
+    g.ellipse(0, 0, r * 0.62, h * 0.46, 0, 0, TAU);
+    const gr = g.createRadialGradient(0, 0, 4, 0, 0, h * 0.46);
+    gr.addColorStop(0, '#ffffff');
+    gr.addColorStop(0.25, light(color, 0.3));
+    gr.addColorStop(0.7, color);
+    gr.addColorStop(1, dark(color, 0.6));
+    g.fillStyle = gr;
+    g.fill();
+    outline(g, 3);
+    g.clip();
+    g.globalCompositeOperation = 'lighter';
+    g.strokeStyle = rgba('#ffffff', 0.35);
+    g.lineWidth = 3;
+    for (let i = 0; i < 6; i++) {
+      g.beginPath();
+      for (let k = 0; k <= 30; k++) {
+        const a = t * 3 + i * (TAU / 6) + k * 0.25;
+        const rr = (k / 30) * h * 0.46;
+        const px = Math.cos(a) * rr * (r * 0.62) / (h * 0.46);
+        const py = Math.sin(a) * rr;
+        if (k === 0) g.moveTo(px, py);
+        else g.lineTo(px, py);
+      }
+      g.stroke();
+    }
+    g.restore();
+    // pedra-chave com runa
+    poly(g, [x - r * 0.75, y - h * 0.86, x, y - h * 1.05, x + r * 0.75, y - h * 0.86, x + r * 0.6, y - h * 0.78, x, y - h * 0.94, x - r * 0.6, y - h * 0.78], lin(g, 0, y - h, 0, y - h * 0.8, '#6a6078', '#2a2436'), 2);
+    glow(g, x, y - h * 0.92, 16, color, 0.9);
+    if (charge > 0) {
+      g.strokeStyle = '#ffffff';
+      g.lineWidth = 5;
+      g.beginPath();
+      g.ellipse(x, y, r + 8, (r + 8) * 0.45, 0, -Math.PI / 2, -Math.PI / 2 + TAU * charge);
+      g.stroke();
+    }
+  }
+
   // ---------- Ímã que puxa todo o XP do mapa ----------
   function drawMagnetPickup(g, p, t) {
     const s = 1 + Math.sin(t * 5) * 0.1;
@@ -2137,10 +2200,35 @@ const Art = (() => {
     },
   };
   let biome = 'grass';
-  function setBiome(id) {
-    if (!BIOMES[id] || id === biome) return;
+  // Variação por dificuldade: 0 Normal, 1 Difícil (roxo e mais névoa), 2 Pesadelo (vermelho sangue).
+  let variant = 0;
+  const VARIANTS = [
+    null,
+    { tint: '#5a2a8a', amt: 0.55, dark: 0.22, fog: '#b07aff', fogA: 0.16, fogMin: 0.15, vig: 'rgba(40,10,60,0.75)' },
+    { tint: '#8a0a14', amt: 0.6, dark: 0.3, fog: '#ff3a3a', fogA: 0.13, fogMin: 0.2, vig: 'rgba(60,0,4,0.8)' },
+  ];
+  function setBiome(id, v) {
+    v = v || 0;
+    if (!BIOMES[id] || (id === biome && v === variant)) return;
     biome = id;
+    variant = v;
     chunks.clear();
+  }
+
+  // Recolore um desenho já pronto com a cor da dificuldade (chão e objetos do cenário).
+  function tintCanvas(g, w, h, strength) {
+    const V = VARIANTS[variant];
+    if (!V) return;
+    g.save();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalCompositeOperation = 'source-atop';
+    g.globalAlpha = V.amt * strength;
+    g.fillStyle = V.tint;
+    g.fillRect(0, 0, w, h);
+    g.globalAlpha = V.dark * strength;
+    g.fillStyle = '#000000';
+    g.fillRect(0, 0, w, h);
+    g.restore();
   }
 
   function decorLava(g, R, rr, spot) {
@@ -2268,12 +2356,16 @@ const Art = (() => {
 
   // Miniatura de um mapa (para a tela de escolha de fase).
   const previewUrls = new Map();
-  function stagePreview(id) {
-    let url = previewUrls.get(id);
+  function stagePreview(id, v) {
+    v = v || 0;
+    let url = previewUrls.get(id + ':' + v);
     if (url) return url;
     const prev = biome;
+    const prevV = variant;
     biome = id;
+    variant = v;
     const ch = makeChunk(3, 2);
+    tintCanvas(ch.canvas.getContext('2d'), CHUNK, CHUNK, 1);
     const c = document.createElement('canvas');
     c.width = 360;
     c.height = 200;
@@ -2284,12 +2376,13 @@ const Art = (() => {
       .sort((a, b) => a.y - b.y);
     for (const p of list) drawProp(g, p, 0, 1);
     biome = prev;
+    variant = prevV;
     try {
       url = c.toDataURL();
     } catch (e) {
       url = '';
     }
-    previewUrls.set(id, url);
+    previewUrls.set(id + ':' + v, url);
     return url;
   }
 
@@ -2479,6 +2572,7 @@ const Art = (() => {
     let c = chunks.get(key);
     if (!c) {
       c = makeChunk(cx, cy);
+      tintCanvas(c.canvas.getContext('2d'), CHUNK, CHUNK, 1);
       chunks.set(key, c);
       if (chunks.size > 40) chunks.delete(chunks.keys().next().value);
     }
@@ -2517,9 +2611,10 @@ const Art = (() => {
 
   function drawProp(g, p, t, alpha) {
     const def = PROPS[p.type];
-    const s = sprite('prop:' + p.type + ':' + p.v, def.size, (pg) => {
+    const s = sprite('prop:' + p.type + ':' + p.v + ':' + variant, def.size, (pg) => {
       pg.translate(0, def.size * 0.35);
       def.draw(pg, p.v);
+      tintCanvas(pg, pg.canvas.width, pg.canvas.height, 0.75);
     });
     const flip = p.type === 'lantern' ? 1 : p.flip;
     g.globalAlpha = alpha;
@@ -2543,27 +2638,31 @@ const Art = (() => {
     for (let gx = gx0; gx <= gx0 + Math.ceil(W / S) + 2; gx++) {
       for (let gy = gy0; gy <= gy0 + Math.ceil(H / S) + 2; gy++) {
         const h = hash01(gx, gy, 31);
-        if (h < 0.35) continue;
+        const V = VARIANTS[variant];
+        if (h < (V ? V.fogMin : 0.35)) continue;
         const r = 220 + h * 220;
         const x = gx * S + h * S + Math.sin(t * 0.15 + h * 10) * 80;
         const y = gy * S + hash01(gx, gy, 32) * S;
-        g.globalAlpha = 0.08;
-        g.drawImage(glowSprite(BIOMES[biome].fog), x - r, y - r * 0.45, r * 2, r * 0.9);
+        g.globalAlpha = V ? V.fogA : 0.08;
+        g.drawImage(glowSprite(V ? V.fog : BIOMES[biome].fog), x - r, y - r * 0.45, r * 2, r * 0.9);
       }
     }
     g.globalAlpha = prevA;
   }
 
   let vigCanvas = null;
+  let vigVariant = -1;
   function vignette(g, W, H) {
-    if (!vigCanvas || vigCanvas.width !== W || vigCanvas.height !== H) {
+    if (!vigCanvas || vigCanvas.width !== W || vigCanvas.height !== H || vigVariant !== variant) {
+      vigVariant = variant;
       vigCanvas = document.createElement('canvas');
       vigCanvas.width = W;
       vigCanvas.height = H;
       const v = vigCanvas.getContext('2d');
-      const gr = v.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.hypot(W, H) * 0.6);
+      const V = VARIANTS[variant];
+      const gr = v.createRadialGradient(W / 2, H / 2, Math.min(W, H) * (V ? 0.25 : 0.35), W / 2, H / 2, Math.hypot(W, H) * 0.6);
       gr.addColorStop(0, 'rgba(10,8,20,0)');
-      gr.addColorStop(1, 'rgba(10,8,20,0.6)');
+      gr.addColorStop(1, V ? V.vig : 'rgba(10,8,20,0.6)');
       v.fillStyle = gr;
       v.fillRect(0, 0, W, H);
     }
@@ -3075,7 +3174,7 @@ const Art = (() => {
     mix, light, dark, rgba,
     outline, ball, oval, poly, path, lin, shadow, glow, flame, sprite, blit,
     drawHero, drawHeroSilhouette, heroIcon, hasSheet: (id) => !!SHEETS[id], drawEnemy, drawGem, drawHeart, drawChest, drawCoin,
-    bonfireGround, bonfireTop, altar, grandAltarGround, grandAltarTop, drawMagnetPickup,
+    bonfireGround, bonfireTop, altar, grandAltarGround, grandAltarTop, drawMagnetPickup, portal,
     drawGround, drawFog, propsInView, drawProp, PROP_HEIGHT, vignette, icon, setLowQuality, setBiome, stagePreview,
   };
 })();

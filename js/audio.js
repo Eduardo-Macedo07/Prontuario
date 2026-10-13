@@ -8,6 +8,7 @@ const Sound = (() => {
   let master;
   let sfxBus;
   let musicBus;
+  let distBus; // guitarra distorcida do rock pesado
   let noiseBuf;
   let vol = { music: 0.6, sfx: 0.8 };
   let ducked = false;
@@ -28,6 +29,25 @@ const Sound = (() => {
     musicBus = ac.createGain();
     sfxBus.connect(master);
     musicBus.connect(master);
+    // distorção: ganho alto -> saturação -> corta os agudos ásperos
+    distBus = ac.createGain();
+    distBus.gain.value = 3;
+    const shaper = ac.createWaveShaper();
+    const curve = new Float32Array(1024);
+    for (let i = 0; i < 1024; i++) {
+      const x = (i / 1023) * 2 - 1;
+      curve[i] = Math.tanh(x * 6);
+    }
+    shaper.curve = curve;
+    const tone2 = ac.createBiquadFilter();
+    tone2.type = 'lowpass';
+    tone2.frequency.value = 3200;
+    const out = ac.createGain();
+    out.gain.value = 0.16;
+    distBus.connect(shaper);
+    shaper.connect(tone2);
+    tone2.connect(out);
+    out.connect(musicBus);
     noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
     const d = noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -162,7 +182,17 @@ const Sound = (() => {
     menu: { bpm: 78, drums: false, bass: 'soft', arp: 'slow' },
     game: { bpm: 112, drums: true, bass: 'drive', arp: 'eighth' },
     boss: { bpm: 132, drums: true, bass: 'boss', arp: 'sixteenth' },
+    // Difícil: lento e sombrio, órgão, sino de igreja e batida de coração
+    dark: { bpm: 92, style: 'dark' },
+    darkboss: { bpm: 116, style: 'dark', boss: true },
+    // Pesadelo: rock pesado com guitarra distorcida e bumbo duplo
+    metal: { bpm: 168, style: 'metal' },
+    metalboss: { bpm: 188, style: 'metal', boss: true },
   };
+  // Lá menor frígio: Am, Bb, Dm, E (soa mais de morte)
+  const DARK_PROG = [[0, 3, 7], [1, 5, 8], [-7, -4, 0], [-5, -1, 2]];
+  // Riffs em quintas: E, F, E, Bb (trítono)
+  const METAL_ROOTS = [-5, -4, -5, 1];
   let mode = null;
   let step = 0;
   let nextTime = 0;
@@ -198,6 +228,8 @@ const Sound = (() => {
   }
 
   function scheduleStep(M, s, t, sd) {
+    if (M.style === 'dark') return scheduleDark(M, s, t, sd);
+    if (M.style === 'metal') return scheduleMetal(M, s, t, sd);
     const at = t - ac.currentTime;
     const bar = Math.floor(s / 16);
     const i = s % 16;
@@ -230,6 +262,65 @@ const Sound = (() => {
       if (i === 4 || i === 12) noise({ filter: 'bandpass', f0: 1800, dur: 0.12, vol: 0.12, q: 0.8, at, dest });
       if (i % 2 === 0) noise({ filter: 'highpass', f0: 7000, dur: 0.035, vol: i % 4 === 2 ? 0.05 : 0.03, at, dest });
     }
+  }
+
+  function scheduleDark(M, s, t, sd) {
+    const at = t - ac.currentTime;
+    const bar = Math.floor(s / 16);
+    const i = s % 16;
+    const chord = DARK_PROG[bar];
+    const dest = musicBus;
+    if (i === 0) {
+      // órgão grave e coro desafinado
+      for (const n of chord) {
+        tone({ type: 'sawtooth', f0: hz(n - 12), dur: sd * 16, vol: 0.016, attack: 0.6, at, dest, lp: 900 });
+        tone({ type: 'sawtooth', f0: hz(n - 12), detune: 12, dur: sd * 16, vol: 0.012, attack: 0.8, at, dest, lp: 700 });
+      }
+      tone({ type: 'sine', f0: hz(chord[0] - 36), dur: sd * 16, vol: 0.09, attack: 0.3, at, dest });
+      // sino de igreja a cada dois compassos
+      if (bar % 2 === 0) {
+        tone({ type: 'sine', f0: hz(chord[0] + 24), dur: 2.6, vol: 0.05, at, dest });
+        tone({ type: 'sine', f0: hz(chord[0] + 24) * 2.76, dur: 1.4, vol: 0.02, at, dest });
+      }
+    }
+    // melodia lenta e triste
+    if (i % 4 === 0) {
+      const k = (bar * 4 + i / 4) % 8;
+      const n = chord[[0, 1, 2, 1, 0, 2, 1, 0][k]] + 12;
+      tone({ type: 'triangle', f0: hz(n), dur: sd * 3.8, vol: 0.03, attack: 0.05, at, dest, lp: 1400 });
+    }
+    // batida de coração
+    if (i === 0 || i === 3 || (M.boss && (i === 8 || i === 11))) {
+      tone({ type: 'sine', f0: 90, f1: 40, dur: 0.25, vol: i % 8 === 0 ? 0.3 : 0.2, at, dest });
+    }
+    if (M.boss && i % 2 === 0) tone({ type: 'sawtooth', f0: hz(chord[0] - 24), dur: sd * 1.6, vol: 0.06, at, dest, lp: 500 });
+    if (M.boss && (i === 4 || i === 12)) noise({ filter: 'bandpass', f0: 600, dur: 0.25, vol: 0.12, q: 1.2, at, dest });
+  }
+
+  function scheduleMetal(M, s, t, sd) {
+    const at = t - ac.currentTime;
+    const bar = Math.floor(s / 16);
+    const i = s % 16;
+    const root = METAL_ROOTS[bar];
+    const dest = musicBus;
+    // guitarra: quintas abafadas em galope, acorde aberto no começo do compasso
+    const gallop = [0, 2, 3, 4, 6, 7, 8, 10, 11, 12, 14, 15];
+    if (i === 0 || i === 8) {
+      for (const n of [root - 12, root - 5, root]) tone({ type: 'sawtooth', f0: hz(n), dur: sd * 3.5, vol: 0.08, at, dest: distBus });
+    } else if (gallop.includes(i)) {
+      for (const n of [root - 12, root - 5]) tone({ type: 'sawtooth', f0: hz(n), dur: sd * 0.7, vol: 0.07, at, dest: distBus, lp: 1400 });
+    }
+    // baixo acompanhando
+    if (i % 2 === 0) tone({ type: 'square', f0: hz(root - 24), dur: sd * 1.5, vol: 0.06, at, dest, lp: 400 });
+    // bumbo duplo
+    if (M.boss || i % 2 === 0) tone({ type: 'sine', f0: 150, f1: 45, dur: 0.12, vol: 0.3, at, dest });
+    // caixa
+    if (i === 4 || i === 12 || (M.boss && i % 4 === 2)) noise({ filter: 'bandpass', f0: 1900, dur: 0.14, vol: 0.16, q: 0.7, at, dest });
+    // prato de ataque no começo de cada compasso e chimbal
+    if (i === 0) noise({ filter: 'highpass', f0: 5000, dur: 0.9, vol: 0.08, at, dest });
+    else if (i % 2 === 0) noise({ filter: 'highpass', f0: 8000, dur: 0.04, vol: 0.04, at, dest });
+    // grito agudo da guitarra solo no fim do riff
+    if (bar === 3 && (i === 8 || i === 12)) tone({ type: 'sawtooth', f0: hz(root + 19), f1: hz(root + 12), dur: sd * 4, vol: 0.05, at, dest: distBus });
   }
 
   // Pausa o áudio quando o jogo sai da tela (troca de aba ou de app).

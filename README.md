@@ -34,6 +34,14 @@ crescem com o tempo (aos 7 minutos têm cerca de 8x a vida do começo).
 | **Vulcão Ardente** (lava) | Slime flamejante (pode deixar o chão em chamas), esqueleto negro (rápido), bombardeiro (para perto de você e explode: saia do círculo), golem de cinzas | Titã de Magma: chuva de meteoros marcados e 3 faixas de fogo |
 | **Picos Gelados** (neve) | Iaque das neves (investida), abominável (arremessa bolas de neve), troll gelado (regenera), guarda cristalino (armadura, atira cristais) | Rainha do Gelo: estrela de 6 faixas de gelo e estacas caindo em volta de você |
 
+Depois de vencer o chefão final aparece um **portal** para a dificuldade seguinte da mesma fase: fique dentro
+dele e você muda de dificuldade na hora, **mantendo armas, passivas, bênçãos e nível**. O relógio do chefão
+final recomeça (7 minutos ou Altar Maior).
+
+Cada dificuldade muda a cara da fase: **Normal** com as cores originais e a música de sempre; **Difícil** com
+tudo puxado para o roxo, mais névoa, almas subindo e uma música lenta e sombria (órgão, sino e batida de
+coração); **Pesadelo** em vermelho sangue, cinzas caindo e rock pesado com guitarra distorcida e bumbo duplo.
+
 Cada fase tem 3 dificuldades: **Normal**, **Difícil** (1,6x vida, 1,35x dano, mais inimigos, 1,6x chance de moedas) e
 **Pesadelo** (2,5x vida, 1,75x dano, 2,4x chance de moedas). Vencer uma dificuldade libera a seguinte; vencer o Normal
 libera a próxima fase.
