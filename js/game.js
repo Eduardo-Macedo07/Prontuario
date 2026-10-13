@@ -475,7 +475,7 @@
     },
     precisao: { name: 'Chance de Crítico', max: 5, v: 0.06, text: (v) => `+${pct(v)} de chance de crítico`, apply: (v) => { player.crit = Math.min(1, player.crit + v); } },
     area: { name: 'Área', max: 5, v: 0.1, text: (v) => `+${pct(v)} de área (aura, explosões, lâminas, ondas)`, apply: (v) => { player.areaMul += v; } },
-    sorte: { name: 'Sorte', max: 5, v: 1, text: (v) => `+${fmtNum(v)} de Sorte: cartas raras, épicas e lendárias aparecem mais`, apply: (v) => { player.luck += v; } },
+    sorte: { name: 'Sorte', max: 5, v: 1, text: (v) => `+${fmtNum(v)} de Sorte: cartas e itens mais raros, mais baús, ímãs, corações e moedas`, apply: (v) => { player.luck += v; } },
     critdmg: { name: 'Dano Crítico', max: 5, v: 0.25, lock: 11, text: (v) => `Críticos causam +${pct(v)} de dano`, apply: (v) => { player.critMul += v; } },
     vampiro: { name: 'Vampirismo', max: 5, v: 0.04, lock: 8, text: (v) => `+${pct(v)} de chance de curar 3 de vida ao derrotar um inimigo`, apply: (v) => { player.lifesteal += v; } },
     sabedoria: { name: 'Sabedoria', max: 5, v: 0.1, lock: 5, text: (v) => `+${pct(v)} de XP ganho`, apply: (v) => { player.xpMul += v; } },
@@ -739,6 +739,7 @@
     };
     if (!diffUnlocked(run.stage, run.diff)) { run.stage = 'cemiterio'; run.diff = 0; }
     run.revives = 0;
+    run.items = {};
     run.usedBonfire = false;
     run.maxThreat = 0;
     for (const P of PERMS) if (optionLevel(P.id)) P.apply(optionLevel(P.id));
@@ -1265,14 +1266,19 @@
       ['Armadura', +player.armor.toFixed(1)],
       ['Redução de dano', pct(bladeReduction())],
       ['Regeneração', `${effRegen().toFixed(1)}/s`],
-      ['Sorte', +effLuck().toFixed(1)],
+      ['Sorte (raridade, baús, ímãs, corações e moedas)', +effLuck().toFixed(1)],
       ['XP e chance de moedas', `${pct(player.xpMul)} · ${pct(player.coinMul)}`],
       ['Espaços', `armas ${Object.keys(weapons).length}/${weaponSlots()} · passivas ${Object.keys(passiveLevels).length}/${passiveSlots()}`],
     ];
     const boons = Object.entries(boonsTaken);
-    $('pstats').innerHTML = rows.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('')
-      + (boons.length ? `<h3 class="earnhead">Bênçãos das fogueiras</h3>`
-        + boons.map(([id, v]) => `<div><span><img class="mini" src="${Art.icon(BOONS[id].icon)}" alt="">${BOONS[id].name}</span><b>${BOONS[id].text(v)}</b></div>`).join('') : '');
+    const items = Object.entries(run.items || {});
+    const itemsHtml = items.length ? `<h3 class="earnhead">Itens</h3>`
+      + items.map(([id, n]) => `<div><span><img class="mini" src="${Art.icon(id)}" alt="">${ITEMS[id].name} x${n}</span><b>${ITEMS[id].desc}</b></div>`).join('') : '';
+    const boonsHtml = boons.length ? `<h3 class="earnhead">Bênçãos das fogueiras</h3>`
+      + boons.map(([id, v]) => `<div><span><img class="mini" src="${Art.icon(BOONS[id].icon)}" alt="">${BOONS[id].name}</span><b>${BOONS[id].text(v)}</b></div>`).join('') : '';
+    // itens e bênçãos primeiro, depois os atributos
+    $('pstats').innerHTML = itemsHtml + boonsHtml + (items.length || boons.length ? '<h3 class="earnhead">Atributos</h3>' : '')
+      + rows.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('');
   }
 
   function startGame() {
@@ -1474,6 +1480,59 @@
   // ============================================================
   // Subir de nível, baús, fogueiras e recompensas
   // ============================================================
+  // ============================================================
+  // Itens dos baús: acumulam (sem ocupar espaço). Os de chance rolam uma vez por item:
+  // 5 ratoeiras = 5 chances de 8% a cada golpe.
+  // ============================================================
+  const ITEMS = {
+    // comuns
+    ratoeira: { name: 'Ratoeira', r: 0, max: 5, desc: '8% de chance do golpe prender o inimigo por 1,5 s' },
+    ferradura: { name: 'Ferradura', r: 0, max: 10, desc: '+0,4 de Sorte', apply: () => { player.luck += 0.4; } },
+    pedra: { name: 'Pedra de Amolar', r: 0, max: 10, desc: '+5% de dano', apply: () => { player.dmgMul += 0.05; } },
+    pao: { name: 'Pão Caseiro', r: 0, max: 10, desc: '+12 de vida máxima', apply: () => { player.maxHp += 12; heal(12); } },
+    bota: { name: 'Bota Remendada', r: 0, max: 8, desc: '+4% de velocidade', apply: () => { player.speed *= 1.04; } },
+    // raros
+    dente: { name: 'Dente de Vampiro', r: 1, max: 5, desc: '3% de chance do golpe curar 2 de vida' },
+    luneta: { name: 'Luneta', r: 1, max: 8, desc: '+4% de chance de crítico', apply: () => { player.crit = Math.min(1, player.crit + 0.04); } },
+    cogumelo: { name: 'Cogumelo Mágico', r: 1, max: 6, desc: '+0,4 de vida por segundo', apply: () => { player.regen += 0.4; } },
+    imabolso: { name: 'Ímã de Bolso', r: 1, max: 6, desc: '+20% de alcance de coleta', apply: () => { player.magnet *= 1.2; } },
+    // épicos
+    capa: { name: 'Capa de Chuva', r: 2, max: 5, desc: '4% de chance de refletir um ataque inimigo sem levar dano' },
+    ampulheta: { name: 'Ampulheta', r: 2, max: 5, desc: 'Todas as armas 6% mais rápidas', apply: () => { player.cdMul = Math.max(0.25, player.cdMul * 0.94); } },
+    estatico: { name: 'Luva Estática', r: 2, max: 5, desc: '6% de chance do golpe soltar um raio que ricocheteia' },
+    // lendários
+    coracao: { name: 'Coração de Dragão', r: 3, max: 3, desc: '+40 de vida máxima e +1 de vida por segundo', apply: () => { player.maxHp += 40; heal(40); player.regen += 1; } },
+    trovao: { name: 'Martelo do Trovão', r: 3, max: 3, desc: '5% de chance do golpe chamar um trovão em área' },
+    trevo4: { name: 'Trevo de Quatro Folhas', r: 3, max: 3, desc: '+1,5 de Sorte', apply: () => { player.luck += 1.5; } },
+  };
+  const itemCount = (id) => (run && run.items ? run.items[id] || 0 : 0);
+  // Pelo menos um sucesso em n tentativas de chance p.
+  const procRoll = (p, n) => n > 0 && Math.random() < 1 - Math.pow(1 - p, n);
+
+  // Baú: 3 itens para escolher 1, raridade sorteada com a Sorte.
+  function buildItemChoices() {
+    const picks = [];
+    for (let k = 0; k < 3; k++) {
+      let r = rollRarity(0);
+      let pool = [];
+      // se a raridade sorteada não tiver item disponível, desce até achar
+      for (; r >= 0 && !pool.length; r--) {
+        pool = Object.keys(ITEMS).filter((id) => ITEMS[id].r === r + 0 && itemCount(id) < ITEMS[id].max && !picks.some((p) => p.id === id));
+        if (pool.length) break;
+      }
+      if (!pool.length) break;
+      const id = pick(pool);
+      picks.push({ kind: 'item', id, rarity: ITEMS[id].r });
+    }
+    if (!picks.length) picks.push({ kind: 'heal', id: 'heal', rarity: 0 });
+    return picks;
+  }
+
+  function addItem(id) {
+    run.items[id] = (run.items[id] || 0) + 1;
+    if (ITEMS[id].apply) ITEMS[id].apply();
+  }
+
   // Raridade das cartas: multiplica o valor do bônus (6% de crítico vira 10%, 16% ou 23%).
   const RARITY = [
     { name: 'Comum', cls: '', mult: 1 },
@@ -1581,7 +1640,7 @@
 
   function openChoices() {
     const mode = pendingLevels > 0 ? 'level' : pendingChests > 0 ? 'chest' : 'shrine';
-    currentChoices = mode === 'shrine' ? buildBoons() : buildChoices(mode === 'chest');
+    currentChoices = mode === 'shrine' ? buildBoons() : mode === 'chest' ? buildItemChoices() : buildChoices(false);
     currentChoices.mode = mode;
     banishMode = false;
     if (mode === 'level') Sound.play('levelup');
@@ -1592,7 +1651,7 @@
   function renderChoices() {
     const mode = currentChoices.mode;
     $('choiceTitle').textContent = mode === 'chest' ? 'Baú do tesouro!' : mode === 'shrine' ? 'Fogueira acesa' : 'Subiu de nível!';
-    $('choiceSub').textContent = mode === 'chest' ? 'Recompensas raras ou melhores garantidas'
+    $('choiceSub').textContent = mode === 'chest' ? `Escolha um item (eles acumulam). Sorte ${fmtNum(effLuck())}: mais chance de itens raros`
       : mode === 'shrine' ? 'Escolha uma bênção (não ocupa espaço). A Sorte deixa as bênçãos mais fortes.'
         : `Espaços: armas ${Object.keys(weapons).length}/${weaponSlots()} · passivas ${Object.keys(passiveLevels).length}/${passiveSlots()} · Sorte ${fmtNum(effLuck())}`;
     const cards = $('cards');
@@ -1631,6 +1690,14 @@
         tag = `Bênção ${tier.name.toLowerCase()}`;
         cls = tier.cls;
         ribbon = tier.name;
+      } else if (c.kind === 'item') {
+        const def = ITEMS[c.id];
+        const have = itemCount(c.id);
+        name = def.name; color = ['#c8ccd4', '#5fb8ff', '#c77dff', '#ffb020'][def.r];
+        tag = `Item ${RARITY[def.r].name.toLowerCase()}${have ? ` · tem ${have}` : ''} · máx. ${def.max}`;
+        desc = `<b>${def.desc}</b>${have ? '<br>(+1 acumulado)' : ''}`;
+        cls = RARITY[def.r].cls;
+        ribbon = def.r > 0 ? RARITY[def.r].name : '';
       } else if (c.kind === 'gold') {
         name = 'Poder Bruto'; tag = 'Tudo no máximo'; desc = '+5% de dano em todas as armas.'; color = '#ffd36b'; iconId = 'might';
       } else {
@@ -1687,7 +1754,7 @@
     run.rerolls--;
     banishMode = false;
     const mode = currentChoices.mode;
-    currentChoices = buildChoices(mode === 'chest');
+    currentChoices = mode === 'chest' ? buildItemChoices() : buildChoices(false);
     currentChoices.mode = mode;
     Sound.play('select');
     renderChoices();
@@ -1729,7 +1796,8 @@
     const c = currentChoices[i];
     if (!c) return;
     if ((c.kind === 'weapon' || c.kind === 'passive') && c.rarity === 3) completeChallenge('lenda');
-    if (c.kind === 'weapon') addWeapon(c.id, c.rarity, c.extras);
+    if (c.kind === 'item') addItem(c.id);
+    else if (c.kind === 'weapon') addWeapon(c.id, c.rarity, c.extras);
     else if (c.kind === 'passive') {
       passiveLevels[c.id] = (passiveLevels[c.id] || 0) + 1;
       PASSIVES[c.id].apply(passiveValue(c.id, c.rarity));
@@ -2074,8 +2142,37 @@
     }
   }
 
+  let inProc = false; // evita que um efeito de item dispare outro em cadeia
+
+  // Efeitos de itens ao acertar um inimigo.
+  function itemProcs(e) {
+    if (!run.items || inProc) return;
+    inProc = true;
+    if (!e.dead && procRoll(0.08, itemCount('ratoeira'))) {
+      e.rootT = 1.5;
+      if (save.settings.numbers) addText(e.x, e.y - e.r - 10, 'Preso!', '#c8a878', false);
+    }
+    if (procRoll(0.03, itemCount('dente')) && player.hp < player.maxHp) {
+      heal(2);
+      sparks(player.x, player.y - 15, '#ff3a5a', 3, 100);
+    }
+    if (procRoll(0.06, itemCount('estatico'))) {
+      Sound.play('zap');
+      chainLightning(e, 3, 18 + player.level, 170);
+    }
+    if (procRoll(0.05, itemCount('trovao'))) {
+      Sound.play('explosion');
+      chains.push({ pts: [{ x: e.x + rand(-20, 20), y: e.y - 420 }, { x: e.x, y: e.y }], life: 0.35 });
+      explosions.push({ x: e.x, y: e.y, r: 90, life: 0.4 });
+      areaDamage(e.x, e.y, 90, 40 + player.level * 3, 200);
+      shake = Math.max(shake, 6);
+    }
+    inProc = false;
+  }
+
   function damageEnemy(e, base, kx, ky) {
     if (e.dead) return;
+    if (!inProc) itemProcs(e);
     let dmg = base * effDmgMul() * e.armor;
     const crit = Math.random() < player.crit;
     if (crit) dmg *= player.critMul;
@@ -2093,7 +2190,7 @@
   }
 
   // Chance de uma moeda dourada cair: maior na dificuldade alta, com Sorte e com a bênção Ganância.
-  const coinChance = (base) => base * DIFFS[run.diff].coins * player.coinMul * (1 + effLuck() * 0.08);
+  const coinChance = (base) => base * DIFFS[run.diff].coins * player.coinMul * (1 + effLuck() * 0.1);
   const dropCoin = (x, y) => pickups.push({ kind: 'coin', x, y, v: 1 });
 
   function killEnemy(e) {
@@ -2134,16 +2231,20 @@
       run.eliteKills++;
       dropXp(e.x, e.y, e.xp);
       if (Math.random() < coinChance(0.06)) dropCoin(e.x + 20, e.y + 10);
-      if (Math.random() < 0.15) pickups.push({ kind: 'heart', x: e.x + 20, y: e.y, v: 25 });
-      if (Math.random() < 0.04) pickups.push({ kind: 'magnet', x: e.x - 20, y: e.y });
-      if (Math.random() < 0.08 * (1 + effLuck() * 0.2)) pickups.push({ kind: 'chest', x: e.x, y: e.y });
+      // a Sorte aumenta bastante baús, ímãs e corações
+      const L = effLuck();
+      if (Math.random() < 0.15 * (1 + L * 0.25)) pickups.push({ kind: 'heart', x: e.x + 20, y: e.y, v: 25 });
+      if (Math.random() < 0.04 * (1 + L * 0.3)) pickups.push({ kind: 'magnet', x: e.x - 20, y: e.y });
+      if (Math.random() < 0.1 * (1 + L * 0.3)) pickups.push({ kind: 'chest', x: e.x, y: e.y });
       sparks(e.x, e.y, '#ffd36b', 22, 300);
       shake = Math.max(shake, 5);
     } else {
       dropXp(e.x, e.y, e.xp);
       if (e.type === 'fireslime' && Math.random() < 0.35) epools.push({ x: e.x, y: e.y, r: 28, life: 2.6, dmg: e.dmg * 0.7 });
-      if (Math.random() < 0.0015 * (1 + effLuck() * 0.1)) pickups.push({ kind: 'magnet', x: e.x, y: e.y });
-      else if (Math.random() < 0.005 * (1 + effLuck() * 0.15)) pickups.push({ kind: 'heart', x: e.x, y: e.y, v: 25 });
+      const L = effLuck();
+      if (Math.random() < 0.0015 * (1 + L * 0.3)) pickups.push({ kind: 'magnet', x: e.x, y: e.y });
+      else if (Math.random() < 0.005 * (1 + L * 0.25)) pickups.push({ kind: 'heart', x: e.x, y: e.y, v: 25 });
+      else if (Math.random() < 0.0006 * (1 + L * 0.3)) pickups.push({ kind: 'chest', x: e.x, y: e.y });
       else if (Math.random() < coinChance(0.0007)) dropCoin(e.x, e.y);
     }
   }
@@ -2158,6 +2259,17 @@
   }
 
   function hurtPlayer(amount) {
+    if (procRoll(0.04, itemCount('capa'))) {
+      // Capa de Chuva: reflete o golpe, sem dano, e fere quem estiver perto
+      player.invuln = 0.4;
+      addText(player.x, player.y - 40, 'Refletido!', '#7fe0ff', true);
+      ringFx(player.x, player.y, 90, '#7fe0ff');
+      sparks(player.x, player.y - 15, '#7fe0ff', 14, 240);
+      inProc = true;
+      areaDamage(player.x, player.y, 90, amount * 2, 260);
+      inProc = false;
+      return;
+    }
     const dmg = Math.max(1, Math.round((amount - player.armor) * (1 - bladeReduction())));
     player.hp -= dmg;
     player.invuln = 0.6;
@@ -2497,6 +2609,13 @@
           }
           sparks(e.x, e.y - 20, '#4fe0d0', 20, 220);
         }
+      }
+      if (e.rootT > 0) {
+        // preso pela ratoeira (chefões só ficam mais lentos)
+        e.rootT -= dt;
+        const k = e.boss ? 0.5 : 0;
+        vx *= k;
+        vy *= k;
       }
       e.x += (vx + e.kbx) * dt;
       e.y += (vy + e.kby) * dt;
@@ -3466,6 +3585,16 @@
       ctx.stroke();
       ctx.restore();
     }
+    if (e.rootT > 0) {
+      // ratoeira presa no pé
+      ctx.strokeStyle = '#c8ccd4';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.ellipse(e.x, e.y + e.r * 0.8, e.r * 0.9, e.r * 0.35, 0, 0, TAU);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(200,150,90,0.5)';
+      ctx.fill();
+    }
     Art.drawEnemy(ctx, e, player.x >= e.x ? 1 : -1);
     if (e.elite) {
       // coroa acima da cabeça
@@ -4302,7 +4431,7 @@
     $('kills').textContent = kills;
     $('runcoins').textContent = Math.round(runCoins);
 
-    const key = JSON.stringify([weapons, passiveLevels, boonsTaken].map((o) => Object.entries(o).map(([k, v]) => k + (v.level || v))));
+    const key = JSON.stringify([weapons, passiveLevels, boonsTaken, run.items || {}].map((o) => Object.entries(o).map(([k, v]) => k + (v.level || v))));
     if (key !== loadoutKey) {
       loadoutKey = key;
       const slot = (id, name, lv, max, cls) => {
@@ -4325,6 +4454,9 @@
       // bênçãos das fogueiras no canto da tela
       $('boonlist').innerHTML = Object.entries(boonsTaken).map(([id, v]) =>
         `<div class="boon" title="${BOONS[id].name}"><img src="${Art.icon(BOONS[id].icon)}" alt=""><span>${boonShort(id, v)}</span></div>`).join('');
+      // itens dos baús, com a quantidade
+      $('itemlist').innerHTML = Object.entries(run.items || {}).map(([id, n]) =>
+        `<div class="item r${ITEMS[id].r}" title="${ITEMS[id].name}: ${ITEMS[id].desc}"><img src="${Art.icon(id)}" alt="">${n > 1 ? `<span>${n}</span>` : ''}</div>`).join('');
     }
   }
 
@@ -4397,5 +4529,6 @@
     setTime(v) { time = v; },
     get summons() { return summons; },
     get pickups() { return pickups; },
+    addItem, buildItemChoices,
   };
 })();

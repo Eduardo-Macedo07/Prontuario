@@ -556,3 +556,18 @@ h2.victory { color: #ffd36b; }
   #boonlist .boon { font-size: 9px; padding: 0 4px 0 1px; }
   #boonlist .boon img { width: 14px; height: 14px; }
 }
+
+/* Itens dos baús no HUD */
+#itemlist { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; max-width: 260px; }
+#itemlist .item { position: relative; width: 26px; height: 26px; border-radius: 6px; background: rgba(15,12,25,.8); border: 2px solid #8a8ea0; }
+#itemlist .item.r1 { border-color: #5fb8ff; }
+#itemlist .item.r2 { border-color: #c77dff; }
+#itemlist .item.r3 { border-color: #ffb020; box-shadow: 0 0 6px #ffb020; }
+#itemlist .item img { width: 100%; height: 100%; }
+#itemlist .item span { position: absolute; right: -3px; bottom: -4px; font-size: 10px; font-weight: 900; color: #fff; text-shadow: 0 1px 0 #000, 0 0 3px #000; }
+#pstats { max-height: 60vh; overflow-y: auto; }
+#pstats div b { max-width: 60%; text-align: right; }
+@media (max-width: 760px), (max-height: 540px) {
+  #itemlist { max-width: 190px; }
+  #itemlist .item { width: 20px; height: 20px; }
+}

@@ -66,6 +66,19 @@ libera a próxima fase.
 - **Fogueiras:** fique perto para escolher 1 de 3 bênçãos (não ocupam espaço). As bênçãos pegas aparecem no
   canto da tela, embaixo das armas, e no menu de pausa. Elas vão de fraca a lendária,
   e quanto mais Sorte, mais fortes.
+- **Baús e itens:** baús (de chefões, às vezes de mini-chefes e muito raramente de inimigos comuns) dão
+  **itens**: escolha 1 entre 3. Itens acumulam e não ocupam espaço; os de chance rolam uma vez por cópia
+  (5 Ratoeiras = 5 chances de 8% a cada golpe). Aparecem embaixo das bênçãos e no pause.
+
+  | Raridade | Itens |
+  | --- | --- |
+  | Comum | Ratoeira (8%: prende o inimigo 1,5 s), Ferradura (+0,4 Sorte), Pedra de Amolar (+5% dano), Pão Caseiro (+12 vida), Bota Remendada (+4% velocidade) |
+  | Raro | Dente de Vampiro (3%: cura 2), Luneta (+4% crítico), Cogumelo Mágico (+0,4 vida/s), Ímã de Bolso (+20% coleta) |
+  | Épico | Capa de Chuva (4%: reflete o ataque sem dano), Ampulheta (armas 6% mais rápidas), Luva Estática (6%: raio em cadeia) |
+  | Lendário | Coração de Dragão (+40 vida e +1 vida/s), Martelo do Trovão (5%: trovão em área), Trevo de Quatro Folhas (+1,5 Sorte) |
+
+- **Sorte:** também aumenta a chance de baús, ímãs, corações e moedas caírem e de itens mais raros nos baús
+  (sorte 0: 82% comum e 2% lendário; sorte 5: 48% comum e 6% lendário).
 - **Altares:** invocam um chefão, que aparece 2 segundos depois (dá tempo de se posicionar). Todo chefão
   deixa um baú com recompensas raras.
 - **Corações e ímãs:** corações caem raramente dos inimigos; o **ímã** é bem mais raro e puxa todo o XP, as

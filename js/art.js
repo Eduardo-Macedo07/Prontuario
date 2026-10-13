@@ -3539,6 +3539,118 @@ const Art = (() => {
       g.lineWidth = 4.5;
       g.stroke();
     },
+    // ---------- Itens dos baús ----------
+    ratoeira(g) {
+      glow(g, 0, 0, 24, '#c8a878', 0.4);
+      rrect(g, -16, -2, 32, 14, 3, lin(g, 0, -2, 0, 12, '#c8955a', '#7a5030'), 2);
+      g.strokeStyle = '#c8ccd4';
+      g.lineWidth = 2.5;
+      g.beginPath();
+      g.arc(0, 2, 12, Math.PI, 0);
+      g.stroke();
+      poly(g, [-4, -2, 4, -2, 2, -8, -2, -8], '#ffd36b', 1.2);
+      oval(g, 8, -2, 4, 3, '#ffe08a', 1, false);
+    },
+    ferradura(g) {
+      glow(g, 0, 0, 24, '#ffd36b', 0.4);
+      g.strokeStyle = OUT;
+      g.lineWidth = 11;
+      g.beginPath();
+      g.arc(0, 2, 11, Math.PI * 0.1, Math.PI * 0.9, true);
+      g.stroke();
+      g.strokeStyle = '#c8ccd4';
+      g.lineWidth = 7;
+      g.stroke();
+      for (const a of [-2.6, -1.6, -0.5]) ball(g, Math.cos(a) * 11, 2 + Math.sin(a) * 11, 1.4, '#5a5a66', 0, false);
+    },
+    pedra(g) {
+      glow(g, 0, 0, 22, '#7fe0ff', 0.3);
+      poly(g, [-16, 6, -10, -8, 14, -10, 18, 4, 8, 10], lin(g, -16, -8, 18, 10, '#8a96a6', '#3a4250'), 2);
+      g.strokeStyle = 'rgba(255,255,255,0.6)';
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.moveTo(-8, -3); g.lineTo(10, -5);
+      g.stroke();
+    },
+    pao(g) {
+      oval(g, 0, 2, 17, 11, '#d89a4a', 2);
+      for (const x of [-7, 0, 7]) {
+        g.strokeStyle = '#a8662a';
+        g.lineWidth = 2;
+        g.beginPath();
+        g.moveTo(x - 3, -4); g.lineTo(x + 3, 4);
+        g.stroke();
+      }
+    },
+    bota(g) {
+      poly(g, [-8, -16, 4, -16, 4, 4, 16, 6, 16, 12, -10, 12], lin(g, 0, -16, 0, 12, '#9a6a3a', '#5a3a1c'), 2);
+      rrect(g, -9, -18, 14, 5, 2, '#7a4a2a', 1.4);
+      ball(g, 10, 9, 2, '#3a2a1a', 0, false);
+    },
+    dente(g) {
+      glow(g, 0, 0, 22, '#ff3a5a', 0.4);
+      poly(g, [-10, -14, 10, -14, 8, 0, 3, 16, 0, 4, -3, 16, -8, 0], lin(g, 0, -14, 0, 16, '#ffffff', '#d8d0c0'), 2);
+      ball(g, 3, 17, 2.5, '#d8203a', 0, false);
+    },
+    luneta(g) {
+      glow(g, 0, 0, 22, '#ffd23f', 0.3);
+      g.save();
+      g.rotate(-0.5);
+      rrect(g, -16, -5, 22, 10, 3, '#8a6a3a', 1.8);
+      rrect(g, 4, -7, 12, 14, 3, '#c8a050', 1.8);
+      ball(g, 16, 0, 5, '#9af0ff', 1.4);
+      g.restore();
+    },
+    cogumelo(g) {
+      glow(g, 0, 0, 22, '#ff6a8a', 0.3);
+      rrect(g, -5, -2, 10, 16, 4, '#f4ecd8', 1.8);
+      oval(g, 0, -4, 17, 11, '#e0304a', 2);
+      for (const [x, y] of [[-8, -7], [3, -10], [9, -3]]) ball(g, x, y, 2.6, '#ffffff', 0, false);
+    },
+    imabolso(g) { ICONS.magnet(g); ball(g, 12, 12, 5, '#ffd36b', 1.2); },
+    capa(g) {
+      glow(g, 0, 0, 24, '#7fe0ff', 0.5);
+      poly(g, [-4, -16, 4, -16, 16, 14, 6, 10, 0, 16, -6, 10, -16, 14], lin(g, 0, -16, 0, 16, '#ffe04a', '#c89a1a'), 2);
+      ball(g, 0, -15, 3, '#5a4a2a', 1, false);
+      for (const [x, y] of [[-12, -8], [12, -12], [8, -2]]) poly(g, [x, y - 4, x + 2, y, x, y + 2, x - 2, y], '#7fe0ff', 0.8);
+    },
+    ampulheta(g) {
+      glow(g, 0, 0, 22, '#ffd36b', 0.3);
+      rrect(g, -12, -17, 24, 4, 1.5, '#7a4a2a', 1.4);
+      rrect(g, -12, 13, 24, 4, 1.5, '#7a4a2a', 1.4);
+      poly(g, [-9, -13, 9, -13, 2, 0, 9, 13, -9, 13, -2, 0], 'rgba(220,240,255,0.85)', 1.8);
+      poly(g, [-5, 13, 5, 13, 0, 6], '#e8c060', 0);
+      poly(g, [-5, -9, 5, -9, 0, -3], '#e8c060', 0);
+    },
+    estatico(g) {
+      glow(g, 0, 0, 24, '#ffd23f', 0.5);
+      oval(g, 0, 4, 12, 13, '#5a4a7a', 2);
+      for (const x of [-8, -3, 2, 7]) rrect(g, x - 2, -14, 4, 10, 2, '#5a4a7a', 1.4);
+      poly(g, [2, -6, -4, 4, 1, 4, -3, 14, 6, 1, 1, 1, 5, -6], '#ffd23f', 1.2);
+    },
+    coracao(g) {
+      glow(g, 0, 0, 28, '#ff4a2a', 0.6);
+      ICONS.vigor(g);
+      flame(g, 0, -8, 8, 18, 0, '#ff6a1a', '#ffe08a');
+    },
+    trovao(g) {
+      glow(g, 0, 0, 28, '#7fd0ff', 0.6);
+      g.save();
+      g.rotate(0.5);
+      rrect(g, -3, -2, 6, 20, 2, '#7a4a2a', 1.6);
+      rrect(g, -12, -16, 24, 14, 3, lin(g, 0, -16, 0, -2, '#d8e0ea', '#6a7686'), 2);
+      g.restore();
+      poly(g, [10, -18, 4, -6, 9, -6, 3, 6, 15, -9, 10, -9, 15, -18], '#ffd23f', 1.2);
+    },
+    trevo4(g) {
+      glow(g, 0, 0, 28, '#6aff8a', 0.6);
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * TAU + Math.PI / 4;
+        ball(g, Math.cos(a) * 7, Math.sin(a) * 7 - 2, 7, '#3ad05a', 1.6);
+      }
+      stroke2(g, [0, 4, 4, 16], 2, '#2a8a3a');
+      ball(g, 0, -2, 2.5, '#ffd36b', 0, false);
+    },
     lock(g) {
       g.strokeStyle = OUT;
       g.lineWidth = 7;
