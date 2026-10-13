@@ -983,7 +983,7 @@
       const diffs = DIFFS.map((D, d) => {
         const ok = diffUnlocked(id, d);
         const on = save.stage === id && save.diff === d;
-        return `<button class="diffbtn ${on ? 'on' : ''}" data-d="${d}" style="--dc:${D.color}" ${ok ? '' : 'disabled'}>${ok ? '' : '🔒 '}${D.name}${done > d ? ' ✔' : ''}</button>`;
+        return `<button class="diffbtn ${on ? 'on' : ''}" data-d="${d}" style="--dc:${D.color}" ${ok ? '' : 'disabled'}>${ok ? '' : `<img class="dlock" src="${Art.icon('lock')}" alt="">`}${D.name}${done > d ? ' ✔' : ''}</button>`;
       }).join('');
       const prev = STAGE_IDS[STAGE_IDS.indexOf(id) - 1];
       card.innerHTML = `
@@ -1019,34 +1019,68 @@
   let portraits = [];
   let hoverChar = null;
 
+  // Personagem mostrado no painel de detalhes (pode ser um bloqueado, só para ver).
+  let viewChar = null;
+
   function renderChars() {
     const box = $('charlist');
     box.innerHTML = '';
     portraits = [];
+    if (!viewChar) viewChar = selectedChar;
     Object.keys(CHARACTERS).forEach((id, i) => {
       const C = CHARACTERS[id];
       const locked = !save.chars[id];
-      const card = document.createElement('div');
-      card.className = 'card char' + (id === selectedChar ? ' selected' : '') + (locked ? ' locked' : '');
-      card.style.setProperty('--accent', C.accent);
-      const bars = Object.entries(C.bars).map(([k, v]) =>
-        `<div class="stat"><span>${k}</span><div class="sbar"><i style="width:${v * 100}%"></i></div></div>`).join('');
-      card.innerHTML = `
-        <canvas class="portrait" width="440" height="360"></canvas>
-        ${locked ? `<div class="lockbadge"><img src="${Art.icon('lock')}" alt=""><span>Desbloqueie na Loja</span></div>` : ''}
+      const tile = document.createElement('div');
+      tile.className = 'chartile' + (id === selectedChar ? ' selected' : '') + (id === viewChar ? ' viewing' : '') + (locked ? ' locked' : '');
+      tile.style.setProperty('--accent', C.accent);
+      tile.innerHTML = `
+        <canvas width="200" height="170"></canvas>
+        ${locked ? `<img class="tlock" src="${Art.icon('lock')}" alt="">` : ''}
+        <div class="tname">${C.name}</div>
+        ${isTouch ? '' : `<div class="tkey">${i + 1}</div>`}`;
+      tile.addEventListener('click', () => {
+        viewChar = id;
+        if (save.chars[id]) selectChar(id);
+        else { Sound.play('click'); renderChars(); }
+      });
+      tile.addEventListener('dblclick', () => { if (save.chars[id]) { selectChar(id); startGame(); } });
+      tile.addEventListener('mouseenter', () => { hoverChar = id; });
+      tile.addEventListener('mouseleave', () => { if (hoverChar === id) hoverChar = null; });
+      box.appendChild(tile);
+      portraits.push({ id, c: tile.querySelector('canvas') });
+    });
+    renderCharDetail();
+  }
+
+  function renderCharDetail() {
+    const id = viewChar;
+    const C = CHARACTERS[id];
+    const locked = !save.chars[id];
+    const item = SHOP.find((x) => x.id === id);
+    const bars = Object.entries(C.bars).map(([k, v]) =>
+      `<div class="stat"><span>${k}</span><div class="sbar"><i style="width:${v * 100}%"></i></div></div>`).join('');
+    let lockInfo = '';
+    if (locked && item) {
+      const ok = reqMet(item.req);
+      lockInfo = `<div class="cd-lock"><img src="${Art.icon('lock')}" alt="">
+        <span>Bloqueado · compre na Loja por <b>${item.price}</b> moedas${item.req ? `<br>${ok ? '✔' : '🔒'} ${item.req.text}${ok ? '' : ` (${reqProgress(item.req)})`}` : ''}</span></div>`;
+    }
+    const det = $('chardetail');
+    det.style.setProperty('--accent', C.accent);
+    det.className = locked ? 'locked' : '';
+    det.innerHTML = `
+      <div class="cd-portrait"><canvas width="440" height="360"></canvas></div>
+      <div class="cd-info">
         <div class="ctitle">${C.title}</div>
         <div class="name">${C.name}</div>
         <div class="stats">${bars}</div>
+        <div class="cd-weapon"><img src="${Art.icon(C.weapon)}" alt=""><span>Arma inicial: <b>${WEAPONS[C.weapon].name}</b></span></div>
         <div class="desc">${C.desc}</div>
         <div class="desc passive">${C.passive}</div>
-        <div class="key">${locked ? 'Bloqueado' : isTouch ? 'Toque para escolher' : 'Clique ou tecla ' + (i + 1)}</div>`;
-      card.addEventListener('click', () => selectChar(id));
-      card.addEventListener('dblclick', () => { if (save.chars[id]) { selectChar(id); startGame(); } });
-      card.addEventListener('mouseenter', () => { hoverChar = id; });
-      card.addEventListener('mouseleave', () => { if (hoverChar === id) hoverChar = null; });
-      box.appendChild(card);
-      portraits.push({ id, c: card.querySelector('canvas') });
-    });
+        ${lockInfo}
+      </div>`;
+    portraits.push({ id, c: det.querySelector('canvas'), big: true });
+    $('charsPlay').disabled = locked;
   }
 
   function drawPortraits(t) {
@@ -1063,20 +1097,20 @@
       g.fillStyle = bg;
       g.fillRect(0, 0, w, h);
       // partículas de ambiente de cada personagem
-      for (let i = 0; i < 18; i++) {
+      for (let i = 0; i < (p.big ? 18 : 6); i++) {
         const seed = i * 97.13;
         const life = (t * 0.25 + (seed % 1)) % 1;
         const x = (seed * 37) % w;
         const y = p.id === 'mago' ? life * h : h - life * h;
         const r = 2 + (i % 3);
-        Art.glow(g, x + Math.sin(t + i) * 10, y, r * 4, locked ? '#6a6080' : C.accent, 0.5 * (1 - Math.abs(life - 0.5) * 2));
+        Art.glow(g, x % w + Math.sin(t + i) * 10, y, r * 4 * (w / 440 + 0.3), locked ? '#6a6080' : C.accent, 0.5 * (1 - Math.abs(life - 0.5) * 2));
       }
       g.fillStyle = 'rgba(0,0,0,0.35)';
       g.beginPath();
       g.ellipse(w / 2, h * 0.86, w * 0.3, h * 0.07, 0, 0, TAU);
       g.fill();
       // arte em imagem ocupa mais o quadro que o desenho por código
-      const s = Art.hasSheet(p.id) ? 4.2 : p.id === 'golem' ? 4.6 : 5.6;
+      const s = (Art.hasSheet(p.id) ? 4.2 : p.id === 'golem' ? 4.6 : 5.6) * (w / 440);
       if (locked) {
         Art.drawHeroSilhouette(g, p.id, w / 2, h * 0.86, s, t);
       } else {
@@ -1093,6 +1127,7 @@
       return;
     }
     selectedChar = id;
+    viewChar = id;
     save.char = id;
     persist();
     resetWorld();
@@ -1151,7 +1186,7 @@
         const accent = item.kind === 'char' ? CHARACTERS[item.id].accent
           : item.color || (item.kind === 'wslot' ? '#ffd36b' : item.kind === 'option' ? '#7fe0ff' : '#8fd3a0');
         const card = document.createElement('div');
-        card.className = 'card shopitem' + (owned ? ' owned' : '') + (!owned && (!ok || !needsOk) ? ' blocked' : '') + (!ok ? ' locked' : '');
+        card.className = 'card shopitem' + (owned ? ' owned' : '') + (!owned && (!ok || !needsOk) ? ' blocked' : '') + (!ok && !owned ? ' locked' : '');
         card.style.setProperty('--accent', accent);
         let status;
         if (owned) status = `<div class="owned-tag">${leveled ? 'Nível máximo' : 'Comprado'}</div>`;
@@ -1167,7 +1202,7 @@
              <div class="lvtext">${item.kind === 'perm' ? `Nível ${lv}/${item.prices.length}` : `${lv ? `${lv} ${lv === 1 ? 'uso' : 'usos'} por partida` : 'Nenhum uso ainda'}${owned ? '' : ` · próximo nível: ${lv + 1} ${lv ? 'usos' : 'uso'}`}`}</div>`
           : '';
         card.innerHTML = `
-          <div class="shopicon ${item.kind === 'char' ? 'hero' : ''}"><img src="${icon}" alt="">${ok ? '' : `<img class="padlock" src="${Art.icon('lock')}" alt="">`}</div>
+          <div class="shopicon ${item.kind === 'char' ? 'hero' : ''}"><img src="${icon}" alt="">${ok || owned ? '' : `<img class="padlock" src="${Art.icon('lock')}" alt="">`}</div>
           <div class="name">${item.name}</div>
           <div class="desc">${item.desc}</div>
           ${pips}
@@ -3682,7 +3717,25 @@
   }
 
   // Setas na borda da tela apontando para fogueiras e altares fora de vista.
+  // Área livre da tela (sem o HUD de cima e o relógio de baixo no celular), em unidades do jogo.
+  function freeArea() {
+    let top = 0;
+    let bottom = H;
+    for (const id of ['hpcol', 'topright', 'stagebar', 'threatbar']) {
+      const el = $(id);
+      if (!el || el.classList.contains('hidden')) continue;
+      const r = el.getBoundingClientRect();
+      if (!r.height) continue;
+      if (r.top < window.innerHeight / 2) top = Math.max(top, r.bottom / zoom);
+      else bottom = Math.min(bottom, r.top / zoom);
+    }
+    const t = $('timer').getBoundingClientRect();
+    if (t.top > window.innerHeight / 2) bottom = Math.min(bottom, t.top / zoom);
+    return { top: top + 10, bottom: bottom - 10 };
+  }
+
   function drawIndicators() {
+    const area = freeArea();
     for (const s of structures) {
       if (s.used) continue;
       const dx = s.x - player.x;
@@ -3692,11 +3745,12 @@
       const m = 34;
       const c = Math.cos(a);
       const n = Math.sin(a);
-      // A faixa de cima fica livre para o HUD.
-      const top = 160;
-      const t = Math.min((W / 2 - m) / (Math.abs(c) || 1e-6), ((H - top - m) / 2) / (Math.abs(n) || 1e-6));
+      // As setas ficam só na área livre, sem cobrir o HUD.
+      const top = area.top + m * 0.6;
+      const bot = area.bottom - m;
+      const t = Math.min((W / 2 - m) / (Math.abs(c) || 1e-6), ((bot - top) / 2) / (Math.abs(n) || 1e-6));
       const sx = W / 2 + c * t;
-      const sy = (top + H - m) / 2 + n * t;
+      const sy = (top + bot) / 2 + n * t;
       const color = s.kind === 'totem' ? BONFIRE_COLOR : s.kind === 'grandaltar' ? '#c77dff' : s.kind === 'portal' ? DIFFS[Math.min(2, run.diff + 1)].color : '#ff3355';
       const pulse = 1 + Math.sin(time * 5) * 0.08;
       Art.glow(ctx, sx, sy, 26, color, 0.5);
