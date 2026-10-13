@@ -339,14 +339,14 @@
     metralhadora: {
       name: 'Metralhadora', color: '#ffd36b', max: 10, unit: ['bala', 'balas'],
       desc: 'Rajadas rápidas; as balas ricocheteiam para outros inimigos.',
-      base: { dmg: 5, cd: 0.17, count: 1, bounces: 1 },
-      ups: [[['dmg', 1.5]], [['bounces', 1]], [['cd', 0.08]], [['count', 1]], [['dmg', 2]], [['bounces', 1]], [['cd', 0.08]], [['dmg', 2.5]], [['count', 1], ['bounces', 1]]],
+      base: { dmg: 4, cd: 0.21, count: 1, bounces: 1 },
+      ups: [[['dmg', 1.2]], [['bounces', 1]], [['cd', 0.07]], [['count', 1]], [['dmg', 1.5]], [['bounces', 1]], [['cd', 0.07]], [['dmg', 2]], [['count', 1], ['bounces', 1]]],
     },
     espadao: {
       name: 'Espadão', color: '#ff8a5a', max: 10, unit: ['giro', 'giros'],
       desc: 'Gira o espadão em círculo, com dano enorme e empurrão.',
-      base: { dmg: 38, cd: 2.0, area: 100, knock: 260, count: 1 },
-      ups: [[['dmg', 12]], [['area', 15]], [['cd', 0.1]], [['dmg', 14]], [['knock', 120]], [['count', 1]], [['area', 20]], [['dmg', 18]], [['cd', 0.1]]],
+      base: { dmg: 48, cd: 1.65, area: 100, knock: 260, count: 1 },
+      ups: [[['dmg', 15]], [['area', 15]], [['cd', 0.1]], [['dmg', 17]], [['knock', 120]], [['count', 1]], [['area', 20]], [['dmg', 22]], [['cd', 0.12]]],
     },
     bombardeio: {
       name: 'Bombardeio', color: '#ff7a1a', max: 10, unit: ['bomba', 'bombas'], lock: 7,
@@ -446,6 +446,14 @@
     armadura: { name: 'Pele de Pedra', icon: 'armor', base: 0.6, text: (v) => `+${v.toFixed(1).replace('.', ',')} de armadura`, apply: (v) => { player.armor += v; } },
     sorte: { name: 'Bênção da Sorte', icon: 'sorte', base: 0.5, text: (v) => `+${v.toFixed(1).replace('.', ',')} de Sorte`, apply: (v) => { player.luck += v; } },
   };
+
+  // Texto curto do total de uma bênção (para o HUD e o pause).
+  function boonShort(id, v) {
+    const pctIds = ['dano', 'recarga', 'area', 'critico', 'velocidade', 'xp', 'ima', 'moedas'];
+    if (pctIds.includes(id)) return '+' + pct(v);
+    if (id === 'vida') return '+' + Math.round(v);
+    return '+' + fmtNum(v);
+  }
 
   const TIERS = [
     { name: 'Fraca', mul: 0.6, cls: 'weak' },
@@ -729,7 +737,11 @@
     else if (!inRun) Sound.music('menu');
     else {
       // cada dificuldade tem sua música: normal, sombria (Difícil) e rock pesado (Pesadelo)
-      const base = ['game', 'dark', 'metal'][run.diff];
+      const base = {
+        cemiterio: ['game', 'dark', 'metal'],
+        vulcao: ['lava', 'lavadark', 'lavametal'],
+        neve: ['snow', 'snowdark', 'snowmetal'],
+      }[run.stage][run.diff];
       const boss = enemies.some((e) => e.boss);
       Sound.music(base === 'game' ? (boss ? 'boss' : 'game') : base + (boss ? 'boss' : ''));
     }
@@ -1152,7 +1164,10 @@
       ['XP e chance de moedas', `${pct(player.xpMul)} · ${pct(player.coinMul)}`],
       ['Espaços', `armas ${Object.keys(weapons).length}/${weaponSlots()} · passivas ${Object.keys(passiveLevels).length}/${passiveSlots()}`],
     ];
-    $('pstats').innerHTML = rows.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('');
+    const boons = Object.entries(boonsTaken);
+    $('pstats').innerHTML = rows.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('')
+      + (boons.length ? `<h3 class="earnhead">Bênçãos das fogueiras</h3>`
+        + boons.map(([id, v]) => `<div><span><img class="mini" src="${Art.icon(BOONS[id].icon)}" alt="">${BOONS[id].name}</span><b>${BOONS[id].text(v)}</b></div>`).join('') : '');
   }
 
   function startGame() {
@@ -1840,7 +1855,7 @@
       flash: 0, kbx: 0, kby: 0, orbitCd: 0, phase: rand(0, TAU), summonT: 3, dead: false,
       lungeCd: rand(1, 3), windup: 0, dashT: 0, dashX: 0, dashY: 0, missileT: 2.5,
       slamT: 2.5, slamWind: 0, fireT: 3, bornAt: time, elite: false,
-      fuse: 0, throwT: rand(2, 5), waveT: 3, starT: 2.5, rainT: 4,
+      fuse: 0, throwT: rand(2, 5), waveT: 3, starT: 2.5, rainT: 4, thrower: type === 'skeleton' && Math.random() < 0.3,
     };
     enemies.push(e);
     return e;
@@ -2069,6 +2084,55 @@
 
   // Comportamentos especiais. Devolve true quando o inimigo deve ficar parado neste quadro.
   const ENEMY_BEHAVIOR = {
+    // Múmia: cospe veneno numa área marcada no chão, que vira uma poça tóxica.
+    mummy(e, dt, d) {
+      e.throwT -= dt;
+      if (e.throwT <= 0 && d < 380) {
+        e.throwT = rand(4.5, 7);
+        const lead = player.moving ? 50 : 0;
+        strikes.push({ x: player.x + player.dirX * lead, y: player.y + player.dirY * lead, r: 52, t: 1.2, max: 1.2, dmg: e.dmg * 0.5, look: 'poison', fromX: e.x, fromY: e.y });
+        Sound.play('growl');
+      }
+      return false;
+    },
+    // Esqueleto: alguns arremessam ossos de longe.
+    skeleton(e, dt, d) {
+      if (!e.thrower) return false;
+      e.throwT -= dt;
+      if (e.throwT <= 0 && d < 340) {
+        e.throwT = rand(4, 7);
+        enemyShot(e, 'bone', 260, 7, e.dmg * 0.8);
+      }
+      return false;
+    },
+    // Cavaleiro: para, marca um círculo e golpeia o chão.
+    skelknight(e, dt, d) {
+      if (e.slamWind > 0) {
+        e.slamWind -= dt;
+        return true;
+      }
+      e.slamT -= dt;
+      if (e.slamT <= 0 && d < 110) {
+        e.slamT = rand(3.5, 5);
+        e.slamWind = 0.9;
+        strikes.push({ x: e.x, y: e.y, r: 95, t: 0.9, max: 0.9, dmg: e.dmg * 1.2, look: 'slam' });
+      }
+      return false;
+    },
+    // Ceifador: às vezes some e reaparece perto do jogador.
+    ghost(e, dt, d) {
+      e.lungeCd -= dt;
+      if (e.lungeCd <= 0 && d > 160 && d < 520) {
+        e.lungeCd = rand(6, 10);
+        smoke(e.x, e.y, 3, '#2a3050');
+        const a = rand(0, TAU);
+        e.x = player.x + Math.cos(a) * 130;
+        e.y = player.y + Math.sin(a) * 110;
+        smoke(e.x, e.y, 4, '#2a3050');
+        sparks(e.x, e.y, '#7fe8ff', 10, 200);
+      }
+      return false;
+    },
     bomber(e, dt, d) {
       if (e.fuse > 0) {
         e.fuse -= dt;
@@ -2202,19 +2266,20 @@
         e.lungeCd -= dt;
         if (e.dashT > 0) {
           e.dashT -= dt;
-          vx = e.dashX * e.speed * 2.4;
-          vy = e.dashY * e.speed * 2.4;
+          const boost = e.type === 'werewolf' ? 3.4 : 2.4;
+          vx = e.dashX * e.speed * boost;
+          vy = e.dashY * e.speed * boost;
         } else if (e.windup > 0) {
           e.windup -= dt;
           vx = 0;
           vy = 0;
           if (e.windup <= 0) {
-            e.dashT = 0.26;
+            e.dashT = e.type === 'werewolf' ? 0.5 : 0.26;
             e.dashX = dx;
             e.dashY = dy;
             smoke(e.x, e.y + 8, 2, '#8a7a64');
           }
-        } else if (e.lungeCd <= 0 && d < (e.type === 'yak' ? 210 : 260)) {
+        } else if (e.lungeCd <= 0 && d < (e.type === 'yak' ? 210 : 360)) {
           e.windup = e.type === 'yak' ? 0.55 : 0.65;
           Sound.play('growl');
           e.lungeCd = rand(2.5, 4);
@@ -2783,7 +2848,9 @@
         const rr = e.r + p.r;
         if (dx * dx + dy * dy < rr * rr) {
           p.hit.add(e);
-          damageEnemy(e, p.dmg, p.vx * 0.3, p.vy * 0.3);
+          // as balas da metralhadora quase não empurram (senão a horda nunca chega perto)
+          const kb = p.kind === 'bullet' ? 0.02 : 0.3;
+          damageEnemy(e, p.dmg, p.vx * kb, p.vy * kb);
           if (p.kind === 'bullet' && p.bounces > 0) {
             // ricocheteia para o inimigo mais próximo que ainda não levou essa bala
             const next = nearestEnemy(e.x, e.y, p.hit, 260);
@@ -2855,13 +2922,26 @@
         continue;
       }
       s.t -= dt;
-      if (s.t <= 0.45 && !s.whistled && s.look !== 'ice') {
+      if (s.t <= 0.45 && !s.whistled && !['ice', 'poison', 'slam'].includes(s.look)) {
         s.whistled = true;
         Sound.play('whistle');
       }
       if (s.t > 0) continue;
-      Sound.play(s.look === 'ice' ? 'ice' : 'explosion');
-      if (s.look === 'ice') {
+      if (s.look === 'poison') {
+        // vira poça de veneno
+        Sound.play('hit');
+        sparks(s.x, s.y, '#9dff6a', 16, 220);
+        epools.push({ x: s.x, y: s.y, r: s.r, life: 3.5, dmg: s.dmg, poison: true });
+        continue;
+      }
+      Sound.play(s.look === 'ice' ? 'ice' : s.look === 'slam' ? 'tremor' : 'explosion');
+      if (s.look === 'slam') {
+        ringFx(s.x, s.y, s.r, '#c8a878');
+        for (let i = 0; i < 8; i++) {
+          const a = rand(0, TAU);
+          fx({ kind: 'rock', x: s.x, y: s.y, vx: Math.cos(a) * rand(100, 220), vy: Math.sin(a) * rand(100, 220), life: rand(0.3, 0.5), color: '#8a7a64', size: rand(2.5, 4) });
+        }
+      } else if (s.look === 'ice') {
         sparks(s.x, s.y, '#bff4ff', 18, 300);
         ringFx(s.x, s.y, s.r, '#bff4ff');
       } else {
@@ -2932,7 +3012,7 @@
       b.x += b.vx * dt;
       b.y += b.vy * dt;
       b.life -= dt;
-      if (Math.random() < 0.4) fx({ kind: 'dot', add: true, x: b.x, y: b.y, vx: rand(-10, 10), vy: rand(-10, 10), life: 0.25, color: b.kind === 'snow' ? '#ffffff' : '#9af0ff', size: rand(1.5, 2.5) });
+      if (Math.random() < 0.4 && b.kind !== 'bone') fx({ kind: 'dot', add: true, x: b.x, y: b.y, vx: rand(-10, 10), vy: rand(-10, 10), life: 0.25, color: b.kind === 'snow' ? '#ffffff' : '#9af0ff', size: rand(1.5, 2.5) });
       const rr = b.r + player.r * 0.6;
       if ((b.x - player.x) ** 2 + (b.y - (player.y - 12)) ** 2 < rr * rr && canHit()) {
         hurtPlayer(b.dmg);
@@ -3019,8 +3099,8 @@
           ringFx(player.x, player.y, 60, '#ffd36b');
           addText(player.x, player.y - 50, '+1 moeda dourada', '#ffd36b', true);
         } else if (p.kind === 'magnet') {
-          // puxa todo o XP do mapa de uma vez
-          for (const q of pickups) if (q.kind === 'xp') q.pulled = true;
+          // puxa todo o XP, moedas e corações do mapa de uma vez
+          for (const q of pickups) if (q.kind === 'xp' || q.kind === 'coin' || q.kind === 'heart') q.pulled = true;
           Sound.play('chest');
           ringFx(player.x, player.y, 160, '#ff4a5a');
           sparks(player.x, player.y - 10, '#ff4a5a', 20, 260);
@@ -3194,6 +3274,16 @@
   }
 
   function drawEnemyFull(e) {
+    if (e.type === 'werewolf' && e.windup > 0) {
+      // aviso do bote: faixa vermelha na direção do jogador
+      const a = Math.atan2(player.y - e.y, player.x - e.x);
+      ctx.save();
+      ctx.translate(e.x, e.y);
+      ctx.rotate(a);
+      ctx.fillStyle = `rgba(255,50,50,${0.12 + (1 - e.windup / 0.65) * 0.22})`;
+      ctx.fillRect(0, -e.r * 0.8, 300, e.r * 1.6);
+      ctx.restore();
+    }
     if (e.elite) {
       // mini-chefe: brilho dourado no chão
       const pulse = 0.5 + Math.sin(time * 5 + e.phase) * 0.5;
@@ -3635,7 +3725,7 @@
     for (const s of strikes) {
       const k = 1 - s.t / s.max;
       const pulse = 0.5 + Math.sin(time * 18) * 0.5;
-      const sc = s.look === 'ice' ? '120,200,255' : s.mark ? '255,140,40' : '255,40,50';
+      const sc = s.look === 'ice' ? '120,200,255' : s.look === 'poison' ? '120,230,80' : s.look === 'slam' ? '230,180,110' : s.mark ? '255,140,40' : '255,40,50';
       if (s.mark) { s.x = s.owner.x; s.y = s.owner.y; }
       ctx.save();
       ctx.translate(s.x, s.y);
@@ -3659,8 +3749,8 @@
     // chão em chamas dos slimes
     for (const p of epools) {
       const k = clamp(p.life / 0.6, 0, 1);
-      Art.glow(ctx, p.x, p.y, p.r * 1.8, '#ff5a1a', 0.55 * k);
-      ctx.fillStyle = `rgba(255,120,30,${0.3 * k})`;
+      Art.glow(ctx, p.x, p.y, p.r * 1.8, p.poison ? '#7aff4a' : '#ff5a1a', 0.55 * k);
+      ctx.fillStyle = p.poison ? `rgba(110,210,60,${0.35 * k})` : `rgba(255,120,30,${0.3 * k})`;
       ctx.beginPath();
       ctx.ellipse(p.x, p.y, p.r, p.r * 0.6, 0, 0, TAU);
       ctx.fill();
@@ -3767,6 +3857,8 @@
         Art.ball(ctx, mx, my, 12, '#6a4a3a', 1.8, false);
         continue;
       }
+      if (s.look === 'slam') continue;
+      if (s.look === 'poison') continue;
       if (s.look === 'ice') {
         Art.glow(ctx, s.x, my - 14, 24, '#9af0ff', 0.7);
         Art.poly(ctx, [s.x - 7, my - 34, s.x + 7, my - 34, s.x, my + 6], Art.lin(ctx, s.x - 7, 0, s.x + 7, 0, '#ffffff', '#5aa8e0'), 1.5);
@@ -3776,6 +3868,16 @@
       Art.poly(ctx, [s.x - 5, my - 30, s.x + 5, my - 30, s.x + 5, my - 6, s.x, my + 4, s.x - 5, my - 6], Art.lin(ctx, s.x - 5, 0, s.x + 5, 0, '#e2e6ea', '#7c8590'), 1.5);
       Art.poly(ctx, [s.x - 5, my - 10, s.x + 5, my - 10, s.x, my + 4], '#ff4a3a', 1.2);
       Art.flame(ctx, s.x, my - 30, 5, 24, 0, '#ff7a1a', '#ffe08a');
+    }
+
+    // bolhas de veneno das múmias voando em arco
+    for (const s of strikes) {
+      if (s.look !== 'poison') continue;
+      const k = 1 - s.t / s.max;
+      const bx = s.fromX + (s.x - s.fromX) * k;
+      const by = s.fromY + (s.y - s.fromY) * k - Math.sin(k * Math.PI) * 120;
+      Art.glow(ctx, bx, by, 20, '#9dff6a', 0.7);
+      Art.ball(ctx, bx, by, 7, '#7ad040', 1.5);
     }
 
     // meteoros caindo na diagonal
@@ -3815,6 +3917,14 @@
     // chamas das poças dos slimes
     for (const p of epools) {
       const k = clamp(p.life / 0.6, 0, 1);
+      if (p.poison) {
+        // bolhas subindo da poça
+        for (let i = 0; i < 4; i++) {
+          const ph = (time * 0.8 + i * 0.27) % 1;
+          Art.ball(ctx, p.x + Math.cos(i * 2.1) * p.r * 0.5, p.y + Math.sin(i * 2.1) * p.r * 0.25 - ph * 14, 3 + ph * 2, '#a8ff70', 1, false);
+        }
+        continue;
+      }
       for (let i = 0; i < 3; i++) Art.flame(ctx, p.x + (i - 1) * p.r * 0.55, p.y + (i === 1 ? -3 : 3), 7, (16 + Math.sin(time * 10 + i * 2) * 5) * k, 0, '#ff5a1a', '#ffe08a');
     }
 
@@ -3823,6 +3933,13 @@
       if (b.kind === 'snow') {
         Art.glow(ctx, b.x, b.y, 18, '#ffffff', 0.4);
         Art.ball(ctx, b.x, b.y, b.r, '#f4f8fc', 1.6);
+      } else if (b.kind === 'bone') {
+        ctx.save();
+        ctx.translate(b.x, b.y);
+        ctx.rotate(time * 14);
+        Art.poly(ctx, [-9, -2, 9, -2, 9, 2, -9, 2], '#efe8d2', 1.3);
+        for (const x of [-9, 9]) for (const y of [-3, 3]) Art.ball(ctx, x, y, 3, '#efe8d2', 1.1, false);
+        ctx.restore();
       } else {
         Art.glow(ctx, b.x, b.y, 16, '#9af0ff', 0.7);
         ctx.save();
@@ -4001,7 +4118,7 @@
     $('kills').textContent = kills;
     $('runcoins').textContent = Math.round(runCoins);
 
-    const key = JSON.stringify([weapons, passiveLevels].map((o) => Object.entries(o).map(([k, v]) => k + (v.level || v))));
+    const key = JSON.stringify([weapons, passiveLevels, boonsTaken].map((o) => Object.entries(o).map(([k, v]) => k + (v.level || v))));
     if (key !== loadoutKey) {
       loadoutKey = key;
       const slot = (id, name, lv, max, cls) => {
@@ -4021,6 +4138,9 @@
       html += empty(passiveSlots() - pN, '') + locked(MAX_PASSIVE_SLOTS - passiveSlots());
       html += '</div>';
       $('loadout').innerHTML = html;
+      // bênçãos das fogueiras no canto da tela
+      $('boonlist').innerHTML = Object.entries(boonsTaken).map(([id, v]) =>
+        `<div class="boon" title="${BOONS[id].name}"><img src="${Art.icon(BOONS[id].icon)}" alt=""><span>${boonShort(id, v)}</span></div>`).join('');
     }
   }
 

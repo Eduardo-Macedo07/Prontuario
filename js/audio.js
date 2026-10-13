@@ -111,6 +111,7 @@ const Sound = (() => {
     const t = ac.currentTime + (o.delay || 0) + (o.at || 0);
     const src = ac.createBufferSource();
     src.buffer = noiseBuf;
+    src.loop = true; // ruídos longos (vento, gongo) passam de 1 segundo
     const f = ac.createBiquadFilter();
     f.type = o.filter || 'lowpass';
     f.frequency.setValueAtTime(o.f0 || 1000, t);
@@ -188,7 +189,26 @@ const Sound = (() => {
     // Pesadelo: rock pesado com guitarra distorcida e bumbo duplo
     metal: { bpm: 168, style: 'metal' },
     metalboss: { bpm: 188, style: 'metal', boss: true },
+    // Vulcão: tambores tribais e escala frígia (normal), gongos e drones (difícil), metal oriental (pesadelo)
+    lava: { bpm: 118, style: 'lava', level: 0 },
+    lavaboss: { bpm: 138, style: 'lava', level: 0, boss: true },
+    lavadark: { bpm: 90, style: 'lava', level: 1 },
+    lavadarkboss: { bpm: 112, style: 'lava', level: 1, boss: true },
+    lavametal: { bpm: 176, style: 'lava', level: 2 },
+    lavametalboss: { bpm: 196, style: 'lava', level: 2, boss: true },
+    // Neve: caixinha de música e sininhos (normal), vento e coro gelado (difícil), black metal (pesadelo)
+    snow: { bpm: 100, style: 'snow', level: 0 },
+    snowboss: { bpm: 124, style: 'snow', level: 0, boss: true },
+    snowdark: { bpm: 70, style: 'snow', level: 1 },
+    snowdarkboss: { bpm: 92, style: 'snow', level: 1, boss: true },
+    snowmetal: { bpm: 200, style: 'snow', level: 2 },
+    snowmetalboss: { bpm: 216, style: 'snow', level: 2, boss: true },
   };
+  // Mi frígio dominante (E F G# A B C D), em semitons a partir do lá 220
+  const LAVA_SCALE = [-5, -4, -1, 0, 2, 3, 5, 7];
+  const LAVA_ROOTS = [-5, -4, -5, -2];
+  // Ré dórico (D E F G A B C)
+  const SNOW_PROG = [[-7, -4, 0], [-9, -5, -2], [-2, 2, 5], [-4, 0, 3]]; // Dm, C, G, Am
   // Lá menor frígio: Am, Bb, Dm, E (soa mais de morte)
   const DARK_PROG = [[0, 3, 7], [1, 5, 8], [-7, -4, 0], [-5, -1, 2]];
   // Riffs em quintas: E, F, E, Bb (trítono)
@@ -230,6 +250,8 @@ const Sound = (() => {
   function scheduleStep(M, s, t, sd) {
     if (M.style === 'dark') return scheduleDark(M, s, t, sd);
     if (M.style === 'metal') return scheduleMetal(M, s, t, sd);
+    if (M.style === 'lava') return scheduleLava(M, s, t, sd);
+    if (M.style === 'snow') return scheduleSnow(M, s, t, sd);
     const at = t - ac.currentTime;
     const bar = Math.floor(s / 16);
     const i = s % 16;
@@ -321,6 +343,100 @@ const Sound = (() => {
     else if (i % 2 === 0) noise({ filter: 'highpass', f0: 8000, dur: 0.04, vol: 0.04, at, dest });
     // grito agudo da guitarra solo no fim do riff
     if (bar === 3 && (i === 8 || i === 12)) tone({ type: 'sawtooth', f0: hz(root + 19), f1: hz(root + 12), dur: sd * 4, vol: 0.05, at, dest: distBus });
+  }
+
+  function scheduleLava(M, s, t, sd) {
+    const at = t - ac.currentTime;
+    const bar = Math.floor(s / 16);
+    const i = s % 16;
+    const root = LAVA_ROOTS[bar];
+    const dest = musicBus;
+    const tom = (f, v) => tone({ type: 'sine', f0: f, f1: f * 0.45, dur: 0.3, vol: v, at, dest });
+    if (M.level === 0) {
+      // drone de lava, tambores tribais e melodia de encantador de serpentes
+      if (i === 0) {
+        tone({ type: 'sawtooth', f0: hz(root - 24), dur: sd * 16, vol: 0.05, attack: 0.3, at, dest, lp: 260 });
+        tone({ type: 'sawtooth', f0: hz(root - 17), dur: sd * 16, vol: 0.025, attack: 0.4, at, dest, lp: 400 });
+      }
+      if ([0, 3, 6, 10, 12].includes(i) || (M.boss && i % 2 === 0)) tom(i % 8 === 0 ? 110 : 160, i % 8 === 0 ? 0.3 : 0.16);
+      if (i === 4 || i === 12) noise({ filter: 'bandpass', f0: 2500, dur: 0.06, vol: 0.06, q: 2, at, dest });
+      if (i % 2 === 0) {
+        const k = (bar * 8 + i / 2) % 16;
+        const pat = [0, 1, 2, 1, 3, 2, 1, 0, 4, 5, 4, 3, 2, 1, 2, 0];
+        if (k % 5 !== 4) tone({ type: 'square', f0: hz(LAVA_SCALE[pat[k]] + 12), dur: sd * 1.8, vol: 0.022, at, dest, lp: 1600 });
+      }
+    } else if (M.level === 1) {
+      // gongo, drones graves e estrondos distantes
+      if (i === 0) {
+        tone({ type: 'sine', f0: hz(root - 36), dur: sd * 16, vol: 0.1, attack: 0.5, at, dest });
+        tone({ type: 'sawtooth', f0: hz(root - 23), dur: sd * 16, vol: 0.02, attack: 1, at, dest, lp: 300 });
+        if (bar % 2 === 0) {
+          tone({ type: 'sine', f0: 98, dur: 3.5, vol: 0.12, at, dest });
+          tone({ type: 'sine', f0: 98 * 2.7, dur: 2.2, vol: 0.03, at, dest });
+          noise({ filter: 'bandpass', f0: 400, dur: 2.5, vol: 0.05, q: 0.6, at, dest });
+        }
+      }
+      if (i === 8 && bar % 2 === 1) noise({ filter: 'lowpass', f0: 180, dur: 1.2, vol: 0.25, at, dest });
+      if (i % 4 === 2) {
+        const n = LAVA_SCALE[(bar * 3 + i) % 8];
+        tone({ type: 'triangle', f0: hz(n), dur: sd * 3.5, vol: 0.03, attack: 0.08, at, dest, lp: 900 });
+      }
+      if (M.boss && i % 4 === 0) tom(90, 0.28);
+    } else {
+      // metal com escala oriental: palhetada em semicolcheia alternando tônica e meio tom
+      const n = i % 4 === 3 ? root + 1 : root;
+      tone({ type: 'sawtooth', f0: hz(n - 12), dur: sd * 0.8, vol: 0.07, at, dest: distBus, lp: 1600 });
+      if (i === 0 || i === 8) for (const k of [root - 12, root - 5, root]) tone({ type: 'sawtooth', f0: hz(k), dur: sd * 3, vol: 0.06, at, dest: distBus });
+      tone({ type: 'square', f0: hz(root - 24), dur: sd * 0.9, vol: 0.05, at, dest, lp: 380 });
+      tone({ type: 'sine', f0: 150, f1: 45, dur: 0.1, vol: M.boss || i % 2 === 0 ? 0.28 : 0.18, at, dest });
+      if (i === 4 || i === 12) noise({ filter: 'bandpass', f0: 1900, dur: 0.14, vol: 0.16, q: 0.7, at, dest });
+      if (bar === 3 && i >= 12) tom(220 - (i - 12) * 30, 0.2);
+      if (i === 0) noise({ filter: 'highpass', f0: 5000, dur: 0.9, vol: 0.08, at, dest });
+      if (bar === 1 && i % 4 === 0) tone({ type: 'sawtooth', f0: hz(LAVA_SCALE[(i / 4 + 4) % 8] + 12), dur: sd * 3.5, vol: 0.045, at, dest: distBus });
+    }
+  }
+
+  function scheduleSnow(M, s, t, sd) {
+    const at = t - ac.currentTime;
+    const bar = Math.floor(s / 16);
+    const i = s % 16;
+    const chord = SNOW_PROG[bar];
+    const dest = musicBus;
+    if (M.level === 0) {
+      // caixinha de música, sininhos de trenó e um coro suave
+      if (i === 0) for (const n of chord) tone({ type: 'sine', f0: hz(n + 12), dur: sd * 16, vol: 0.016, attack: 0.6, at, dest });
+      if (i === 0 || i === 8) tone({ type: 'triangle', f0: hz(chord[0] - 12), dur: sd * 7, vol: 0.06, at, dest, lp: 600 });
+      if (i % 2 === 0) {
+        const k = i / 2;
+        const n = chord[k % 3] + (k >= 4 ? 24 : 12) + 12;
+        tone({ type: 'sine', f0: hz(n), dur: 0.9, vol: 0.03, at, dest });
+        tone({ type: 'sine', f0: hz(n) * 3, dur: 0.3, vol: 0.006, at, dest });
+      }
+      if (i % 2 === 1 || M.boss) noise({ filter: 'highpass', f0: 9000, dur: 0.05, vol: 0.025, at, dest });
+      if (i === 0 || i === 8 || (M.boss && i % 4 === 0)) tone({ type: 'sine', f0: 120, f1: 50, dur: 0.15, vol: 0.18, at, dest });
+    } else if (M.level === 1) {
+      // vento uivando, coro gelado e notas soltas e dissonantes
+      if (i === 0) {
+        noise({ filter: 'bandpass', f0: 500, f1: 1400, dur: sd * 16, vol: 0.05, q: 4, attack: 1, at, dest });
+        for (const n of chord) tone({ type: 'sawtooth', f0: hz(n), detune: -10, dur: sd * 16, vol: 0.012, attack: 1.2, at, dest, lp: 800 });
+        tone({ type: 'sine', f0: hz(chord[0] - 24), dur: sd * 16, vol: 0.07, attack: 0.8, at, dest });
+      }
+      if (i === 6 || i === 13) {
+        const n = chord[(bar + i) % 3] + 24 + (i === 13 ? 1 : 0);
+        tone({ type: 'sine', f0: hz(n), dur: 1.8, vol: 0.03, at, dest });
+      }
+      if (i === 0 || i === 3 || (M.boss && (i === 8 || i === 11))) tone({ type: 'sine', f0: 80, f1: 38, dur: 0.3, vol: 0.25, at, dest });
+    } else {
+      // black metal: palhetada de trêmolo na melodia e bumbo em blast beat
+      const mel = chord[[0, 1, 2, 1][Math.floor(i / 4)]];
+      tone({ type: 'sawtooth', f0: hz(mel), dur: sd * 0.95, vol: 0.05, at, dest: distBus, lp: 2400 });
+      tone({ type: 'sawtooth', f0: hz(mel - 12), dur: sd * 0.95, vol: 0.04, at, dest: distBus, lp: 1400 });
+      if (i === 0) for (const n of chord) tone({ type: 'sawtooth', f0: hz(n - 12), dur: sd * 16, vol: 0.012, attack: 0.5, at, dest, lp: 900 });
+      tone({ type: 'sine', f0: 140, f1: 45, dur: 0.08, vol: 0.22, at, dest });
+      if (i % 2 === 1) noise({ filter: 'bandpass', f0: 2000, dur: 0.08, vol: 0.1, q: 0.7, at, dest });
+      if (i === 0) noise({ filter: 'highpass', f0: 4500, dur: 1.2, vol: 0.09, at, dest });
+      if (M.boss || i % 2 === 0) noise({ filter: 'highpass', f0: 8000, dur: 0.03, vol: 0.03, at, dest });
+    }
   }
 
   // Pausa o áudio quando o jogo sai da tela (troca de aba ou de app).

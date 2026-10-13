@@ -539,3 +539,17 @@ button.diffbtn {
 button.diffbtn.on { background: var(--dc); color: #120e1c; border-color: #fff; }
 h2.victory { color: #ffd36b; }
 .card .desc .extras { margin-top: 6px; display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: #9fe8ff; font-weight: 800; }
+
+/* Bênçãos das fogueiras no HUD */
+#boonlist { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; max-width: 260px; }
+#boonlist .boon {
+  display: flex; align-items: center; gap: 2px; padding: 1px 6px 1px 2px; border-radius: 10px;
+  background: rgba(40,20,10,.8); border: 1px solid #ff8a2a; font-size: 11px; font-weight: 900; color: #ffd36b;
+}
+#boonlist .boon img { width: 18px; height: 18px; }
+#pstats img.mini { width: 18px; height: 18px; vertical-align: middle; margin-right: 4px; }
+@media (max-width: 760px), (max-height: 540px) {
+  #boonlist { max-width: 190px; gap: 3px; }
+  #boonlist .boon { font-size: 9px; padding: 0 4px 0 1px; }
+  #boonlist .boon img { width: 14px; height: 14px; }
+}

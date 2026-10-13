@@ -41,6 +41,9 @@ final recomeça (7 minutos ou Altar Maior).
 Cada dificuldade muda a cara da fase: **Normal** com as cores originais e a música de sempre; **Difícil** com
 tudo puxado para o roxo, mais névoa, almas subindo e uma música lenta e sombria (órgão, sino e batida de
 coração); **Pesadelo** em vermelho sangue, cinzas caindo e rock pesado com guitarra distorcida e bumbo duplo.
+Cada mapa tem músicas próprias: o **Vulcão** usa tambores tribais e escala oriental (Normal), gongos e drones
+(Difícil) e metal oriental (Pesadelo); os **Picos Gelados** usam caixinha de música e sininhos (Normal), vento
+e coro gelado (Difícil) e black metal com bumbo em blast beat (Pesadelo).
 
 Cada fase tem 3 dificuldades: **Normal**, **Difícil** (1,6x vida, 1,35x dano, mais inimigos, 1,6x chance de moedas) e
 **Pesadelo** (2,5x vida, 1,75x dano, 2,4x chance de moedas). Vencer uma dificuldade libera a seguinte; vencer o Normal
@@ -58,12 +61,13 @@ libera a próxima fase.
   Projéteis usa 1 / 1,5 / 2 / 4, e as frações somam até virar um projétil inteiro.
 - **Sorte:** aumenta a chance das raridades altas (sorte 0: 82% comum e 0,5% lendário; sorte 5: 48% comum
   e 6% lendário) e às vezes dá uma 4ª opção.
-- **Fogueiras:** fique perto para escolher 1 de 3 bênçãos (não ocupam espaço). Elas vão de fraca a lendária,
+- **Fogueiras:** fique perto para escolher 1 de 3 bênçãos (não ocupam espaço). As bênçãos pegas aparecem no
+  canto da tela, embaixo das armas, e no menu de pausa. Elas vão de fraca a lendária,
   e quanto mais Sorte, mais fortes.
 - **Altares:** invocam um chefão, que aparece 2 segundos depois (dá tempo de se posicionar). Todo chefão
   deixa um baú com recompensas raras.
-- **Corações e ímãs:** corações caem raramente dos inimigos; o **ímã** é bem mais raro e puxa todo o XP do
-  mapa de uma vez.
+- **Corações e ímãs:** corações caem raramente dos inimigos; o **ímã** é bem mais raro e puxa todo o XP, as
+  moedas e os corações do mapa de uma vez.
 - **Moeda dourada (única moeda do jogo):** rara e grande, com um facho de luz para ser vista de longe.
   Cai dos chefões (1; o chefão final dá 2 + 1 por dificuldade), às vezes dos mini-chefes e muito raramente
   dos inimigos comuns. Uma partida completa rende umas 9; uma muito boa, umas 14. Dificuldade alta, Sorte e a
@@ -116,10 +120,11 @@ Cada desafio concluído dá moedas douradas na hora.
 
 Todos andam um pouco mais devagar que o seu personagem.
 
-- **Esqueleto** (com espada e escudo) e **Cavaleiro Esqueleto** (armadura, elmo com pluma, mais resistente)
-- **Múmia**: lenta e resistente
-- **Ceifador**: fantasma de manto e foice que flutua em zigue-zague
-- **Lobisomem**: agacha (aviso) e dá um bote rápido
+- **Esqueleto** (com espada e escudo; alguns arremessam ossos) e **Cavaleiro Esqueleto** (para, marca um
+  círculo e golpeia o chão)
+- **Múmia**: lenta e resistente; cospe veneno numa área marcada, que vira uma poça tóxica por alguns segundos
+- **Ceifador**: fantasma de manto e foice que flutua em zigue-zague e às vezes some e reaparece perto de você
+- **Lobisomem**: agacha (aviso com uma faixa vermelha) e dá um bote longo e rápido
 - **Mini-chefes**: a cada 15 inimigos nasce um elite (coroa e brilho dourado), maior, com 5x a vida e
   recompensas melhores
 - **Chefões** (revezam, com pouca vida mas ataques perigosos e sempre avisados no chão):
