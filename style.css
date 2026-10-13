@@ -102,6 +102,18 @@ body.touch .pc-only { display: none; }
   font-weight: 900; font-size: 13px; color: #d8d0ec; text-shadow: 0 2px 0 #000;
   padding: 2px 12px; border-radius: 12px; background: rgba(15,12,25,.6);
 }
+#threatbar {
+  position: absolute; top: 86px; left: 50%; transform: translateX(-50%); width: 220px; height: 8px;
+  border-radius: 5px; background: rgba(15,12,25,.8); border: 2px solid #5a1a28; overflow: hidden;
+}
+#threatbar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ff9a3a, #ff2a4a); box-shadow: 0 0 8px #ff2a4a; }
+.shopicon { position: relative; }
+.shopicon img.padlock { position: absolute; width: 34px; height: 34px; right: -2px; bottom: -2px; filter: drop-shadow(0 2px 0 #000); }
+.card.shopitem.locked .shopicon > img:first-child { filter: grayscale(.9) brightness(.55); }
+.lvpips { display: flex; gap: 4px; justify-content: center; margin: 8px 0 2px; }
+.lvpips i { width: 18px; height: 6px; border-radius: 3px; background: #2a2340; border: 1px solid #4a3f6a; }
+.lvpips i.on { background: #7fe0ff; box-shadow: 0 0 6px #7fe0ff; border-color: #bff4ff; }
+.lvtext { font-size: 11px; color: #9fe8ff; font-weight: 800; }
 #stagebar.alert { color: #ff7a8a; animation: pulse 0.8s ease-in-out infinite alternate; }
 @keyframes pulse { to { color: #ffd36b; } }
 #timer {
@@ -332,6 +344,7 @@ button.secondary {
   .slot img { width: 22px; height: 22px; }
   #timer { font-size: 22px; top: 12px; }
   #stagebar { top: 42px; font-size: 10px; padding: 1px 8px; }
+  #threatbar { top: 60px; width: 150px; height: 6px; }
   #topright { top: 12px; gap: 6px; right: max(8px, env(safe-area-inset-right)); }
   #pauseBtn { width: 38px; height: 38px; }
   #banner { font-size: 20px; padding: 0 10px; }
@@ -342,6 +355,7 @@ button.secondary {
 @media (max-width: 520px) {
   #timer { top: auto; bottom: max(30px, calc(env(safe-area-inset-bottom) + 16px)); }
   #stagebar { top: auto; bottom: max(10px, env(safe-area-inset-bottom)); }
+  #threatbar { top: auto; bottom: max(64px, calc(env(safe-area-inset-bottom) + 50px)); }
 }
 
 /* ============================================================

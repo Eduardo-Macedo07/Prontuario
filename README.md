@@ -21,7 +21,10 @@ Todas as armas atacam e miram sozinhas.
 ## Fases e dificuldades
 
 Escolha a fase antes do personagem. Aos **7 minutos** chega o **chefão final**, e derrotá-lo conclui a fase
-(enquanto ele vive, a horda fica ainda mais intensa). Se quiser enfrentá-lo antes, fique no centro do
+(enquanto ele vive, a horda fica ainda mais intensa). **A partida não acaba aí:** o tempo continua e o medidor
+de **Ameaça** sobe 1 nível a cada 30 segundos. Cada nível dá aos inimigos +20% de vida e +12% de dano, faz os
+chefões atacarem mais rápido e traz mais inimigos; a cada minuto volta um chefão (inclusive o final), cada vez
+mais forte. Sobreviva o quanto conseguir. Se quiser enfrentá-lo antes, fique no centro do
 **Altar Maior** (o altar roxo com obelisco e cristal, sempre presente no mapa). A vida e o dano dos inimigos
 crescem com o tempo (aos 7 minutos têm cerca de 8x a vida do começo).
 
@@ -70,14 +73,15 @@ Uma loja só, tudo em moedas douradas. O que é mais forte custa mais.
 | Maníaco / Golem de Pedra / Mercenário / Berserker | 6 / 9 / 11 / 14 | — / 1 chefão / nível 12 / concluir o Cemitério |
 | Armas: Aura Sagrada, Bumerangue, Bola de Fogo, Bombardeio, Raio em Cadeia, Chuva de Meteoros | 3, 4, 7, 7, 8, 9 | — |
 | Passivas: Regeneração, Sabedoria, Vampirismo, Dano Crítico, Projéteis | 2, 3, 5, 7, 12 | — |
-| Atualizar (troca as opções) / Atualizar II | 3 / 6 | 2 usos por partida cada |
-| Banir (remove uma arma ou passiva da partida) / Banir II | 4 / 8 | 2 usos por partida cada |
-| Pular (pula a escolha) / Pular II | 2 / 4 | 2 usos por partida cada |
+| Pular (pula a escolha) | 2, 3, 4, 6, 8 (5 níveis) | alcançar o nível 8 |
+| Atualizar (troca as opções) | 3, 4, 6, 8, 10 (5 níveis) | sobreviver 3 minutos |
+| Banir (remove uma arma ou passiva da partida) | 4, 6, 8, 10, 12 (5 níveis) | derrotar 1 chefão |
 | Espaço de arma (4º / 5º) | 5 / 12 | sobreviver 5 min / 3 chefões no total |
 | Espaço de passiva (3º / 4º) | 4 / 10 | nível 15 / sobreviver 7 min |
 
-Na tela de subir de nível, os botões **Atualizar** (tecla `R`), **Banir** (clique em Banir e depois na carta) e
-**Pular** aparecem depois de comprados.
+As opções de nível ficam com cadeado até cumprir o objetivo. Cada nível comprado dá +1 uso por partida e o
+próximo nível fica mais caro. Na tela de subir de nível, os botões **Atualizar** (tecla `R`), **Banir** (clique
+em Banir e depois na carta) e **Pular** aparecem depois de comprados.
 
 ## Desafios
 

@@ -97,6 +97,14 @@
       if (raw) {
         const m = merge(s, raw);
         // versão 2: moeda única. Converte as moedas antigas e as de desafio.
+        // opções compradas na versão antiga (reroll1/reroll2...) viram níveis
+        for (const id of ['reroll', 'banish', 'skip']) {
+          if (m.bought[id + '1'] || m.bought[id + '2']) {
+            m.bought[id] = (m.bought[id + '1'] ? 2 : 0) + (m.bought[id + '2'] ? 2 : 0);
+            delete m.bought[id + '1'];
+            delete m.bought[id + '2'];
+          }
+        }
         if (!raw.version) {
           m.coins = Math.floor(m.coins / 60) + (m.tokens || 0);
           m.tokens = 0;
@@ -185,17 +193,21 @@
     { id: 'wslot2', kind: 'wslot', name: 'Espaço de arma', price: 12, desc: '+1 espaço de arma (5 no total).', req: { type: 'bosses', n: 3, text: 'Derrote 3 chefões no total' }, needs: 'wslot1' },
     { id: 'pslot1', kind: 'pslot', name: 'Espaço de passiva', price: 4, desc: '+1 espaço de passiva (3 no total).', req: { type: 'level', n: 15, text: 'Alcance o nível 15' } },
     { id: 'pslot2', kind: 'pslot', name: 'Espaço de passiva', price: 10, desc: '+1 espaço de passiva (4 no total).', req: { type: 'time', n: 420, text: 'Sobreviva 7 minutos' }, needs: 'pslot1' },
-    // opções na hora de subir de nível (cargas por partida)
-    { id: 'reroll1', kind: 'option', icon: 'reroll', name: 'Atualizar', price: 3, desc: 'Troca as 3 opções de recompensa. 2 usos por partida.' },
-    { id: 'reroll2', kind: 'option', icon: 'reroll', name: 'Atualizar II', price: 6, desc: '+2 usos de Atualizar por partida.', needs: 'reroll1' },
-    { id: 'banish1', kind: 'option', icon: 'banish', name: 'Banir', price: 4, desc: 'Remove uma arma ou passiva da partida inteira. 2 usos por partida.' },
-    { id: 'banish2', kind: 'option', icon: 'banish', name: 'Banir II', price: 8, desc: '+2 usos de Banir por partida.', needs: 'banish1' },
-    { id: 'skip1', kind: 'option', icon: 'skip', name: 'Pular', price: 2, desc: 'Pula a escolha sem pegar nada. 2 usos por partida.' },
-    { id: 'skip2', kind: 'option', icon: 'skip', name: 'Pular II', price: 4, desc: '+2 usos de Pular por partida.', needs: 'skip1' },
+    // Opções ao subir de nível: começam trancadas (objetivo) e têm níveis; cada nível dá +1 uso por partida.
+    { id: 'skip', kind: 'option', icon: 'skip', name: 'Pular', prices: [2, 3, 4, 6, 8],
+      desc: 'Pula a escolha de recompensa sem pegar nada.', req: { type: 'level', n: 8, text: 'Alcance o nível 8' } },
+    { id: 'reroll', kind: 'option', icon: 'reroll', name: 'Atualizar', prices: [3, 4, 6, 8, 10],
+      desc: 'Troca as opções de recompensa por outras.', req: { type: 'time', n: 180, text: 'Sobreviva 3 minutos' } },
+    { id: 'banish', kind: 'option', icon: 'banish', name: 'Banir', prices: [4, 6, 8, 10, 12],
+      desc: 'Remove uma arma ou passiva da partida inteira.', req: { type: 'bosses', n: 1, text: 'Derrote 1 chefão' } },
   ];
 
-  // Usos por partida de cada opção, conforme o que foi comprado.
-  const optionUses = (base) => (save.bought[base + '1'] ? 2 : 0) + (save.bought[base + '2'] ? 2 : 0);
+  // Nível comprado de cada opção = usos por partida.
+  const optionLevel = (id) => {
+    const v = save.bought[id];
+    return typeof v === 'number' ? v : 0;
+  };
+  const optionUses = optionLevel;
 
   const BASE_WEAPON_SLOTS = 3; // a arma inicial + 2
   const BASE_PASSIVE_SLOTS = 2;
@@ -619,7 +631,7 @@
       lastHurt: 0, bestHitless: 0, eliteKills: 0, spawned: 0, chalCoins: 0, checkT: 0,
       rerolls: optionUses('reroll'), banishes: optionUses('banish'), skips: optionUses('skip'), banned: new Set(),
       stage: STAGES[save.stage] ? save.stage : 'cemiterio', diff: save.diff || 0,
-      finalSpawned: false, victory: false, victoryT: 0,
+      finalSpawned: false, cleared: false, clearTime: 0, firstClear: false, nextOver: 0, overIdx: 0,
     };
     if (!diffUnlocked(run.stage, run.diff)) { run.stage = 'cemiterio'; run.diff = 0; }
     Art.setBiome(STAGES[run.stage].biome);
@@ -981,7 +993,11 @@
     return items;
   }
 
-  const isOwned = (item) => (item.kind === 'char' ? save.chars[item.id]
+  // Preço atual (as opções com níveis ficam mais caras a cada compra).
+  const priceOf = (item) => (item.prices ? item.prices[Math.min(optionLevel(item.id), item.prices.length - 1)] : item.price);
+
+  const isOwned = (item) => (item.prices ? optionLevel(item.id) >= item.prices.length
+    : item.kind === 'char' ? save.chars[item.id]
     : item.kind === 'weapon' || item.kind === 'passive' ? save.unlocks[item.id] : save.bought[item.id]);
 
   function renderShop() {
@@ -998,31 +1014,39 @@
       const row = document.createElement('div');
       row.className = 'shoprow';
       // do mais barato para o mais caro
-      for (const item of all.filter((i) => i.kind === kind).sort((a, b) => a.price - b.price)) {
+      for (const item of all.filter((i) => i.kind === kind).sort((a, b) => priceOf(a) - priceOf(b))) {
         const owned = isOwned(item);
+        const leveled = !!item.prices;
+        const lv = leveled ? optionLevel(item.id) : 0;
+        const price = priceOf(item);
         const needsOk = !item.needs || save.bought[item.needs];
         const ok = reqMet(item.req);
-        const afford = save.coins >= item.price;
+        const afford = save.coins >= price;
         const icon = item.kind === 'char' ? Art.heroIcon(item.id)
           : Art.icon(item.kind === 'wslot' ? 'might' : item.kind === 'pslot' ? 'armor' : item.icon || item.id);
         const accent = item.kind === 'char' ? CHARACTERS[item.id].accent
           : item.color || (item.kind === 'wslot' ? '#ffd36b' : item.kind === 'option' ? '#7fe0ff' : '#8fd3a0');
         const card = document.createElement('div');
-        card.className = 'card shopitem' + (owned ? ' owned' : '') + (!owned && (!ok || !needsOk) ? ' blocked' : '');
+        card.className = 'card shopitem' + (owned ? ' owned' : '') + (!owned && (!ok || !needsOk) ? ' blocked' : '') + (!ok ? ' locked' : '');
         card.style.setProperty('--accent', accent);
         let status;
-        if (owned) status = '<div class="owned-tag">Comprado</div>';
+        if (owned) status = `<div class="owned-tag">${leveled ? 'Nível máximo' : 'Comprado'}</div>`;
         else if (!needsOk) status = '<div class="req">Compre o anterior primeiro</div>';
         else {
           const reqHtml = item.req
             ? `<div class="req ${ok ? 'ok' : ''}">${ok ? '✔' : '🔒'} ${item.req.text}${ok ? '' : ` <b>(${reqProgress(item.req)})</b>`}</div>`
             : '';
-          status = `${reqHtml}<button class="buy" ${ok && afford ? '' : 'disabled'}><img src="${Art.icon('coin')}" alt="">${item.price}</button>`;
+          status = `${reqHtml}<button class="buy" ${ok && afford ? '' : 'disabled'}><img src="${Art.icon('coin')}" alt="">${price}</button>`;
         }
+        const pips = leveled
+          ? `<div class="lvpips">${item.prices.map((_, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')}</div>
+             <div class="lvtext">${lv ? `${lv} ${lv === 1 ? 'uso' : 'usos'} por partida` : 'Nenhum uso ainda'}${owned ? '' : ` · próximo nível: ${lv + 1} ${lv ? 'usos' : 'uso'}`}</div>`
+          : '';
         card.innerHTML = `
-          <div class="shopicon ${item.kind === 'char' ? 'hero' : ''}"><img src="${icon}" alt=""></div>
+          <div class="shopicon ${item.kind === 'char' ? 'hero' : ''}"><img src="${icon}" alt="">${ok ? '' : `<img class="padlock" src="${Art.icon('lock')}" alt="">`}</div>
           <div class="name">${item.name}</div>
           <div class="desc">${item.desc}</div>
+          ${pips}
           ${status}`;
         const btn = card.querySelector('.buy');
         if (btn) btn.addEventListener('click', () => buy(item));
@@ -1034,14 +1058,16 @@
   }
 
   function buy(item) {
-    if (isOwned(item) || save.coins < item.price || !reqMet(item.req) || (item.needs && !save.bought[item.needs])) return;
-    save.coins -= item.price;
+    const price = priceOf(item);
+    if (isOwned(item) || save.coins < price || !reqMet(item.req) || (item.needs && !save.bought[item.needs])) return;
+    save.coins -= price;
     Sound.play('buy');
     if (item.kind === 'weapon' || item.kind === 'passive') save.unlocks[item.id] = true;
+    else if (item.prices) save.bought[item.id] = optionLevel(item.id) + 1;
     else save.bought[item.id] = true;
     if (item.kind === 'char') save.chars[item.id] = true;
     persist();
-    toast(`${item.name} desbloqueado!`);
+    toast(item.prices ? `${item.name}: nível ${optionLevel(item.id)}!` : `${item.name} desbloqueado!`);
     renderShop();
   }
 
@@ -1175,19 +1201,31 @@
   }
 
   // Venceu o chefão final: libera a próxima dificuldade e a próxima fase.
+  // A partida continua: a Ameaça começa a subir e os inimigos ficam cada vez mais fortes.
   function stageClear() {
     const prev = save.stages[run.stage] || 0;
     save.stages[run.stage] = Math.max(prev, run.diff + 1);
+    run.cleared = true;
+    run.clearTime = time;
+    run.firstClear = prev < run.diff + 1;
+    run.nextOver = time + 60;
     completeChallenge(run.stage);
     if (run.diff === 2) completeChallenge('pesadelo');
     persist();
     Sound.play('levelup');
-    showResult(true, prev < run.diff + 1);
+    player.invuln = Math.max(player.invuln, 2);
+    setTimeout(() => showBanner('Fase concluída! Agora sobreviva: a Ameaça vai subir.', '#ffd36b'), 2700);
   }
+
+  // Nível de Ameaça depois de vencer o chefão final: sobe 1 a cada 30 segundos.
+  const threat = () => (run && run.cleared ? 1 + Math.floor((time - run.clearTime) / 30) : 0);
+  const threatHp = () => 1 + threat() * 0.2;
+  const threatDmg = () => 1 + threat() * 0.12;
+  const threatAtk = () => Math.min(2.5, 1 + threat() * 0.12);
 
   function gameOver() {
     Sound.play('death');
-    showResult(false, false);
+    showResult(run.cleared, run.firstClear);
   }
 
   function showResult(won, firstClear) {
@@ -1201,6 +1239,7 @@
       unlockMsg = msgs.map((m) => `<p class="new">${m}!</p>`).join('');
     }
     $('resultTitle').textContent = won ? 'Fase concluída!' : 'Você morreu';
+    const threatRow = run.cleared ? `<div><span>Ameaça alcançada</span><b>${threat()}</b></div>` : '';
     $('resultTitle').className = won ? 'victory' : 'danger';
     $('stats').innerHTML = `
       <div><span>Fase</span><b>${STAGES[run.stage].name} · ${DIFFS[run.diff].name}</b></div>`
@@ -1208,6 +1247,7 @@
       <div><span>Personagem</span><b>${CHARACTERS[player.char].name}</b></div>
       <div><span>Tempo sobrevivido</span><b>${fmtTime(time)}</b></div>
       <div><span>Nível alcançado</span><b>${player.level}</b></div>
+      ${threatRow}
       ${newRecord ? '<p class="new">Novo recorde!</p>' : ''}
       ${unlockMsg}
       <h3 class="earnhead">Moedas ganhas</h3>
@@ -1735,13 +1775,13 @@
     // Fica mais forte com o tempo (7 min = 8x a vida) e com a dificuldade.
     const D = DIFFS[run.diff];
     const m = time / 60;
-    const hp = T.hp * (1 + m * 0.7 + m * m * 0.04) * D.hp * (hpMul || 1);
+    const hp = T.hp * (1 + m * 0.7 + m * m * 0.04) * D.hp * threatHp() * (hpMul || 1);
     const base = CHARACTERS[player.char].speed;
     const e = {
       type, x, y, r: T.r, hp, maxHp: hp,
       // fica sempre abaixo de 60% da velocidade base do personagem
       speed: base * Math.min(0.6, T.speed * (1 + Math.min(time / 600, 0.1))),
-      dmg: T.dmg * (1 + m * 0.14) * D.dmg,
+      dmg: T.dmg * (1 + m * 0.14) * D.dmg * threatDmg(),
       xp: T.xp, color: T.color, boss: !!T.boss, final: !!T.final, armor: T.armor || 1,
       flash: 0, kbx: 0, kby: 0, orbitCd: 0, phase: rand(0, TAU), summonT: 3, dead: false,
       lungeCd: rand(1, 3), windup: 0, dashT: 0, dashX: 0, dashY: 0, missileT: 2.5,
@@ -1792,7 +1832,9 @@
   function updateSpawning(dt) {
     // Começo tranquilo (pouquinhos até a primeira horda), depois acelera aos poucos.
     // enquanto o chefão final vive, a horda aperta
-    const rate = spawnRate(time) * DIFFS[run.diff].spawn * (run.finalSpawned ? 1.6 : 1);
+    // com o chefão final vivo a horda aperta; depois de vencê-lo, a Ameaça aumenta ainda mais
+    const rush = run.cleared ? 1.3 * (1 + threat() * 0.1) : run.finalSpawned ? 1.6 : 1;
+    const rate = spawnRate(time) * DIFFS[run.diff].spawn * rush;
     spawnAcc += rate * dt;
     while (spawnAcc >= 1) {
       spawnAcc -= 1;
@@ -1828,6 +1870,21 @@
       const p = spawnPoint();
       spawnBoss(p.x, p.y);
       showBanner('Um chefão apareceu!');
+    }
+
+    // Depois da vitória, um chefão a cada minuto (o final também volta), cada vez mais forte.
+    if (run.cleared && time >= run.nextOver) {
+      run.nextOver = time + 60;
+      const S = STAGES[run.stage];
+      const list = [...S.bosses, S.final];
+      const type = list[run.overIdx++ % list.length];
+      const p = spawnPoint();
+      const e = spawnEnemy(type, p.x, p.y, 1 + bossesSpawned * 0.3);
+      e.bornAt = time;
+      bossesSpawned++;
+      smoke(p.x, p.y, 12, '#2a1a24');
+      Sound.play('boss');
+      showBanner(`${ENEMY_TYPES[type].name} voltou mais forte! (Ameaça ${threat()})`, '#ff4f6a');
     }
   }
 
@@ -1873,11 +1930,7 @@
       pickups.push({ kind: 'heart', x: e.x + 34, y: e.y, v: 50 });
       player.bossKills++;
       if (player.char === 'mercenario') addText(player.x, player.y - 50, '+10% de dano', '#ffd36b', true);
-      if (e.final) {
-        run.victory = true;
-        run.victoryT = 2.2;
-        player.invuln = 99;
-      }
+      if (e.final && !run.cleared) stageClear();
       const fight = time - e.bornAt;
       if (e.type === 'boss' && fight < 30) completeChallenge('ogro');
       if (e.type === 'lich' && fight < 40) completeChallenge('lich');
@@ -2112,13 +2165,15 @@
           e.lungeCd = rand(2.5, 4);
         }
       }
+      // com a Ameaça alta, os chefões atacam com mais frequência
+      const adt = e.boss ? dt * threatAtk() : dt;
       if (ENEMY_BEHAVIOR[e.type]) {
-        const stop = ENEMY_BEHAVIOR[e.type](e, dt, d, dx, dy);
+        const stop = ENEMY_BEHAVIOR[e.type](e, adt, d, dx, dy);
         if (stop) { vx = 0; vy = 0; }
       }
       if (e.type === 'boss') {
         // Rei Ogro: para, marca uma faixa no chão e solta uma onda de choque por ela.
-        e.slamT -= dt;
+        e.slamT -= adt;
         if (e.slamWind > 0) {
           e.slamWind -= dt;
           vx = 0;
@@ -2138,7 +2193,7 @@
       }
       if (e.type === 'robo') {
         // Marca áreas no chão; os mísseis caem depois de um tempo para dar chance de desviar.
-        e.missileT -= dt;
+        e.missileT -= adt;
         if (e.missileT <= 0) {
           e.missileT = 3.4;
           const n = 5 + Math.min(4, Math.floor(bossesSpawned / 2));
@@ -2156,7 +2211,7 @@
       if (e.type === 'lich') {
         // O Lich ateia fogo em 3 colunas na direção do jogador:
         // para escapar, saia delas ou fique no vão entre uma e outra.
-        e.fireT -= dt;
+        e.fireT -= adt;
         if (e.fireT <= 0 && d < 700) {
           e.fireT = Math.max(3.2, 5 - bossesSpawned * 0.2);
           const a = Math.atan2(dy, dx);
@@ -2170,7 +2225,7 @@
           Sound.play('warn');
         }
         // e invoca esqueletos ao seu redor
-        e.summonT -= dt;
+        e.summonT -= adt;
         if (e.summonT <= 0) {
           e.summonT = 6;
           for (let i = 0; i < 3 && enemies.length < MAX_ENEMIES + 60; i++) {
@@ -2987,10 +3042,6 @@
     enemies = enemies.filter((e) => !e.dead);
     if (state !== 'playing') return; // morreu durante este quadro
     updatePickups(dt);
-    if (run.victory) {
-      run.victoryT -= dt;
-      if (run.victoryT <= 0) { stageClear(); return; }
-    }
     run.checkT -= dt;
     if (run.checkT <= 0) {
       run.checkT = 0.5;
@@ -3871,9 +3922,14 @@
     $('hptext').textContent = Math.ceil(player.hp) + ' / ' + player.maxHp;
     $('timer').textContent = fmtTime(time);
     const left = STAGE_TIME - time;
-    const sb = run.victory ? 'Vitória!' : run.finalSpawned ? 'Derrote o chefão final!' : `Chefão final em ${fmtTime(Math.max(0, left))} · ou invoque no Altar Maior`;
+    const sb = run.cleared
+      ? `☠ Ameaça ${threat()} · inimigos +${Math.round((threatHp() - 1) * 100)}% vida · sobe em ${fmtTime(30 - ((time - run.clearTime) % 30))}`
+      : run.finalSpawned ? 'Derrote o chefão final!' : `Chefão final em ${fmtTime(Math.max(0, left))} · ou invoque no Altar Maior`;
     if ($('stagebar').textContent !== sb) $('stagebar').textContent = sb;
     $('stagebar').classList.toggle('alert', run.finalSpawned || left < 30);
+    // medidor de Ameaça: enche até subir de nível
+    $('threatbar').classList.toggle('hidden', !run.cleared);
+    if (run.cleared) $('threatfill').style.width = (((time - run.clearTime) % 30) / 30 * 100) + '%';
     $('kills').textContent = kills;
     $('runcoins').textContent = Math.round(runCoins);
 
