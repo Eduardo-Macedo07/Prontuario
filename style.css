@@ -682,3 +682,19 @@ button.diffbtn img.dlock { width: 14px; height: 14px; }
 #pstats div span { flex: 0 0 auto; display: flex; align-items: center; gap: 4px; }
 #pstats div b { font-size: 13px; line-height: 1.3; }
 #pstats h3.earnhead { margin: 12px 0 4px; }
+
+/* Chaves e botão de abrir baú */
+.key-ico {
+  display: inline-block; width: 18px; height: 18px;
+  background: linear-gradient(#ffe08a, #c8901e); border: 2px solid #1a1222; border-radius: 50% 50% 50% 4px;
+  transform: rotate(-45deg) scale(.85);
+}
+.pill.keys { color: #ffcf4a; }
+#openBtn {
+  position: fixed; left: 50%; bottom: 22%; transform: translateX(-50%); z-index: 5; width: auto; margin: 0;
+  display: flex; align-items: center; gap: 6px; padding: 10px 22px; font-size: 18px; pointer-events: auto;
+  animation: pulseBtn 0.8s ease-in-out infinite alternate;
+}
+#openBtn img { width: 22px; height: 22px; }
+@keyframes pulseBtn { to { transform: translateX(-50%) scale(1.06); } }
+@media (max-width: 760px), (max-height: 540px) { .key-ico { width: 13px; height: 13px; } #openBtn { font-size: 15px; padding: 8px 16px; } }

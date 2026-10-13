@@ -66,16 +66,20 @@ libera a próxima fase.
 - **Fogueiras:** fique perto para escolher 1 de 3 bênçãos (não ocupam espaço). As bênçãos pegas aparecem no
   canto da tela, embaixo das armas, e no menu de pausa. Elas vão de fraca a lendária,
   e quanto mais Sorte, mais fortes.
-- **Baús e itens:** baús (de chefões, às vezes de mini-chefes e muito raramente de inimigos comuns) dão
-  **itens**: escolha 1 entre 3. Itens acumulam e não ocupam espaço; os de chance rolam uma vez por cópia
-  (5 Ratoeiras = 5 chances de 8% a cada golpe). Aparecem embaixo das bênçãos e no pause.
+- **Chaves e baús:** chaves caem com facilidade dos inimigos (mini-chefes e chefões soltam mais) e ficam só
+  durante a partida. Pelo mapa há sempre alguns **baús trancados**: chegue perto e aperte **E** (no celular, toque
+  em "Abrir"). Cada baú aberto com chaves deixa o próximo mais caro (1, 2, 3, 5, 7, 9, 12... chaves). Os baús que
+  caem de chefões e mini-chefes são **grátis** e não aumentam o preço; também se abrem com **E**.
+- **Itens:** cada baú oferece 3 itens para escolher 1. Itens acumulam sem limite e não ocupam espaço; os de
+  chance rolam uma vez por cópia (5 Ratoeiras = 5 chances de 8% a cada golpe). Aparecem embaixo das bênçãos e no
+  pause. Os marcados com preço são liberados na Loja.
 
   | Raridade | Itens |
   | --- | --- |
-  | Comum | Ratoeira (8%: prende o inimigo 1,5 s), Ferradura (+0,4 Sorte), Pedra de Amolar (+5% dano), Pão Caseiro (+12 vida), Bota Remendada (+4% velocidade) |
-  | Raro | Dente de Vampiro (3%: cura 2), Luneta (+4% crítico), Cogumelo Mágico (+0,4 vida/s), Ímã de Bolso (+20% coleta) |
-  | Épico | Capa de Chuva (4%: reflete o ataque sem dano), Ampulheta (armas 6% mais rápidas), Luva Estática (6%: raio em cadeia) |
-  | Lendário | Coração de Dragão (+40 vida e +1 vida/s), Martelo do Trovão (5%: trovão em área), Trevo de Quatro Folhas (+1,5 Sorte) |
+  | Comum | Ratoeira (8%: prende o inimigo 1,5 s), Chave Mestra (5%: abre um baú trancado de graça, sem subir o preço), Ferradura (+0,4 Sorte), Pedra de Amolar (+5% dano), Pão Caseiro (+12 vida), Bota Remendada (+4% velocidade), Chaveiro (+20% chaves; loja: 4) |
+  | Raro | Dente de Vampiro (3%: cura 2), Luneta (+4% crítico), Cogumelo Mágico (+0,4 vida/s), Ímã de Bolso (+20% coleta), Lanterna de Almas (+10% XP), Armadura de Espinhos (fere quem te acerta; loja: 5) |
+  | Épico | Capa de Chuva (4%: reflete o ataque sem dano), Ampulheta (armas 6% mais rápidas), Luva Estática (6%: raio em cadeia), Garra de Lobo (+20% dano crítico), Coroa de Espinhos (onda ao levar dano; loja: 8), Amuleto da Esquiva (5%: desvia; loja: 9) |
+  | Lendário | Coração de Dragão (+40 vida e +1 vida/s), Martelo do Trovão (5%: trovão em área), Trevo de Quatro Folhas (+1,5 Sorte), Cálice de Sangue (cada abate cura 0,5; loja: 10), Relógio Parado (congela todos os inimigos a cada 20 s; loja: 12), Pena de Fênix (revive com toda a vida; loja: 14), Coroa do Rei (+1 projétil; loja: 16) |
 
 - **Sorte:** também aumenta a chance de baús, ímãs, corações e moedas caírem e de itens mais raros nos baús
   (sorte 0: 82% comum e 2% lendário; sorte 5: 48% comum e 6% lendário).

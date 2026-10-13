@@ -2081,6 +2081,14 @@ const Art = (() => {
     }
   }
 
+  // ---------- Chave caída no chão ----------
+  function drawKeyPickup(g, p, t) {
+    const y = p.y - 4 + Math.sin(t * 4 + p.x) * 2;
+    glow(g, p.x, y, 16, '#ffd36b', 0.45);
+    const spr = sprite('pickup:key', 34, (pg) => { pg.scale(0.5, 0.5); ICONS.key(pg); });
+    blit(g, spr, p.x, y, 1, 1, Math.sin(t * 2 + p.y) * 0.25);
+  }
+
   // ---------- Ímã que puxa todo o XP do mapa ----------
   function drawMagnetPickup(g, p, t) {
     const s = 1 + Math.sin(t * 5) * 0.1;
@@ -3539,6 +3547,128 @@ const Art = (() => {
       g.lineWidth = 4.5;
       g.stroke();
     },
+    key(g) {
+      glow(g, 0, 0, 24, '#ffd36b', 0.45);
+      g.save();
+      g.rotate(-0.7);
+      g.strokeStyle = OUT;
+      g.lineWidth = 9;
+      g.beginPath();
+      g.arc(-8, 0, 7, 0, TAU);
+      g.moveTo(-1, 0); g.lineTo(17, 0);
+      g.moveTo(11, 0); g.lineTo(11, 7);
+      g.moveTo(16, 0); g.lineTo(16, 6);
+      g.stroke();
+      g.strokeStyle = '#ffcf4a';
+      g.lineWidth = 5;
+      g.stroke();
+      g.restore();
+    },
+    chavemestra(g) {
+      ICONS.key(g);
+      glow(g, -6, -6, 12, '#ffffff', 0.8);
+      poly(g, [-14, -16, -11, -10, -5, -10, -10, -6, -8, 0, -14, -4, -20, 0, -18, -6, -23, -10, -17, -10], '#fff6c8', 1);
+    },
+    chaveiro(g) {
+      glow(g, 0, 0, 24, '#ffd36b', 0.4);
+      g.strokeStyle = '#c8ccd4';
+      g.lineWidth = 3;
+      g.beginPath();
+      g.arc(0, -8, 8, 0, TAU);
+      g.stroke();
+      for (const a of [-0.9, 0, 0.9]) {
+        g.save();
+        g.translate(Math.sin(a) * 8, 2);
+        g.rotate(a + Math.PI / 2);
+        g.scale(0.5, 0.5);
+        ICONS.key(g);
+        g.restore();
+      }
+    },
+    lanterna(g) {
+      glow(g, 0, 2, 26, '#ffb347', 0.6);
+      rrect(g, -8, -10, 16, 20, 3, 'rgba(255,220,140,0.9)', 2);
+      rrect(g, -10, -14, 20, 5, 2, '#5a4030', 1.5);
+      rrect(g, -10, 9, 20, 5, 2, '#5a4030', 1.5);
+      flame(g, 0, 6, 4, 12, 0, '#ff8a2a', '#fff3b0');
+    },
+    espinhos(g) {
+      glow(g, 0, 0, 24, '#c8a878', 0.35);
+      ball(g, 0, 0, 10, '#6a8a3a', 1.8);
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * TAU;
+        poly(g, [Math.cos(a - 0.25) * 9, Math.sin(a - 0.25) * 9, Math.cos(a) * 19, Math.sin(a) * 19, Math.cos(a + 0.25) * 9, Math.sin(a + 0.25) * 9], '#e8e0c8', 1.2);
+      }
+    },
+    garra(g) {
+      glow(g, 0, 0, 24, '#ff4a3a', 0.4);
+      for (let i = -1; i <= 1; i++) {
+        g.save();
+        g.translate(i * 8, 0);
+        g.rotate(0.3 + i * 0.1);
+        poly(g, [-3, 12, 3, 12, 2, -6, 0, -16, -2, -6], lin(g, 0, -16, 0, 12, '#ffffff', '#a8a090'), 1.5);
+        g.restore();
+      }
+      rrect(g, -14, 10, 28, 7, 3, '#6a4a32', 1.5);
+    },
+    coroaespinhos(g) {
+      glow(g, 0, 0, 26, '#ff3a5a', 0.5);
+      g.strokeStyle = '#5a3a20';
+      g.lineWidth = 5;
+      g.beginPath();
+      g.ellipse(0, 4, 16, 8, 0, 0, TAU);
+      g.stroke();
+      for (let i = 0; i < 7; i++) {
+        const a = (i / 7) * TAU;
+        const x = Math.cos(a) * 16;
+        const y = 4 + Math.sin(a) * 8;
+        poly(g, [x - 2, y, x, y - 9, x + 2, y], '#e8e0c8', 1);
+      }
+      ball(g, 0, 4, 3, '#d8203a', 0, false);
+    },
+    esquiva(g) {
+      glow(g, 0, 0, 24, '#9af0ff', 0.5);
+      g.strokeStyle = '#c8a050';
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(0, -18); g.lineTo(0, -8);
+      g.stroke();
+      poly(g, [0, -8, 12, 2, 0, 16, -12, 2], lin(g, 0, -8, 0, 16, '#e8fbff', '#3a8ac0'), 2);
+      for (const s of [-1, 1]) poly(g, [s * 12, 2, s * 22, -4, s * 18, 6], '#e8fbff', 1.2);
+    },
+    fenix(g) {
+      glow(g, 0, 0, 30, '#ff8a2a', 0.7);
+      poly(g, [0, 16, -4, 0, -10, -14, 0, -6, 10, -14, 4, 0], lin(g, 0, -14, 0, 16, '#ffe08a', '#ff4a1a'), 2);
+      flame(g, 0, -4, 6, 18, 0, '#ff6a1a', '#ffe08a');
+      stroke2(g, [0, 16, 0, 22], 1.5, '#c8902e');
+    },
+    calice(g) {
+      glow(g, 0, 0, 26, '#ff2a4a', 0.5);
+      poly(g, [-12, -14, 12, -14, 8, 0, 2, 4, 2, 12, 8, 16, -8, 16, -2, 12, -2, 4, -8, 0], lin(g, -12, 0, 12, 0, '#ffe08a', '#a8761e'), 2);
+      oval(g, 0, -12, 10, 3, '#a80a20', 1, false);
+    },
+    relogio(g) {
+      glow(g, 0, 0, 26, '#9af0ff', 0.5);
+      ball(g, 0, 2, 15, '#e8e0c8', 2);
+      ball(g, 0, 2, 11, '#f8f4ec', 1, false);
+      g.strokeStyle = OUT;
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(0, 2); g.lineTo(0, -6);
+      g.moveTo(0, 2); g.lineTo(6, 4);
+      g.stroke();
+      rrect(g, -3, -17, 6, 5, 1.5, '#c8a050', 1.2);
+      g.strokeStyle = '#3ad0ff';
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(-18, -14); g.lineTo(18, 18);
+      g.stroke();
+    },
+    coroa(g) {
+      glow(g, 0, 0, 28, '#ffd36b', 0.7);
+      poly(g, [-16, 10, -16, -8, -8, 0, 0, -14, 8, 0, 16, -8, 16, 10], lin(g, 0, -14, 0, 10, '#fff3b0', '#d6a12a'), 2);
+      for (const [x, c] of [[-8, '#3a8ac0'], [0, '#d8203a'], [8, '#3ad05a']]) ball(g, x, 5, 2.6, c, 1, false);
+    },
     // ---------- Itens dos baús ----------
     ratoeira(g) {
       glow(g, 0, 0, 24, '#c8a878', 0.4);
@@ -3813,7 +3943,7 @@ const Art = (() => {
     mix, light, dark, rgba,
     outline, ball, oval, poly, path, lin, shadow, glow, flame, sprite, blit,
     drawHero, drawHeroSilhouette, heroIcon, hasSheet: (id) => !!SHEETS[id], drawEnemy, drawGem, drawHeart, drawChest, drawCoin,
-    bonfireGround, bonfireTop, altar, grandAltarGround, grandAltarTop, drawMagnetPickup, portal,
+    bonfireGround, bonfireTop, altar, grandAltarGround, grandAltarTop, drawMagnetPickup, drawKeyPickup, portal,
     drawGround, drawFog, propsInView, drawProp, PROP_HEIGHT, vignette, icon, setLowQuality, setBiome, stagePreview,
   };
 })();

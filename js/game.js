@@ -740,6 +740,9 @@
     if (!diffUnlocked(run.stage, run.diff)) { run.stage = 'cemiterio'; run.diff = 0; }
     run.revives = 0;
     run.items = {};
+    run.keys = 0;
+    run.chestOpened = 0;
+    run.nearChest = null;
     run.usedBonfire = false;
     run.maxThreat = 0;
     for (const P of PERMS) if (optionLevel(P.id)) P.apply(optionLevel(P.id));
@@ -910,6 +913,7 @@
     } else if ((state === 'shop' || state === 'challenges') && k === 'escape') setState('home');
     else if (state === 'settings' && k === 'escape') setState(settingsReturn);
     else if (state === 'playing' && (k === 'escape' || k === 'p')) setState('paused');
+    else if (state === 'playing' && k === 'e') openNearChest();
     else if (state === 'paused' && (k === 'escape' || k === 'p')) setState('playing');
     else if (state === 'levelup' && ['1', '2', '3', '4'].includes(k)) (banishMode ? banishChoice : choose)(Number(k) - 1);
     else if (state === 'levelup' && k === 'r') rerollChoices();
@@ -1145,6 +1149,10 @@
       const d = WEAPONS[id];
       if (d.lock) items.push({ id, kind: 'weapon', name: d.name, price: d.lock, desc: d.desc, color: d.color });
     }
+    for (const id in ITEMS) {
+      const d = ITEMS[id];
+      if (d.lock) items.push({ id, kind: 'item', name: d.name, price: d.lock, desc: `${RARITY[d.r].name}: ${d.desc}.`, color: ['#c8ccd4', '#5fb8ff', '#c77dff', '#ffb020'][d.r] });
+    }
     for (const id in PASSIVES) {
       const d = PASSIVES[id];
       if (d.lock) items.push({ id, kind: 'passive', name: d.name, price: d.lock, desc: d.text(passiveValue(id, 0)), color: '#8fd3a0' });
@@ -1157,12 +1165,12 @@
 
   const isOwned = (item) => (item.prices ? optionLevel(item.id) >= item.prices.length
     : item.kind === 'char' ? save.chars[item.id]
-    : item.kind === 'weapon' || item.kind === 'passive' ? save.unlocks[item.id] : save.bought[item.id]);
+    : item.kind === 'weapon' || item.kind === 'passive' || item.kind === 'item' ? save.unlocks[item.id] : save.bought[item.id]);
 
   function renderShop() {
     const box = $('shoplist');
     box.innerHTML = '';
-    const groups = [['Personagens', 'char'], ['Melhorias permanentes', 'perm'], ['Armas', 'weapon'], ['Passivas', 'passive'],
+    const groups = [['Personagens', 'char'], ['Melhorias permanentes', 'perm'], ['Armas', 'weapon'], ['Passivas', 'passive'], ['Itens dos baús', 'item'],
       ['Opções ao subir de nível', 'option'], ['Espaços de arma', 'wslot'], ['Espaços de passiva', 'pslot']];
     const all = shopItems();
     for (const [title, kind] of groups) {
@@ -1221,7 +1229,7 @@
     if (isOwned(item) || save.coins < price || !reqMet(item.req) || (item.needs && !save.bought[item.needs])) return;
     save.coins -= price;
     Sound.play('buy');
-    if (item.kind === 'weapon' || item.kind === 'passive') save.unlocks[item.id] = true;
+    if (item.kind === 'weapon' || item.kind === 'passive' || item.kind === 'item') save.unlocks[item.id] = true;
     else if (item.prices) save.bought[item.id] = optionLevel(item.id) + 1;
     else save.bought[item.id] = true;
     if (item.kind === 'char') save.chars[item.id] = true;
@@ -1408,7 +1416,7 @@
     // limpa o mapa (o XP que estava no chão vai direto para o jogador)
     let xp = 0;
     for (const p of pickups) if (p.kind === 'xp') xp += p.v;
-    pickups = pickups.filter((p) => p.kind === 'coin' || p.kind === 'chest');
+    pickups = pickups.filter((p) => p.kind === 'coin' || p.kind === 'key' || (p.kind === 'chest' && p.free));
     for (const p of pickups) { p.x = player.x + rand(-60, 60); p.y = player.y + rand(-60, 60); }
     enemies = [];
     lanes = [];
@@ -1510,6 +1518,7 @@
   $('pauseSettings').addEventListener('click', () => { settingsReturn = 'paused'; setState('settings'); });
   $('pauseBtn').addEventListener('click', () => { if (state === 'playing') setState('paused'); });
   $('quitBtn').addEventListener('click', quitToHome);
+  $('openBtn').addEventListener('pointerdown', (ev) => { ev.stopPropagation(); openNearChest(); });
   $('menuBtn').addEventListener('click', quitToHome);
 
   // ============================================================
@@ -1519,26 +1528,38 @@
   // Itens dos baús: acumulam (sem ocupar espaço). Os de chance rolam uma vez por item:
   // 5 ratoeiras = 5 chances de 8% a cada golpe.
   // ============================================================
+  // lock = preço para liberar na Loja (sem lock: já vem liberado). Não há limite de cópias.
   const ITEMS = {
     // comuns
-    ratoeira: { name: 'Ratoeira', r: 0, max: 5, desc: '8% de chance do golpe prender o inimigo por 1,5 s' },
-    ferradura: { name: 'Ferradura', r: 0, max: 10, desc: '+0,4 de Sorte', apply: () => { player.luck += 0.4; } },
-    pedra: { name: 'Pedra de Amolar', r: 0, max: 10, desc: '+5% de dano', apply: () => { player.dmgMul += 0.05; } },
-    pao: { name: 'Pão Caseiro', r: 0, max: 10, desc: '+12 de vida máxima', apply: () => { player.maxHp += 12; heal(12); } },
-    bota: { name: 'Bota Remendada', r: 0, max: 8, desc: '+4% de velocidade', apply: () => { player.speed *= 1.04; } },
+    ratoeira: { name: 'Ratoeira', r: 0, desc: '8% de chance do golpe prender o inimigo por 1,5 s' },
+    chavemestra: { name: 'Chave Mestra', r: 0, desc: '5% de chance de abrir um baú trancado de graça (sem subir o preço)' },
+    ferradura: { name: 'Ferradura', r: 0, desc: '+0,4 de Sorte', apply: () => { player.luck += 0.4; } },
+    pedra: { name: 'Pedra de Amolar', r: 0, desc: '+5% de dano', apply: () => { player.dmgMul += 0.05; } },
+    pao: { name: 'Pão Caseiro', r: 0, desc: '+12 de vida máxima', apply: () => { player.maxHp += 12; heal(12); } },
+    bota: { name: 'Bota Remendada', r: 0, desc: '+4% de velocidade', apply: () => { player.speed *= 1.04; } },
+    chaveiro: { name: 'Chaveiro', r: 0, lock: 4, desc: '+20% de chance dos inimigos soltarem chaves' },
     // raros
-    dente: { name: 'Dente de Vampiro', r: 1, max: 5, desc: '3% de chance do golpe curar 2 de vida' },
-    luneta: { name: 'Luneta', r: 1, max: 8, desc: '+4% de chance de crítico', apply: () => { player.crit = Math.min(1, player.crit + 0.04); } },
-    cogumelo: { name: 'Cogumelo Mágico', r: 1, max: 6, desc: '+0,4 de vida por segundo', apply: () => { player.regen += 0.4; } },
-    imabolso: { name: 'Ímã de Bolso', r: 1, max: 6, desc: '+20% de alcance de coleta', apply: () => { player.magnet *= 1.2; } },
+    dente: { name: 'Dente de Vampiro', r: 1, desc: '3% de chance do golpe curar 2 de vida' },
+    luneta: { name: 'Luneta', r: 1, desc: '+4% de chance de crítico', apply: () => { player.crit = Math.min(1, player.crit + 0.04); } },
+    cogumelo: { name: 'Cogumelo Mágico', r: 1, desc: '+0,4 de vida por segundo', apply: () => { player.regen += 0.4; } },
+    imabolso: { name: 'Ímã de Bolso', r: 1, desc: '+20% de alcance de coleta', apply: () => { player.magnet *= 1.2; } },
+    lanterna: { name: 'Lanterna de Almas', r: 1, desc: '+10% de XP', apply: () => { player.xpMul += 0.1; } },
+    espinhos: { name: 'Armadura de Espinhos', r: 1, lock: 5, desc: 'Quem te acerta leva 10 de dano por espinho' },
     // épicos
-    capa: { name: 'Capa de Chuva', r: 2, max: 5, desc: '4% de chance de refletir um ataque inimigo sem levar dano' },
-    ampulheta: { name: 'Ampulheta', r: 2, max: 5, desc: 'Todas as armas 6% mais rápidas', apply: () => { player.cdMul = Math.max(0.25, player.cdMul * 0.94); } },
-    estatico: { name: 'Luva Estática', r: 2, max: 5, desc: '6% de chance do golpe soltar um raio que ricocheteia' },
+    capa: { name: 'Capa de Chuva', r: 2, desc: '4% de chance de refletir um ataque inimigo sem levar dano' },
+    ampulheta: { name: 'Ampulheta', r: 2, desc: 'Todas as armas 6% mais rápidas', apply: () => { player.cdMul = Math.max(0.25, player.cdMul * 0.94); } },
+    estatico: { name: 'Luva Estática', r: 2, desc: '6% de chance do golpe soltar um raio que ricocheteia' },
+    garra: { name: 'Garra de Lobo', r: 2, desc: 'Críticos causam +20% de dano', apply: () => { player.critMul += 0.2; } },
+    coroaespinhos: { name: 'Coroa de Espinhos', r: 2, lock: 8, desc: 'Ao levar dano, solta uma onda que fere os inimigos em volta' },
+    esquiva: { name: 'Amuleto da Esquiva', r: 2, lock: 9, desc: '5% de chance de desviar de um ataque' },
     // lendários
-    coracao: { name: 'Coração de Dragão', r: 3, max: 3, desc: '+40 de vida máxima e +1 de vida por segundo', apply: () => { player.maxHp += 40; heal(40); player.regen += 1; } },
-    trovao: { name: 'Martelo do Trovão', r: 3, max: 3, desc: '5% de chance do golpe chamar um trovão em área' },
-    trevo4: { name: 'Trevo de Quatro Folhas', r: 3, max: 3, desc: '+1,5 de Sorte', apply: () => { player.luck += 1.5; } },
+    coracao: { name: 'Coração de Dragão', r: 3, desc: '+40 de vida máxima e +1 de vida por segundo', apply: () => { player.maxHp += 40; heal(40); player.regen += 1; } },
+    trovao: { name: 'Martelo do Trovão', r: 3, desc: '5% de chance do golpe chamar um trovão em área' },
+    trevo4: { name: 'Trevo de Quatro Folhas', r: 3, desc: '+1,5 de Sorte', apply: () => { player.luck += 1.5; } },
+    calice: { name: 'Cálice de Sangue', r: 3, lock: 10, desc: 'Cada inimigo derrotado cura 0,5 de vida' },
+    relogio: { name: 'Relógio Parado', r: 3, lock: 12, desc: 'A cada 20 s, congela todos os inimigos por 1,5 s' },
+    fenix: { name: 'Pena de Fênix', r: 3, lock: 14, desc: 'Ao morrer, revive com toda a vida (some ao usar)' },
+    coroa: { name: 'Coroa do Rei', r: 3, lock: 16, desc: '+1 projétil em todas as armas', apply: () => { player.extraProj += 1; } },
   };
   const itemCount = (id) => (run && run.items ? run.items[id] || 0 : 0);
   // Pelo menos um sucesso em n tentativas de chance p.
@@ -1552,7 +1573,7 @@
       let pool = [];
       // se a raridade sorteada não tiver item disponível, desce até achar
       for (; r >= 0 && !pool.length; r--) {
-        pool = Object.keys(ITEMS).filter((id) => ITEMS[id].r === r + 0 && itemCount(id) < ITEMS[id].max && !picks.some((p) => p.id === id));
+        pool = Object.keys(ITEMS).filter((id) => ITEMS[id].r === r && isUnlocked(ITEMS[id], id) && !picks.some((p) => p.id === id));
         if (pool.length) break;
       }
       if (!pool.length) break;
@@ -1729,7 +1750,7 @@
         const def = ITEMS[c.id];
         const have = itemCount(c.id);
         name = def.name; color = ['#c8ccd4', '#5fb8ff', '#c77dff', '#ffb020'][def.r];
-        tag = `Item ${RARITY[def.r].name.toLowerCase()}${have ? ` · tem ${have}` : ''} · máx. ${def.max}`;
+        tag = `Item ${RARITY[def.r].name.toLowerCase()}${have ? ` · você tem ${have}` : ''}`;
         desc = `<b>${def.desc}</b>${have ? '<br>(+1 acumulado)' : ''}`;
         cls = RARITY[def.r].cls;
         ribbon = def.r > 0 ? RARITY[def.r].name : '';
@@ -1946,6 +1967,7 @@
     structTimer -= dt;
     if (structTimer <= 0) {
       structTimer = 3;
+      updateMapChests();
       structures = structures.filter((s) => s.kind === 'grandaltar' || s.kind === 'portal' || (Math.hypot(s.x - player.x, s.y - player.y) < 2600 && s.fade > 0));
       const totems = structures.filter((s) => s.kind === 'totem' && !s.used).length;
       const altars = structures.filter((s) => s.kind === 'altar' && !s.used).length;
@@ -2235,6 +2257,7 @@
     burst(e.x, e.y, e.color, e.boss ? 40 : 7, e.boss ? 280 : 150);
     ringFx(e.x, e.y, e.r * 1.4, '#ffffff');
     smoke(e.x, e.y, e.boss ? 14 : 1);
+    if (itemCount('calice')) heal(0.5 * itemCount('calice'));
     if (player.lifesteal > 0 && Math.random() < player.lifesteal && player.hp < player.maxHp) {
       heal(3);
       sparks(player.x, player.y - 15, '#ff3a5a', 4, 120);
@@ -2244,8 +2267,9 @@
       // chefão: 1 moeda; chefão final: 2 + 1 por nível de dificuldade
       const nCoins = e.final ? 2 + run.diff : 1;
       for (let i = 0; i < nCoins; i++) dropCoin(e.x - 40 + i * 30, e.y + 30);
-      pickups.push({ kind: 'chest', x: e.x, y: e.y });
+      pickups.push({ kind: 'chest', x: e.x, y: e.y, free: true });
       pickups.push({ kind: 'heart', x: e.x + 34, y: e.y, v: 50 });
+      for (let i = 0; i < 3; i++) pickups.push({ kind: 'key', x: e.x - 30 + i * 30, y: e.y - 30 });
       player.bossKills++;
       if (player.char === 'mercenario') addText(player.x, player.y - 50, '+10% de dano', '#ffd36b', true);
       if (e.final && time - e.bornAt < 45) completeChallenge('relampago');
@@ -2270,7 +2294,8 @@
       const L = effLuck();
       if (Math.random() < 0.15 * (1 + L * 0.25)) pickups.push({ kind: 'heart', x: e.x + 20, y: e.y, v: 25 });
       if (Math.random() < 0.04 * (1 + L * 0.3)) pickups.push({ kind: 'magnet', x: e.x - 20, y: e.y });
-      if (Math.random() < 0.1 * (1 + L * 0.3)) pickups.push({ kind: 'chest', x: e.x, y: e.y });
+      if (Math.random() < 0.1 * (1 + L * 0.3)) pickups.push({ kind: 'chest', x: e.x, y: e.y, free: true });
+      if (Math.random() < 0.5 * (1 + L * 0.1)) pickups.push({ kind: 'key', x: e.x - 16, y: e.y + 12 });
       sparks(e.x, e.y, '#ffd36b', 22, 300);
       shake = Math.max(shake, 5);
     } else {
@@ -2279,7 +2304,9 @@
       const L = effLuck();
       if (Math.random() < 0.0015 * (1 + L * 0.3)) pickups.push({ kind: 'magnet', x: e.x, y: e.y });
       else if (Math.random() < 0.005 * (1 + L * 0.25)) pickups.push({ kind: 'heart', x: e.x, y: e.y, v: 25 });
-      else if (Math.random() < 0.0006 * (1 + L * 0.3)) pickups.push({ kind: 'chest', x: e.x, y: e.y });
+      else if (Math.random() < 0.0006 * (1 + L * 0.3)) pickups.push({ kind: 'chest', x: e.x, y: e.y, free: true });
+      // chaves são fáceis de achar
+      if (Math.random() < 0.025 * (1 + L * 0.15) * (1 + itemCount('chaveiro') * 0.2)) pickups.push({ kind: 'key', x: e.x + 6, y: e.y + 4 });
       else if (Math.random() < coinChance(0.0007)) dropCoin(e.x, e.y);
     }
   }
@@ -2294,6 +2321,11 @@
   }
 
   function hurtPlayer(amount) {
+    if (procRoll(0.05, itemCount('esquiva'))) {
+      player.invuln = 0.4;
+      addText(player.x, player.y - 40, 'Desviou!', '#9af0ff', true);
+      return;
+    }
     if (procRoll(0.04, itemCount('capa'))) {
       // Capa de Chuva: reflete o golpe, sem dano, e fere quem estiver perto
       player.invuln = 0.4;
@@ -2307,6 +2339,18 @@
     }
     const dmg = Math.max(1, Math.round((amount - player.armor) * (1 - bladeReduction())));
     player.hp -= dmg;
+    // espinhos e coroa de espinhos revidam em quem estiver perto
+    const thorns = itemCount('espinhos');
+    const crown = itemCount('coroaespinhos');
+    if (thorns || crown) {
+      inProc = true;
+      if (thorns) areaDamage(player.x, player.y, 60, 10 * thorns, 120);
+      if (crown) {
+        areaDamage(player.x, player.y, 150, (25 + player.level * 2) * crown, 320);
+        ringFx(player.x, player.y, 150, '#ff3a5a');
+      }
+      inProc = false;
+    }
     player.invuln = 0.6;
     run.bestHitless = Math.max(run.bestHitless, time - run.lastHurt);
     run.lastHurt = time;
@@ -2315,6 +2359,21 @@
     Sound.play('hurt');
     sparks(player.x, player.y - 15, '#ff4444', 8, 220);
     addText(player.x, player.y - 40, '-' + dmg, '#ff5555', true);
+    if (player.hp <= 0 && itemCount('fenix') > 0) {
+      // Pena de Fênix: revive com toda a vida e é consumida
+      run.items.fenix--;
+      if (!run.items.fenix) delete run.items.fenix;
+      player.hp = player.maxHp;
+      player.invuln = 3;
+      inProc = true;
+      areaDamage(player.x, player.y, 260, 60 + player.level * 4, 900);
+      inProc = false;
+      ringFx(player.x, player.y, 260, '#ff8a2a');
+      sparks(player.x, player.y - 20, '#ff8a2a', 70, 460);
+      Sound.play('levelup');
+      showBanner('A Fênix renasceu!', '#ff8a2a');
+      return;
+    }
     if (player.hp <= 0 && run.revives > 0) {
       // Segunda Chance: volta com metade da vida e empurra os inimigos
       run.revives--;
@@ -3393,6 +3452,8 @@
   // ============================================================
   function updatePickups(dt) {
     const magnet2 = player.magnet * player.magnet;
+    let near = null;
+    let nearD = 0;
     for (const p of pickups) {
       const dx = player.x - p.x;
       const dy = player.y - p.y;
@@ -3406,7 +3467,12 @@
         p.x += (dx / d) * step;
         p.y += (dy / d) * step;
       }
-      const reach = player.r + (p.kind === 'chest' ? 18 : 8);
+      if (p.kind === 'chest') {
+        // baús são abertos com a tecla E (ou o botão na tela)
+        if (d2 < 70 * 70 && (!near || d2 < nearD)) { near = p; nearD = d2; }
+        continue;
+      }
+      const reach = player.r + 8;
       if (d2 < reach * reach) {
         p.taken = true;
         if (p.kind === 'xp') {
@@ -3421,16 +3487,15 @@
           addText(player.x, player.y - 50, '+1 moeda dourada', '#ffd36b', true);
         } else if (p.kind === 'magnet') {
           // puxa todo o XP, moedas e corações do mapa de uma vez
-          for (const q of pickups) if (q.kind === 'xp' || q.kind === 'coin' || q.kind === 'heart') q.pulled = true;
+          for (const q of pickups) if (q.kind === 'xp' || q.kind === 'coin' || q.kind === 'heart' || q.kind === 'key') q.pulled = true;
           Sound.play('chest');
           ringFx(player.x, player.y, 160, '#ff4a5a');
           sparks(player.x, player.y - 10, '#ff4a5a', 20, 260);
           addText(player.x, player.y - 50, 'Ímã!', '#ff6a7a', true);
-        } else if (p.kind === 'chest') {
-          pendingChests++;
-          Sound.play('chest');
-          sparks(p.x, p.y, '#ffd36b', 40, 360);
-          ringFx(p.x, p.y, 70, '#ffd36b');
+        } else if (p.kind === 'key') {
+          run.keys++;
+          Sound.play('coin');
+          sparks(player.x, player.y - 10, '#ffcf4a', 5, 150);
         } else {
           heal(p.v);
           Sound.play('heal');
@@ -3440,6 +3505,57 @@
       }
     }
     pickups = pickups.filter((p) => !p.taken);
+    run.nearChest = near;
+  }
+
+  // Preço do próximo baú do mapa: sobe a cada baú aberto com chaves (1, 2, 3, 5, 7, 9, 12...).
+  const chestCost = () => { const n = run.chestOpened; return 1 + n + Math.floor((n * n) / 4); };
+
+  // Abre o baú perto do jogador (tecla E).
+  function openNearChest() {
+    const c = run.nearChest;
+    if (!c || c.taken || state !== 'playing') return;
+    let paid = false;
+    if (!c.free) {
+      if (procRoll(0.05, itemCount('chavemestra'))) {
+        addText(c.x, c.y - 50, 'Chave Mestra!', '#fff6c8', true);
+      } else {
+        const cost = chestCost();
+        if (run.keys < cost) {
+          Sound.play('denied');
+          addText(c.x, c.y - 50, `Faltam ${cost - run.keys} chaves`, '#ff7a7a', true);
+          return;
+        }
+        run.keys -= cost;
+        paid = true;
+      }
+    }
+    if (paid) run.chestOpened++;
+    c.taken = true;
+    pickups = pickups.filter((p) => !p.taken);
+    run.nearChest = null;
+    pendingChests++;
+    Sound.play('chest');
+    sparks(c.x, c.y, '#ffd36b', 40, 360);
+    ringFx(c.x, c.y, 70, '#ffd36b');
+  }
+
+  // Mantém alguns baús trancados espalhados pelo mapa.
+  function updateMapChests() {
+    const locked = pickups.filter((p) => p.kind === 'chest' && !p.free && Math.hypot(p.x - player.x, p.y - player.y) < 2200);
+    pickups = pickups.filter((p) => !(p.kind === 'chest' && !p.free && Math.hypot(p.x - player.x, p.y - player.y) > 3000));
+    if (locked.length >= 3) return;
+    for (let k = 0; k < 8; k++) {
+      const a = rand(0, TAU);
+      const d = rand(550, 1100);
+      const x = player.x + Math.cos(a) * d;
+      const y = player.y + Math.sin(a) * d;
+      // longe de altares, fogueiras e de outros baús
+      if (structures.some((st) => Math.hypot(st.x - x, st.y - y) < 260)) continue;
+      if (locked.some((c) => Math.hypot(c.x - x, c.y - y) < 300)) continue;
+      pickups.push({ kind: 'chest', x, y, free: false });
+      return;
+    }
   }
 
   // ============================================================
@@ -3499,6 +3615,17 @@
     if (state !== 'playing') return; // morreu durante este quadro
     updatePickups(dt);
     run.maxThreat = Math.max(run.maxThreat, threat());
+    if (itemCount('relogio')) {
+      run.clockT = (run.clockT || 0) + dt;
+      const every = Math.max(8, 20 / Math.sqrt(itemCount('relogio')));
+      if (run.clockT >= every) {
+        run.clockT = 0;
+        for (const e of enemies) e.rootT = Math.max(e.rootT || 0, 1.5);
+        Sound.play('ice');
+        ringFx(player.x, player.y, 400, '#9af0ff');
+        addText(player.x, player.y - 60, 'O tempo parou!', '#9af0ff', true);
+      }
+    }
     run.checkT -= dt;
     if (run.checkT <= 0) {
       run.checkT = 0.5;
@@ -3653,6 +3780,35 @@
         ctx.fillStyle = '#ffd36b';
         ctx.fillText(ENEMY_TYPES[e.type].name, e.x, y + 22);
       }
+    }
+  }
+
+  const keyImg = new Image();
+  keyImg.src = Art.icon('key');
+
+  // Preço em chaves em cima do baú e o aviso de "E" quando perto.
+  function drawChestLabel(c) {
+    const d = Math.hypot(c.x - player.x, c.y - player.y);
+    if (d > 320) return;
+    const near = run.nearChest === c;
+    const cost = c.free ? 0 : chestCost();
+    const y = c.y - 46;
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#000';
+    ctx.font = `800 13px ${FONT}`;
+    const label = c.free ? 'Grátis' : `${cost}`;
+    const can = c.free || run.keys >= cost;
+    if (!c.free) ctx.drawImage(keyImg, c.x - 22, y - 13, 16, 16);
+    ctx.strokeText(label, c.x + (c.free ? 0 : 6), y);
+    ctx.fillStyle = c.free ? '#8fd3a0' : can ? '#ffd36b' : '#ff7a7a';
+    ctx.fillText(label, c.x + (c.free ? 0 : 6), y);
+    if (near) {
+      const k = isTouch ? 'Toque em Abrir' : 'Aperte E para abrir';
+      ctx.font = `800 11px ${FONT}`;
+      ctx.strokeText(k, c.x, y - 16);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(k, c.x, y - 16);
     }
   }
 
@@ -4145,6 +4301,7 @@
       if (p.kind === 'xp') Art.drawGem(ctx, p, time);
       else if (p.kind === 'coin') Art.drawCoin(ctx, p, time);
       else if (p.kind === 'magnet') Art.drawMagnetPickup(ctx, p, time);
+      else if (p.kind === 'key') Art.drawKeyPickup(ctx, p, time);
       else Art.drawHeart(ctx, p, time);
     }
 
@@ -4172,7 +4329,14 @@
         ctx.globalAlpha = clamp(o.s.fade, 0, 1);
         Art.bonfireTop(ctx, o.s.x, o.s.y, time, BONFIRE_COLOR, !o.s.used);
         ctx.globalAlpha = 1;
-      } else if (o.c) Art.drawChest(ctx, o.c.x, o.c.y, time);
+      } else if (o.c) {
+        if (!o.c.free) {
+          // baú trancado: um pouco mais escuro, com cadeado
+          Art.drawChest(ctx, o.c.x, o.c.y, time);
+          ctx.drawImage(keyImg, o.c.x - 9, o.c.y - 38, 18, 18);
+        } else Art.drawChest(ctx, o.c.x, o.c.y, time);
+        drawChestLabel(o.c);
+      }
       else drawPlayer();
     }
 
@@ -4484,6 +4648,9 @@
     if (run.cleared) $('threatfill').style.width = (((time - run.clearTime) % 30) / 30 * 100) + '%';
     $('kills').textContent = kills;
     $('runcoins').textContent = Math.round(runCoins);
+    $('runkeys').textContent = run.keys;
+    $('openBtn').classList.toggle('hidden', !isTouch || !run.nearChest || state !== 'playing');
+    if (run.nearChest) $('openBtn').innerHTML = run.nearChest.free ? 'Abrir baú' : `Abrir <img src="${Art.icon('key')}" alt="">${chestCost()}`;
 
     const key = JSON.stringify([weapons, passiveLevels, boonsTaken, run.items || {}].map((o) => Object.entries(o).map(([k, v]) => k + (v.level || v))));
     if (key !== loadoutKey) {
@@ -4583,6 +4750,6 @@
     setTime(v) { time = v; },
     get summons() { return summons; },
     get pickups() { return pickups; },
-    addItem, buildItemChoices,
+    addItem, buildItemChoices, openNearChest,
   };
 })();
