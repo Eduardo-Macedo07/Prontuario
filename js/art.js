@@ -649,7 +649,91 @@ const Art = (() => {
     g.fill();
   }
 
-  const HEROES = { mago: heroMago, maniaco: heroManiaco, golem: heroGolem, mercenario: heroMercenario, berserker: heroBerserker };
+  // ---------- Arqueira ----------
+  function heroArqueira(g, t, o) {
+    // aljava nas costas
+    g.save();
+    g.translate(-8, -20);
+    g.rotate(-0.4);
+    rrect(g, -3, -10, 6, 16, 2, '#7a4a2a', 1.4);
+    for (let i = 0; i < 3; i++) poly(g, [-2 + i * 2, -10, -1 + i * 2, -15, i * 2, -10], '#e04040', 0.8);
+    g.restore();
+    // capa verde
+    const wave = Math.sin(t * 6) * 1.5;
+    poly(g, [-8, -26, 6, -26, 9, -4, 3, 0 + wave, -4, -3, -11, 0 - wave], lin(g, 0, -26, 0, 0, '#3a8a4a', '#123a1a'));
+    feet(g, t, o.moving, '#4a3020');
+    // túnica
+    oval(g, 0, -13, 8.5, 9.5, '#5aa85a', 1.8);
+    rrect(g, -8, -9.5, 16, 3, 1, '#6a4a2a', 1.1);
+    // braço com arco
+    g.save();
+    g.translate(10, -15);
+    g.strokeStyle = OUT;
+    g.lineWidth = 4;
+    g.beginPath();
+    g.arc(-6, 0, 13, -1.1, 1.1);
+    g.stroke();
+    g.strokeStyle = '#a8743e';
+    g.lineWidth = 2.2;
+    g.stroke();
+    g.strokeStyle = '#f4ecd8';
+    g.lineWidth = 0.8;
+    g.beginPath();
+    g.moveTo(-6 + Math.cos(-1.1) * 13, Math.sin(-1.1) * 13);
+    g.lineTo(-6 + Math.cos(1.1) * 13, Math.sin(1.1) * 13);
+    g.stroke();
+    g.restore();
+    ball(g, 9, -15, 3, '#f0c8a0', 1.2);
+    // cabeça com capuz e orelha élfica
+    ball(g, 1, -28, 7.5, '#f0c8a0');
+    poly(g, [-5, -29, -12, -34, -6, -26], '#f0c8a0', 1.3);
+    poly(g, [-8, -27, -6, -36, 3, -38, 9, -33, 8, -29, 2, -33, -4, -30], lin(g, 0, -38, 0, -27, '#4aa85a', '#1a5a2a'), 1.6);
+    // cabelo ruivo
+    poly(g, [-6, -27, -10, -18, -5, -20], '#d0602a', 1.2);
+    g.fillStyle = '#1a3a1a';
+    if (blink(t)) g.fillRect(3, -28.5, 3, 0.8);
+    else {
+      g.beginPath();
+      g.arc(4.5, -28, 1.2, 0, TAU);
+      g.fill();
+    }
+  }
+
+  // ---------- Necromante ----------
+  function heroNecromante(g, t, o) {
+    // manto preto rasgado
+    const wave = Math.sin(t * 5) * 1.5;
+    g.beginPath();
+    g.moveTo(-8, -28);
+    g.lineTo(7, -28);
+    g.lineTo(11, -1);
+    for (let i = 1; i <= 5; i++) g.lineTo(11 - i * 4.4, i % 2 ? -4 + wave : 1);
+    g.closePath();
+    g.fillStyle = lin(g, 0, -28, 0, 0, '#2a2a3a', '#0a0a12');
+    g.fill();
+    outline(g, 1.8);
+    // faixa roxa
+    poly(g, [-1, -26, 2, -26, 3, -2, -2, -2], '#7a3ad0', 1.2);
+    // cajado com caveira
+    stroke2(g, [12, 0, 15, -38], 1.8, '#4a3a2a');
+    skull(g, 12, -40, 5, '#9dff6a');
+    glow(g, 15, -40, 14, '#9dff6a', 0.6 + Math.sin(t * 4) * 0.2);
+    ball(g, 11, -17, 3, '#c8c0d0', 1.2);
+    // capuz com rosto pálido
+    poly(g, [-9, -25, -7, -36, 1, -42, 9, -36, 10, -25], lin(g, 0, -42, 0, -25, '#2a2a3a', '#0a0a12'), 1.8);
+    oval(g, 2, -29.5, 5, 5.5, '#c8c0d0', 1.3);
+    glow(g, 3, -30, 8, '#9dff6a', 0.8);
+    g.fillStyle = '#c8ffb0';
+    g.fillRect(1, -31, 1.8, 1.4);
+    g.fillRect(4.2, -31, 1.8, 1.4);
+    // almas girando em volta
+    for (let i = 0; i < 2; i++) {
+      const a = t * 2 + i * Math.PI;
+      glow(g, Math.cos(a) * 16, -18 + Math.sin(a) * 6, 6, '#9dff6a', 0.7);
+    }
+  }
+
+  const HEROES = { mago: heroMago, maniaco: heroManiaco, golem: heroGolem, mercenario: heroMercenario, berserker: heroBerserker, arqueira: heroArqueira, necromante: heroNecromante };
 
   // Pisca por um instante a cada ~3,5 segundos.
   function blink(t) {
@@ -1337,6 +1421,210 @@ const Art = (() => {
         poly(g, [bx - r * 0.06, -r * 0.85, bx, -r * (1.15 + (2 - Math.abs(i)) * 0.12), bx + r * 0.06, -r * 0.85], lin(g, 0, -r * 1.4, 0, -r * 0.85, '#ffffff', '#6ad0ff'), 1.1);
       }
     },
+    // ---------- Pântano ----------
+    frog(g, r) {
+      // pernas traseiras dobradas
+      oval(g, -r * 0.55, r * 0.55, r * 0.42, r * 0.28, '#3a7a2a', 1.6, false);
+      oval(g, r * 0.5, r * 0.6, r * 0.3, r * 0.2, '#3a7a2a', 1.4, false);
+      // corpo largo
+      oval(g, 0, r * 0.15, r * 0.95, r * 0.7, '#5aa83a', 2.2);
+      oval(g, r * 0.15, r * 0.4, r * 0.55, r * 0.35, '#c8e08a', 0, false);
+      // manchas
+      for (const [x, y, s] of [[-0.4, -0.1, 0.14], [0.05, -0.3, 0.1], [-0.6, 0.2, 0.1]]) ball(g, r * x, r * y, r * s, '#2f6a22', 0, false);
+      // olhos esbugalhados
+      for (const x of [-0.05, 0.55]) {
+        ball(g, r * x, -r * 0.55, r * 0.26, '#5aa83a', 1.6, false);
+        eye(g, r * x, -r * 0.58, r * 0.17, '#1a1a00');
+      }
+      // boca enorme
+      g.strokeStyle = OUT;
+      g.lineWidth = Math.max(1.5, r * 0.08);
+      g.beginPath();
+      g.moveTo(-r * 0.2, r * 0.05);
+      g.quadraticCurveTo(r * 0.35, r * 0.3, r * 0.9, r * 0.0);
+      g.stroke();
+    },
+
+    zombie(g, r) {
+      const skin = '#8aa86a';
+      // braços esticados
+      for (const yy of [-r * 0.15, r * 0.25]) rrect(g, r * 0.1, yy - r * 0.12, r * 0.9, r * 0.24, r * 0.1, skin, 1.5);
+      // camisa rasgada
+      g.beginPath();
+      g.moveTo(-r * 0.6, -r * 0.1);
+      g.lineTo(r * 0.5, -r * 0.1);
+      g.lineTo(r * 0.55, r * 0.9);
+      for (let i = 1; i <= 5; i++) g.lineTo(r * (0.55 - i * 0.23), r * (i % 2 ? 0.75 : 0.95));
+      g.closePath();
+      g.fillStyle = lin(g, 0, -r * 0.1, 0, r, '#5a6a8a', '#2a3048');
+      g.fill();
+      outline(g, 2);
+      // cabeça torta
+      g.save();
+      g.translate(r * 0.1, -r * 0.5);
+      g.rotate(0.2);
+      ball(g, 0, 0, r * 0.5, skin, 1.8);
+      eye(g, r * 0.05, -r * 0.08, r * 0.13, '#3a0a0a');
+      ball(g, r * 0.32, -r * 0.05, r * 0.08, '#e8e060', 1, false);
+      g.strokeStyle = OUT;
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.moveTo(-r * 0.05, r * 0.25); g.lineTo(r * 0.35, r * 0.2);
+      g.stroke();
+      // cabelo ralo
+      stroke2(g, [-r * 0.3, -r * 0.4, -r * 0.1, -r * 0.6, r * 0.1, -r * 0.45], r * 0.06, '#3a2a20');
+      g.restore();
+      // lodo pingando
+      ball(g, -r * 0.3, r * 0.95, r * 0.1, '#4a6a2a', 0, false);
+    },
+
+    witch(g, r) {
+      // vassoura atrás
+      stroke2(g, [-r * 1.0, r * 0.7, r * 0.8, r * 0.3], r * 0.07, '#7a5030');
+      poly(g, [-r * 1.0, r * 0.55, -r * 1.35, r * 0.5, -r * 1.4, r * 0.95, -r * 1.0, r * 0.85], '#c8a050', 1.2);
+      // vestido
+      g.beginPath();
+      g.moveTo(-r * 0.1, -r * 0.3);
+      g.quadraticCurveTo(-r * 0.75, r * 0.3, -r * 0.7, r * 0.95);
+      g.lineTo(r * 0.65, r * 0.95);
+      g.quadraticCurveTo(r * 0.7, r * 0.3, r * 0.15, -r * 0.3);
+      g.closePath();
+      g.fillStyle = lin(g, 0, -r * 0.3, 0, r, '#5a2a7a', '#200a30');
+      g.fill();
+      outline(g, 2);
+      // rosto verde e nariz pontudo
+      ball(g, r * 0.05, -r * 0.45, r * 0.36, '#7ac050', 1.6);
+      poly(g, [r * 0.3, -r * 0.45, r * 0.62, -r * 0.35, r * 0.3, -r * 0.32], '#6aa840', 1.2);
+      eye(g, r * 0.12, -r * 0.55, r * 0.09, '#ffcc00');
+      // chapéu pontudo
+      oval(g, r * 0.05, -r * 0.75, r * 0.6, r * 0.13, '#2a1238', 1.6, false);
+      poly(g, [-r * 0.3, -r * 0.78, r * 0.35, -r * 0.78, -r * 0.15, -r * 1.55], lin(g, 0, -r * 1.5, 0, -r * 0.8, '#5a2a7a', '#2a1238'), 1.8);
+      rrect(g, -r * 0.27, -r * 0.92, r * 0.58, r * 0.12, r * 0.03, '#c8a050', 1);
+      // orbe na mão
+      glow(g, r * 0.75, r * 0.15, r * 0.6, '#c77dff', 0.9);
+      ball(g, r * 0.75, r * 0.15, r * 0.18, '#e0b0ff', 1.3);
+    },
+
+    // ---------- Deserto ----------
+    scorpion(g, r) {
+      const c = '#c8803a';
+      // patas
+      g.strokeStyle = OUT;
+      g.lineWidth = r * 0.12;
+      for (let i = 0; i < 3; i++) {
+        g.beginPath();
+        g.moveTo(-r * 0.2 + i * r * 0.3, r * 0.2);
+        g.lineTo(-r * 0.4 + i * r * 0.3, r * 0.8);
+        g.stroke();
+      }
+      // cauda curvada com ferrão
+      stroke2(g, [-r * 0.6, r * 0.1, -r * 1.0, -r * 0.3, -r * 0.8, -r * 0.9, -r * 0.3, -r * 1.1], r * 0.2, dark(c, 0.05));
+      poly(g, [-r * 0.35, -r * 1.25, r * 0.0, -r * 1.05, -r * 0.3, -r * 0.92], '#3a1a10', 1.2);
+      glow(g, -r * 0.15, -r * 1.08, r * 0.4, '#ff4a2a', 0.6);
+      // corpo segmentado
+      for (let i = 0; i < 3; i++) oval(g, -r * 0.35 + i * r * 0.35, r * 0.15, r * 0.32, r * 0.3, c, 1.6, i === 2);
+      // pinças
+      for (const yy of [-r * 0.25, r * 0.45]) {
+        stroke2(g, [r * 0.4, r * 0.15, r * 0.85, yy], r * 0.1, c);
+        poly(g, [r * 0.8, yy - r * 0.2, r * 1.2, yy - r * 0.1, r * 1.05, yy, r * 1.2, yy + r * 0.1, r * 0.8, yy + r * 0.2], c, 1.4);
+      }
+      ball(g, r * 0.5, -r * 0.02, r * 0.07, '#1a0a0a', 0, false);
+    },
+
+    sandworm(g, r, frame) {
+      const c = '#c8a070';
+      // corpo saindo da areia em arco
+      const wob = frame ? 0.05 : -0.05;
+      for (let i = 4; i >= 0; i--) {
+        const x = -r * 0.9 + i * r * 0.38;
+        const y = r * 0.5 - Math.sin((i / 4) * Math.PI * 0.9) * r * 0.9 + (i % 2 ? wob * r : 0);
+        ball(g, x, y, r * (0.32 + i * 0.05), i % 2 ? c : dark(c, 0.1), 1.8, false);
+      }
+      // boca circular com dentes
+      g.save();
+      g.translate(r * 0.65, -r * 0.2);
+      ball(g, 0, 0, r * 0.45, dark(c, 0.15), 2);
+      ball(g, r * 0.05, 0, r * 0.3, '#3a0a10', 1.2, false);
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * TAU;
+        poly(g, [Math.cos(a) * r * 0.3, Math.sin(a) * r * 0.3, Math.cos(a + 0.2) * r * 0.15, Math.sin(a + 0.2) * r * 0.15, Math.cos(a - 0.2) * r * 0.15, Math.sin(a - 0.2) * r * 0.15], '#f4ecd8', 0.8);
+      }
+      g.restore();
+      // monte de areia na base
+      oval(g, -r * 0.6, r * 0.75, r * 0.7, r * 0.2, '#e0c088', 1.4, false);
+    },
+
+    jackal(g, r) {
+      // lança de ouro
+      stroke2(g, [-r * 0.2, r * 1.0, r * 0.9, -r * 1.1], r * 0.08, '#c8a040');
+      poly(g, [r * 0.82, -r * 1.05, r * 1.08, -r * 1.25, r * 0.98, -r * 0.95], '#ffe08a', 1.2);
+      // saiote e corpo
+      poly(g, [-r * 0.5, r * 0.4, r * 0.5, r * 0.4, r * 0.55, r * 0.95, -r * 0.55, r * 0.95], lin(g, 0, r * 0.4, 0, r, '#f4ecd8', '#c8bca0'), 1.6);
+      oval(g, 0, r * 0.1, r * 0.55, r * 0.45, '#3a2a40', 1.8);
+      // colar de ouro
+      oval(g, 0, -r * 0.2, r * 0.5, r * 0.18, '#ffd36b', 1.4, false);
+      for (let i = -2; i <= 2; i++) ball(g, i * r * 0.18, -r * 0.12, r * 0.05, '#3a8ac0', 0, false);
+      // cabeça de chacal
+      g.save();
+      g.translate(r * 0.15, -r * 0.55);
+      poly(g, [-r * 0.25, -r * 0.1, -r * 0.2, -r * 0.75, r * 0.0, -r * 0.2], '#1a1418', 1.4);
+      poly(g, [r * 0.05, -r * 0.15, r * 0.15, -r * 0.8, r * 0.3, -r * 0.15], '#1a1418', 1.4);
+      ball(g, 0, 0, r * 0.35, '#2a2228', 1.8);
+      poly(g, [r * 0.15, -r * 0.1, r * 0.75, r * 0.1, r * 0.2, r * 0.2], '#2a2228', 1.4);
+      glow(g, r * 0.1, -r * 0.08, r * 0.35, '#ffd36b', 0.8);
+      ball(g, r * 0.1, -r * 0.08, r * 0.06, '#ffe08a', 0, false);
+      g.restore();
+    },
+
+    // ---------- Chefões finais novos ----------
+    hydra(g, r) {
+      glow(g, 0, 0, r * 2, '#7aff4a', 0.25);
+      // corpo
+      oval(g, 0, r * 0.45, r * 0.9, r * 0.55, '#3a7a4a', 2.4);
+      oval(g, 0, r * 0.6, r * 0.6, r * 0.3, '#a8d080', 0, false);
+      // três pescoços com cabeças
+      for (const [bx, tx, ty] of [[-0.4, -0.85, -0.9], [0, 0.05, -1.25], [0.4, 0.85, -0.85]]) {
+        stroke2(g, [r * bx, r * 0.2, r * (bx + tx) / 2, -r * 0.3, r * tx, r * ty], r * 0.22, '#3a7a4a');
+        g.save();
+        g.translate(r * tx, r * ty);
+        ball(g, 0, 0, r * 0.26, '#4a8a5a', 1.8);
+        poly(g, [r * 0.1, -r * 0.05, r * 0.45, r * 0.05, r * 0.1, r * 0.15], '#4a8a5a', 1.3);
+        glow(g, r * 0.05, -r * 0.08, r * 0.25, '#ffe060', 0.9);
+        ball(g, r * 0.05, -r * 0.08, r * 0.05, '#ffe060', 0, false);
+        poly(g, [-r * 0.15, -r * 0.2, -r * 0.3, -r * 0.45, -r * 0.05, -r * 0.25], '#2a5a3a', 1);
+        g.restore();
+      }
+      // gotas de veneno
+      ball(g, r * 0.55, -r * 0.5, r * 0.07, '#9dff6a', 0, false);
+    },
+
+    pharaoh(g, r) {
+      glow(g, 0, 0, r * 2, '#ffd36b', 0.3);
+      // cajado com olho
+      stroke2(g, [r * 0.8, r * 0.9, r * 0.9, -r * 1.1], r * 0.07, '#c8a040');
+      glow(g, r * 0.9, -r * 1.2, r * 0.45, '#3ad0ff', 0.9);
+      ball(g, r * 0.9, -r * 1.2, r * 0.14, '#3a8ac0', 1.2);
+      // manto/sarcófago
+      poly(g, [-r * 0.6, -r * 0.2, r * 0.6, -r * 0.2, r * 0.75, r * 0.95, -r * 0.75, r * 0.95], lin(g, 0, -r * 0.2, 0, r, '#ffd36b', '#a8761e'), 2.2);
+      for (let i = 0; i < 4; i++) {
+        g.fillStyle = i % 2 ? '#2a5aa0' : '#ffd36b';
+        g.fillRect(-r * 0.55, r * (0.05 + i * 0.2), r * 1.1, r * 0.1);
+      }
+      g.strokeStyle = OUT;
+      g.lineWidth = 1.5;
+      g.strokeRect(-r * 0.55, r * 0.05, r * 1.1, r * 0.7);
+      // rosto com faixas de múmia
+      ball(g, 0, -r * 0.5, r * 0.36, '#d8c9a3', 1.8);
+      glow(g, r * 0.05, -r * 0.52, r * 0.35, '#3ad0ff', 0.8);
+      g.fillStyle = '#9af0ff';
+      g.fillRect(-r * 0.1, -r * 0.56, r * 0.08, r * 0.06);
+      g.fillRect(r * 0.08, -r * 0.56, r * 0.08, r * 0.06);
+      // nemes (toucado listrado)
+      poly(g, [-r * 0.45, -r * 0.7, r * 0.45, -r * 0.7, r * 0.55, -r * 0.1, r * 0.3, -r * 0.35, -r * 0.3, -r * 0.35, -r * 0.55, -r * 0.1], lin(g, 0, -r * 0.7, 0, -r * 0.1, '#ffd36b', '#2a5aa0'), 1.8);
+      poly(g, [-r * 0.1, -r * 0.82, r * 0.1, -r * 0.82, r * 0.05, -r * 0.7, -r * 0.05, -r * 0.7], '#ffd36b', 1.2);
+      // barba
+      poly(g, [-r * 0.06, -r * 0.2, r * 0.06, -r * 0.2, r * 0.04, r * 0.0, -r * 0.04, r * 0.0], '#2a5aa0', 1.2);
+    },
   };
 
   function enemySprite(type, r, frame, flash) {
@@ -1346,7 +1634,7 @@ const Art = (() => {
   }
 
   function drawEnemy(g, e, face) {
-    const float = e.type === 'ghost' || e.type === 'ceifador' || e.type === 'rainha';
+    const float = e.type === 'ghost' || e.type === 'ceifador' || e.type === 'rainha' || e.type === 'witch';
     shadow(g, e.x, e.y + e.r * 0.85, e.r * (float ? 0.65 : 0.95), e.r * (float ? 0.25 : 0.38));
     let sx = face;
     let sy = 1;
@@ -1356,8 +1644,8 @@ const Art = (() => {
     if (float) {
       oy = Math.sin(e.phase * 3) * 4 - 8;
       rot = Math.sin(e.phase * 2) * 0.06;
-      glow(g, e.x, e.y + oy, e.r * 2.2, e.type === 'ghost' ? '#7fd8ff' : e.type === 'rainha' ? '#9af0ff' : '#c77dff', 0.18);
-    } else if (e.type === 'fireslime') {
+      glow(g, e.x, e.y + oy, e.r * 2.2, e.type === 'ghost' ? '#7fd8ff' : e.type === 'rainha' ? '#9af0ff' : e.type === 'witch' ? '#9dff6a' : '#c77dff', 0.18);
+    } else if (e.type === 'fireslime' || e.type === 'frog') {
       // pulinhos achatando o corpo
       const h = Math.abs(Math.sin(e.phase * 6));
       oy = -h * 8;
@@ -1368,7 +1656,7 @@ const Art = (() => {
       oy = Math.sin(e.phase * 70) * 1.5;
       sx *= 1 + (0.9 - e.fuse) * 0.25;
       sy = 1 + (0.9 - e.fuse) * 0.25;
-    } else if (e.type === 'werewolf' || e.type === 'yak') {
+    } else if (e.type === 'werewolf' || e.type === 'yak' || e.type === 'sandworm') {
       frame = Math.floor(e.phase * 10) % 2;
       oy = -Math.abs(Math.sin(e.phase * 10)) * 3;
       if (e.windup > 0) {
@@ -2179,6 +2467,102 @@ const Art = (() => {
         poly(g, [-6, -31, 6, -31, 6, -29, -6, -29], '#c02a2a', 1);
       },
     },
+    // ---------- Pântano ----------
+    swamptree: {
+      size: 160,
+      draw(g) {
+        shadow(g, 4, 2, 32, 10);
+        // raízes
+        for (const s of [-1, 1]) stroke2(g, [s * 4, -6, s * 16, 2], 3, '#3a3020');
+        poly(g, [-8, 0, 8, 0, 6, -40, -6, -40], lin(g, -8, 0, 8, 0, '#5a4a30', '#2a2216'), 2);
+        for (const [x, y, r] of [[-18, -48, 15], [16, -50, 15], [0, -64, 18], [-6, -52, 14], [10, -42, 13]]) ball(g, x, y, r, '#3a5a2a', 2);
+        // musgo pendurado
+        for (const x of [-22, -8, 6, 20]) stroke2(g, [x, -42, x + 1, -26 - (x % 3) * 3], 1.6, '#6a8a3a');
+      },
+    },
+    reeds: {
+      size: 70,
+      draw(g, v) {
+        shadow(g, 0, 1, 14, 4);
+        for (let k = -2; k <= 2; k++) {
+          stroke2(g, [k * 4, 0, k * 5, -26 - Math.abs(k) * 2 - v * 3], 1.4, '#5a7a2a');
+          oval(g, k * 5, -28 - Math.abs(k) * 2 - v * 3, 2, 5, '#6a4a2a', 1, false);
+        }
+      },
+    },
+    shroom: {
+      size: 70,
+      light: { x: 0, y: -14, color: '#9dff6a', r: 40 },
+      draw(g, v) {
+        shadow(g, 0, 2, 16, 5);
+        for (const [x, h, w] of [[-8, 14, 9], [6, 22 + v * 3, 12], [14, 10, 6]]) {
+          poly(g, [x - 2.5, 0, x + 2.5, 0, x + 2, -h, x - 2, -h], '#e8e0c8', 1.2);
+          oval(g, x, -h, w, w * 0.55, '#6ad04a', 1.6);
+          ball(g, x - w * 0.3, -h - 2, 1.6, '#e8ffd0', 0, false);
+        }
+      },
+    },
+    // ---------- Deserto ----------
+    cactus: {
+      size: 110,
+      draw(g, v) {
+        shadow(g, 0, 2, 16, 5);
+        rrect(g, -6, -50 - v * 6, 12, 50 + v * 6, 6, lin(g, -6, 0, 6, 0, '#6aa84a', '#3a7a2a'), 2);
+        rrect(g, -18, -34, 8, 16, 4, '#5a9a3a', 1.6);
+        rrect(g, -18, -24, 14, 6, 3, '#5a9a3a', 1.6);
+        rrect(g, 10, -42, 8, 18, 4, '#5a9a3a', 1.6);
+        rrect(g, 4, -28, 14, 6, 3, '#5a9a3a', 1.6);
+        if (v === 1) ball(g, 0, -56, 3, '#ff6a8a', 1, false);
+      },
+    },
+    sandrock: {
+      size: 90,
+      draw(g, v) {
+        shadow(g, 3, 2, 26, 7);
+        poly(g, [-22, 0, -18, -20 - v * 4, -4, -32, 14, -26, 22, 0], lin(g, -22, -30, 22, 0, '#d8a868', '#8a6038'), 2);
+        g.strokeStyle = 'rgba(90,50,20,0.5)';
+        g.lineWidth = 1.5;
+        g.beginPath();
+        g.moveTo(-16, -12); g.lineTo(14, -14);
+        g.moveTo(-12, -22); g.lineTo(8, -22);
+        g.stroke();
+      },
+    },
+    pillar: {
+      size: 130,
+      draw(g, v) {
+        shadow(g, 2, 2, 18, 6);
+        const h = v === 2 ? 34 : 64;
+        poly(g, [-11, 0, 11, 0, 9, -h, -9, -h], lin(g, -11, 0, 11, 0, '#e8d0a0', '#a8885a'), 2);
+        for (let y = -10; y > -h; y -= 12) {
+          g.strokeStyle = 'rgba(90,60,30,0.4)';
+          g.lineWidth = 1;
+          g.beginPath();
+          g.moveTo(-9, y); g.lineTo(9, y);
+          g.stroke();
+        }
+        if (v !== 2) poly(g, [-14, -h, 14, -h, 12, -h - 6, -12, -h - 6], '#d8bc88', 1.6);
+        else poly(g, [-9, -h, -2, -h - 6, 4, -h - 2, 9, -h], '#c8a878', 1.4);
+        // hieróglifos
+        g.fillStyle = 'rgba(60,40,20,0.6)';
+        g.fillRect(-3, -h * 0.55, 2, 6);
+        g.fillRect(1, -h * 0.4, 3, 2);
+      },
+    },
+    cowskull: {
+      size: 50,
+      draw(g) {
+        shadow(g, 0, 1, 12, 4);
+        oval(g, 0, -5, 7, 6, '#f4ecd8', 1.4);
+        stroke2(g, [-5, -8, -12, -12, -14, -6], 1.8, '#f4ecd8');
+        stroke2(g, [5, -8, 12, -12, 14, -6], 1.8, '#f4ecd8');
+        g.fillStyle = '#1d1418';
+        g.beginPath();
+        g.arc(-2.5, -6, 1.6, 0, TAU);
+        g.arc(2.5, -6, 1.6, 0, TAU);
+        g.fill();
+      },
+    },
   };
 
   // ---------- Biomas: cores do chão, decoração e objetos de cada mapa ----------
@@ -2192,6 +2576,16 @@ const Art = (() => {
       base: '#2e2523', tones: ['#362b28', '#28201e', '#3c302b', '#231b1a', '#40322b', '#33261f'],
       blades: ['rgba(0,0,0,0.3)', 'rgba(255,120,40,0.12)'], litter: ['#5a4038', '#4a3430', '#ff6a1a'],
       path: ['rgba(15,8,6,0.5)', '#4a3a34', '#5c4a42', 'rgba(130,105,95,0.4)', '#7a6a62'], fog: '#ff9a6a',
+    },
+    swamp: {
+      base: '#2f4a2a', tones: ['#35522e', '#2a4226', '#3a5a30', '#253a22', '#33502a', '#3a4a26'],
+      blades: ['rgba(10,30,10,0.3)', 'rgba(140,190,90,0.15)'], litter: ['#5a6a2a', '#4a5a20', '#7a8a3a'],
+      path: ['rgba(20,35,15,0.55)', '#4a4a2a', '#5a5a34', 'rgba(110,110,70,0.4)', '#7a7a5a'], fog: '#b8e0a0',
+    },
+    sand: {
+      base: '#d8b878', tones: ['#e0c088', '#d0ac6a', '#e8c890', '#c8a060', '#dcb87a', '#d4b070'],
+      blades: ['rgba(120,80,30,0.2)', 'rgba(255,240,200,0.35)'], litter: ['#b08850', '#c89a5a', '#a07840'],
+      path: ['rgba(140,100,50,0.4)', '#b89458', '#c8a468', 'rgba(240,220,170,0.4)', '#9a7a48'], fog: '#fff0c8',
     },
     snow: {
       base: '#dbe6f1', tones: ['#e6eef7', '#d0dcea', '#f0f5fb', '#c8d6e6', '#e0eaf4', '#d6e3ef'],
@@ -2335,7 +2729,112 @@ const Art = (() => {
     }
   }
 
+  function decorSwamp(g, R, rr, spot) {
+    // poças de água lodosa
+    for (let i = 0; i < 4; i++) {
+      if (R() < 0.3) continue;
+      const s = spot(70);
+      if (!s) continue;
+      const [x, y] = s;
+      const rx = rr(26, 52);
+      const ry = rx * rr(0.4, 0.55);
+      oval(g, x, y + 2, rx + 4, ry + 3, '#1e2a14', 1.6, false);
+      const gr = g.createRadialGradient(x - rx * 0.3, y - ry * 0.3, 2, x, y, rx);
+      gr.addColorStop(0, '#5a7a4a');
+      gr.addColorStop(1, '#22361e');
+      g.fillStyle = gr;
+      g.beginPath();
+      g.ellipse(x, y, rx, ry, 0, 0, TAU);
+      g.fill();
+      // vitórias-régias e bolhas
+      for (let k = 0; k < 3; k++) {
+        const lx = x + rr(-rx * 0.6, rx * 0.6);
+        const ly = y + rr(-ry * 0.5, ry * 0.5);
+        g.fillStyle = '#4a9a3a';
+        g.beginPath();
+        g.ellipse(lx, ly, 6, 3.5, 0, 0.3, TAU - 0.3);
+        g.lineTo(lx, ly);
+        g.fill();
+        if (R() < 0.3) ball(g, lx + 2, ly - 1, 1.6, '#ff8fb0', 0.6, false);
+      }
+      ball(g, x + rr(-rx * 0.4, rx * 0.4), y, 2, '#8aaa6a', 0.6, false);
+    }
+    // juncos
+    for (let i = 0; i < 10; i++) {
+      const s = spot(30);
+      if (!s) continue;
+      const [x, y] = s;
+      for (let k = -1; k <= 1; k++) {
+        stroke2(g, [x + k * 3, y, x + k * 4, y - rr(12, 20)], 1.2, '#5a7a2a');
+      }
+      if (R() < 0.5) oval(g, x, y - 18, 1.8, 4, '#6a4a2a', 0.8, false);
+    }
+    // cogumelos brilhantes
+    for (let i = 0; i < 4; i++) {
+      const s = spot(30);
+      if (!s) continue;
+      const [x, y] = s;
+      glow(g, x, y - 4, 14, '#9dff6a', 0.4);
+      oval(g, x, y - 4, 4, 3, '#7aff6a', 1, false);
+    }
+  }
+
+  function decorSand(g, R, rr, spot) {
+    // dunas (ondulações de areia)
+    for (let i = 0; i < 12; i++) {
+      const x = rr(0, CHUNK);
+      const y = rr(0, CHUNK);
+      g.strokeStyle = R() < 0.5 ? 'rgba(160,120,60,0.35)' : 'rgba(255,240,200,0.4)';
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(x - 40, y);
+      g.quadraticCurveTo(x, y - rr(6, 14), x + 40, y);
+      g.stroke();
+    }
+    // pedrinhas e conchas
+    for (let i = 0; i < 6; i++) {
+      const s = spot(30);
+      if (!s) continue;
+      const [x, y] = s;
+      const sz = rr(3, 6);
+      shadow(g, x + 1, y + sz * 0.5, sz * 1.1, sz * 0.4);
+      oval(g, x, y, sz * 1.2, sz * 0.8, '#a88a60', 1.2);
+    }
+    // ossinhos espalhados
+    for (let i = 0; i < 3; i++) {
+      if (R() < 0.4) continue;
+      const s = spot(30);
+      if (!s) continue;
+      const [x, y] = s;
+      stroke2(g, [x - 6, y, x + 6, y - 2], 2, '#f4ecd8');
+    }
+    // capim seco
+    for (let i = 0; i < 6; i++) {
+      const s = spot(30);
+      if (!s) continue;
+      const [x, y] = s;
+      for (let k = -1; k <= 1; k++) stroke2(g, [x, y, x + k * 6, y - rr(6, 10)], 1, '#a88a48');
+    }
+  }
+
   function placeBiomeProps(place, R) {
+    if (biome === 'swamp') {
+      const n = 1 + Math.floor(R() * 3);
+      for (let i = 0; i < n; i++) place('swamptree', 110);
+      if (R() < 0.7) place('reeds', 50);
+      if (R() < 0.6) place('reeds', 50);
+      if (R() < 0.5) place('shroom', 60);
+      if (R() < 0.3) place('skulls', 50);
+      return;
+    }
+    if (biome === 'sand') {
+      const n = Math.floor(R() * 3);
+      for (let i = 0; i < n; i++) place('cactus', 80);
+      if (R() < 0.6) place('sandrock', 80);
+      if (R() < 0.35) { place('pillar', 70); place('pillar', 70); }
+      if (R() < 0.4) place('cowskull', 50);
+      return;
+    }
     if (biome === 'lava') {
       const n = 1 + Math.floor(R() * 3);
       for (let i = 0; i < n; i++) place('basalt', 80);
@@ -2505,6 +3004,14 @@ const Art = (() => {
       decorSnow(g, R, rr, spot);
       return { canvas: c, props: makeProps(cx, cy, P) };
     }
+    if (biome === 'swamp') {
+      decorSwamp(g, R, rr, spot);
+      return { canvas: c, props: makeProps(cx, cy, P) };
+    }
+    if (biome === 'sand') {
+      decorSand(g, R, rr, spot);
+      return { canvas: c, props: makeProps(cx, cy, P) };
+    }
     // tufos de grama cartoon
     for (let i = 0; i < 16; i++) {
       const s = spot(30);
@@ -2607,7 +3114,7 @@ const Art = (() => {
   }
 
   // Altura aproximada de cada objeto (para deixar transparente quando o jogador passa atrás).
-  const PROP_HEIGHT = { tree: 90, deadtree: 95, lantern: 65, fence: 30, tomb: 34, cross: 36, charred: 95, pine: 110, frosttree: 95, icecrystal: 40, obsidian: 40, basalt: 38, snowman: 40 };
+  const PROP_HEIGHT = { swamptree: 95, cactus: 60, pillar: 70, tree: 90, deadtree: 95, lantern: 65, fence: 30, tomb: 34, cross: 36, charred: 95, pine: 110, frosttree: 95, icecrystal: 40, obsidian: 40, basalt: 38, snowman: 40 };
 
   function drawProp(g, p, t, alpha) {
     const def = PROPS[p.type];
@@ -3011,6 +3518,26 @@ const Art = (() => {
       oval(g, 0, 0, 6, 12, '#4a5260', 1.8);
       poly(g, [-6, -10, 6, -10, 3, -16, -3, -16], '#c02a2a', 1.4);
       g.restore();
+    },
+    caveiras(g) {
+      glow(g, 0, 0, 26, '#9dff6a', 0.6);
+      skull(g, -9, -2, 9, '#9dff6a');
+      skull(g, 4, 6, 7, '#9dff6a');
+      for (let i = 0; i < 3; i++) ball(g, -14 + i * 6, 14, 2, '#9dff6a', 0, false);
+    },
+    revive(g) {
+      glow(g, 0, 0, 26, '#ffd36b', 0.6);
+      // ankh
+      g.strokeStyle = OUT;
+      g.lineWidth = 8;
+      g.beginPath();
+      g.ellipse(0, -8, 7, 9, 0, 0, TAU);
+      g.moveTo(0, 1); g.lineTo(0, 20);
+      g.moveTo(-12, 4); g.lineTo(12, 4);
+      g.stroke();
+      g.strokeStyle = '#ffd36b';
+      g.lineWidth = 4.5;
+      g.stroke();
     },
     lock(g) {
       g.strokeStyle = OUT;

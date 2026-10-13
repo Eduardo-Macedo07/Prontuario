@@ -256,8 +256,11 @@ button.secondary {
 .card .desc { font-size: 14px; color: #e8e0d0; line-height: 1.4; padding: 0 12px; }
 .card .key { margin: 12px 0 12px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
 
-.card.char { width: 168px; overflow: hidden; }
-.card.char .portrait { display: block; width: 100%; height: 146px; object-fit: cover; border-bottom: 2px solid #3d3556; }
+.card.char { width: 138px; overflow: hidden; }
+.card.char .desc:not(.passive) { display: none; }
+.card.char .desc { font-size: 11px; }
+.card.char .name { font-size: 15px; }
+.card.char .portrait { display: block; width: 100%; height: 124px; object-fit: cover; border-bottom: 2px solid #3d3556; }
 .card.char .ctitle { margin-top: 10px; font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; font-weight: 900; }
 .card.char.selected {
   border-color: var(--accent);

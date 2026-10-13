@@ -204,6 +204,30 @@ const Sound = (() => {
     snowmetal: { bpm: 200, style: 'snow', level: 2 },
     snowmetalboss: { bpm: 216, style: 'snow', level: 2, boss: true },
   };
+  const MODES2 = {
+    // Pântano: banjo, sapos e bolhas (normal), drones e sinos afogados (difícil), doom arrastado (pesadelo)
+    swamp: { bpm: 104, style: 'swamp', level: 0 },
+    swampboss: { bpm: 124, style: 'swamp', level: 0, boss: true },
+    swampdark: { bpm: 76, style: 'swamp', level: 1 },
+    swampdarkboss: { bpm: 96, style: 'swamp', level: 1, boss: true },
+    swampmetal: { bpm: 84, style: 'swamp', level: 2 },
+    swampmetalboss: { bpm: 100, style: 'swamp', level: 2, boss: true },
+    // Deserto: alaúde e darbuka em escala hijaz (normal), vento e drones (difícil), metal árabe (pesadelo)
+    desert: { bpm: 112, style: 'desert', level: 0 },
+    desertboss: { bpm: 132, style: 'desert', level: 0, boss: true },
+    desertdark: { bpm: 84, style: 'desert', level: 1 },
+    desertdarkboss: { bpm: 104, style: 'desert', level: 1, boss: true },
+    desertmetal: { bpm: 180, style: 'desert', level: 2 },
+    desertmetalboss: { bpm: 198, style: 'desert', level: 2, boss: true },
+  };
+  Object.assign(MODES, MODES2);
+  // Lá hijaz (A Bb C# D E F G)
+  const DESERT_SCALE = [0, 1, 4, 5, 7, 8, 10, 12];
+  const DESERT_ROOTS = [0, 1, 0, -2];
+  // Mi menor pentatônica para o pântano
+  const SWAMP_SCALE = [-5, -2, 0, 2, 5, 7, 10, 12];
+  const SWAMP_ROOTS = [-5, -5, 0, -2];
+
   // Mi frígio dominante (E F G# A B C D), em semitons a partir do lá 220
   const LAVA_SCALE = [-5, -4, -1, 0, 2, 3, 5, 7];
   const LAVA_ROOTS = [-5, -4, -5, -2];
@@ -252,6 +276,8 @@ const Sound = (() => {
     if (M.style === 'metal') return scheduleMetal(M, s, t, sd);
     if (M.style === 'lava') return scheduleLava(M, s, t, sd);
     if (M.style === 'snow') return scheduleSnow(M, s, t, sd);
+    if (M.style === 'swamp') return scheduleSwamp(M, s, t, sd);
+    if (M.style === 'desert') return scheduleDesert(M, s, t, sd);
     const at = t - ac.currentTime;
     const bar = Math.floor(s / 16);
     const i = s % 16;
@@ -436,6 +462,100 @@ const Sound = (() => {
       if (i % 2 === 1) noise({ filter: 'bandpass', f0: 2000, dur: 0.08, vol: 0.1, q: 0.7, at, dest });
       if (i === 0) noise({ filter: 'highpass', f0: 4500, dur: 1.2, vol: 0.09, at, dest });
       if (M.boss || i % 2 === 0) noise({ filter: 'highpass', f0: 8000, dur: 0.03, vol: 0.03, at, dest });
+    }
+  }
+
+  function scheduleSwamp(M, s, t, sd) {
+    const at = t - ac.currentTime;
+    const bar = Math.floor(s / 16);
+    const i = s % 16;
+    const root = SWAMP_ROOTS[bar];
+    const dest = musicBus;
+    if (M.level === 0) {
+      // banjo dedilhado, baixo de tuba, sapos coaxando e bolhas
+      if (i % 2 === 0) {
+        const k = (bar * 8 + i / 2) % 8;
+        const n = SWAMP_SCALE[[0, 2, 4, 2, 5, 4, 2, 1][k]] + 12;
+        tone({ type: 'triangle', f0: hz(n), dur: 0.22, vol: 0.05, at, dest, lp: 2600 });
+        tone({ type: 'square', f0: hz(n), dur: 0.08, vol: 0.012, at, dest, lp: 3000 });
+      }
+      if (i === 0 || i === 8) tone({ type: 'triangle', f0: hz(root - 24), dur: sd * 3, vol: 0.09, at, dest, lp: 400 });
+      if (i === 4 || i === 12) tone({ type: 'triangle', f0: hz(root - 17), dur: sd * 2, vol: 0.06, at, dest, lp: 400 });
+      if (i === 6 && bar % 2 === 0) tone({ type: 'square', f0: 110, f1: 70, dur: 0.18, vol: 0.05, at, dest, lp: 500 });
+      if (i === 14 && bar % 2 === 1) tone({ type: 'sine', f0: 300, f1: 900, dur: 0.08, vol: 0.03, at, dest });
+      if (i === 4 || i === 12 || (M.boss && i % 4 === 0)) noise({ filter: 'bandpass', f0: 1500, dur: 0.08, vol: 0.06, q: 1, at, dest });
+      if (i === 0 || (M.boss && i === 8)) tone({ type: 'sine', f0: 110, f1: 45, dur: 0.18, vol: 0.22, at, dest });
+    } else if (M.level === 1) {
+      // drones de lodo e sinos afogados
+      if (i === 0) {
+        tone({ type: 'sawtooth', f0: hz(root - 24), dur: sd * 16, vol: 0.035, attack: 1, at, dest, lp: 300 });
+        tone({ type: 'sawtooth', f0: hz(root - 23), dur: sd * 16, vol: 0.02, attack: 1, at, dest, lp: 300 });
+        noise({ filter: 'lowpass', f0: 300, dur: sd * 16, vol: 0.04, attack: 1, at, dest });
+      }
+      if (i === 0 || i === 10) {
+        const n = SWAMP_SCALE[(bar * 2 + i) % 8] + 12;
+        tone({ type: 'sine', f0: hz(n), dur: 2.4, vol: 0.035, at, dest, lp: 900 });
+        tone({ type: 'sine', f0: hz(n) * 2.4, dur: 1.2, vol: 0.008, at, dest });
+      }
+      if (i === 0 || i === 3 || (M.boss && (i === 8 || i === 11))) tone({ type: 'sine', f0: 70, f1: 35, dur: 0.35, vol: 0.25, at, dest });
+    } else {
+      // doom: guitarra arrastada e muito grave, bateria lenta e pesada
+      if (i % 4 === 0) {
+        const n = i === 12 ? root + 1 : root;
+        for (const k of [n - 24, n - 17, n - 12]) tone({ type: 'sawtooth', f0: hz(k), dur: sd * 3.8, vol: 0.07, at, dest: distBus, lp: 1200 });
+      }
+      tone({ type: 'square', f0: hz(root - 24), dur: sd * 0.9, vol: 0.04, at, dest, lp: 250 });
+      if (i === 0 || i === 6 || i === 10 || (M.boss && i % 2 === 0)) tone({ type: 'sine', f0: 120, f1: 35, dur: 0.25, vol: 0.32, at, dest });
+      if (i === 8) noise({ filter: 'bandpass', f0: 1600, dur: 0.3, vol: 0.18, q: 0.7, at, dest });
+      if (i === 0) noise({ filter: 'highpass', f0: 4000, dur: 1.6, vol: 0.08, at, dest });
+    }
+  }
+
+  function scheduleDesert(M, s, t, sd) {
+    const at = t - ac.currentTime;
+    const bar = Math.floor(s / 16);
+    const i = s % 16;
+    const root = DESERT_ROOTS[bar];
+    const dest = musicBus;
+    // darbuka: dum (grave) e tek (agudo)
+    const dum = () => tone({ type: 'sine', f0: 130, f1: 60, dur: 0.22, vol: 0.26, at, dest });
+    const tek = () => noise({ filter: 'bandpass', f0: 3200, dur: 0.05, vol: 0.08, q: 2, at, dest });
+    if (M.level === 0) {
+      if (i === 0 || i === 6 || (M.boss && i === 10)) dum();
+      if ([3, 4, 8, 11, 12, 14].includes(i)) tek();
+      if (i === 0) tone({ type: 'sawtooth', f0: hz(root - 24), dur: sd * 16, vol: 0.035, attack: 0.4, at, dest, lp: 350 });
+      if (i % 2 === 0) {
+        const k = (bar * 8 + i / 2) % 16;
+        const pat = [0, 1, 2, 3, 4, 3, 2, 1, 4, 5, 6, 5, 4, 3, 1, 0];
+        if (k % 4 !== 3) {
+          // alaúde: ataque rápido e som curto
+          tone({ type: 'sawtooth', f0: hz(DESERT_SCALE[pat[k]] + root + 12), dur: 0.25, vol: 0.03, at, dest, lp: 2200 });
+          tone({ type: 'triangle', f0: hz(DESERT_SCALE[pat[k]] + root + 24), dur: 0.12, vol: 0.012, at, dest });
+        }
+      }
+    } else if (M.level === 1) {
+      if (i === 0) {
+        noise({ filter: 'bandpass', f0: 350, f1: 900, dur: sd * 16, vol: 0.05, q: 3, attack: 1.2, at, dest });
+        tone({ type: 'sine', f0: hz(root - 36), dur: sd * 16, vol: 0.1, attack: 0.6, at, dest });
+        tone({ type: 'sawtooth', f0: hz(root - 17), dur: sd * 16, vol: 0.015, attack: 1, at, dest, lp: 500 });
+      }
+      if (i === 4 || i === 12) {
+        const n = DESERT_SCALE[(bar * 3 + i) % 8] + root;
+        tone({ type: 'triangle', f0: hz(n), dur: sd * 6, vol: 0.03, attack: 0.15, at, dest, lp: 1100 });
+      }
+      if (i === 0 || (M.boss && i % 4 === 0)) dum();
+      if (M.boss && i % 4 === 2) tek();
+    } else {
+      // metal árabe: riff na escala hijaz, bumbo duplo e darbuka por cima
+      const k = [0, 0, 1, 0, 2, 0, 1, 0][Math.floor(i / 2)];
+      const n = DESERT_SCALE[k] + root;
+      tone({ type: 'sawtooth', f0: hz(n - 12), dur: sd * 0.8, vol: 0.07, at, dest: distBus, lp: 1700 });
+      if (i === 0 || i === 8) for (const q of [root - 12, root - 5]) tone({ type: 'sawtooth', f0: hz(q), dur: sd * 3, vol: 0.06, at, dest: distBus });
+      tone({ type: 'sine', f0: 150, f1: 45, dur: 0.1, vol: M.boss || i % 2 === 0 ? 0.28 : 0.16, at, dest });
+      if (i === 4 || i === 12) noise({ filter: 'bandpass', f0: 1900, dur: 0.14, vol: 0.16, q: 0.7, at, dest });
+      if (i % 4 === 3) tek();
+      if (i === 0) noise({ filter: 'highpass', f0: 5000, dur: 0.9, vol: 0.08, at, dest });
+      if (bar === 2 && i % 4 === 0) tone({ type: 'sawtooth', f0: hz(DESERT_SCALE[(i / 4 + 3) % 8] + root + 12), dur: sd * 3.5, vol: 0.045, at, dest: distBus });
     }
   }
 

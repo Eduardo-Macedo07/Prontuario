@@ -33,6 +33,8 @@ crescem com o tempo (aos 7 minutos têm cerca de 8x a vida do começo).
 | **Cemitério Sombrio** (floresta) | Esqueletos, múmias, ceifadores, lobisomens, cavaleiros | Ceifador Ancestral: 5 ondas de alma em leque e invoca ceifadores |
 | **Vulcão Ardente** (lava) | Slime flamejante (pode deixar o chão em chamas), esqueleto negro (rápido), bombardeiro (para perto de você e explode: saia do círculo), golem de cinzas | Titã de Magma: chuva de meteoros marcados e 3 faixas de fogo |
 | **Picos Gelados** (neve) | Iaque das neves (investida), abominável (arremessa bolas de neve), troll gelado (regenera), guarda cristalino (armadura, atira cristais) | Rainha do Gelo: estrela de 6 faixas de gelo e estacas caindo em volta de você |
+| **Pântano Venenoso** (lodo) | Sapo gigante, zumbi do pântano, bruxa (lança maldições), múmias | Hidra do Pântano: 3 faixas de veneno e chuva de veneno |
+| **Deserto Amaldiçoado** (areia e ruínas) | Escorpião (rápido), verme da areia (investida), guerreiro chacal (armadura), lobisomens | Faraó Amaldiçoado: ondas de areia em cruz e invoca múmias |
 
 Depois de vencer o chefão final aparece um **portal** para a dificuldade seguinte da mesma fase: fique dentro
 dele e você muda de dificuldade na hora, **mantendo armas, passivas, bênçãos e nível**. O relógio do chefão
@@ -82,14 +84,16 @@ Uma loja só, tudo em moedas douradas. O que é mais forte custa mais.
 
 | Item | Preço | Objetivo |
 | --- | --- | --- |
-| Maníaco / Golem de Pedra / Mercenário / Berserker | 6 / 9 / 11 / 14 | — / 1 chefão / nível 12 / concluir o Cemitério |
-| Armas: Aura Sagrada, Bumerangue, Bola de Fogo, Bombardeio, Raio em Cadeia, Chuva de Meteoros | 3, 4, 7, 7, 8, 9 | — |
-| Passivas: Regeneração, Sabedoria, Vampirismo, Dano Crítico, Projéteis | 2, 3, 5, 7, 12 | — |
+| Maníaco / Golem de Pedra / Mercenário / Berserker | 8 / 12 / 15 / 18 | — / 1 chefão / nível 12 / concluir o Cemitério |
+| Arqueira Élfica / Necromante | 20 / 26 | concluir o Vulcão / 40 mini-chefes |
+| Melhorias permanentes (valem em todas as partidas, cada nível mais caro): Vigor Eterno (+8% vida), Força Ancestral (+5% dano), Botas Aladas (+3% velocidade), Mente Afiada (+6% XP), Trevo Dourado (+0,5 Sorte), Faro de Tesouro (+10% moedas), Couraça (+1 armadura), Segunda Chance (reviver 1 vez por partida) | de 3 a 30 | Segunda Chance: concluir o Vulcão |
+| Armas: Aura Sagrada, Bumerangue, Bola de Fogo, Bombardeio, Raio em Cadeia, Chuva de Meteoros | 4, 6, 10, 10, 12, 14 | — |
+| Passivas: Regeneração, Sabedoria, Vampirismo, Dano Crítico, Projéteis | 3, 5, 8, 11, 18 | — |
 | Pular (pula a escolha) | 2, 3, 4, 6, 8 (5 níveis) | alcançar o nível 8 |
 | Atualizar (troca as opções) | 3, 4, 6, 8, 10 (5 níveis) | sobreviver 3 minutos |
 | Banir (remove uma arma ou passiva da partida) | 4, 6, 8, 10, 12 (5 níveis) | derrotar 1 chefão |
-| Espaço de arma (4º / 5º) | 5 / 12 | sobreviver 5 min / 3 chefões no total |
-| Espaço de passiva (3º / 4º) | 4 / 10 | nível 15 / sobreviver 7 min |
+| Espaço de arma (4º / 5º) | 8 / 18 | sobreviver 5 min / 3 chefões no total |
+| Espaço de passiva (3º / 4º) | 6 / 15 | nível 15 / sobreviver 7 min |
 
 As opções de nível ficam com cadeado até cumprir o objetivo. Cada nível comprado dá +1 uso por partida e o
 próximo nível fica mais caro. Na tela de subir de nível, os botões **Atualizar** (tecla `R`), **Banir** (clique
@@ -115,6 +119,14 @@ Cada desafio concluído dá moedas douradas na hora.
 | Mestre de Armas: levar uma arma ao nível 10 | 2 |
 | Concluir o Cemitério / o Vulcão / os Picos Gelados | 3 / 3 / 4 |
 | Concluir qualquer fase no Pesadelo | 5 |
+| Concluir o Pântano / o Deserto | 5 / 6 |
+| Concluir o Difícil em 3 fases / o Pesadelo em 3 fases / todas as 5 fases | 6 / 10 / 8 |
+| Chegar à Ameaça 5 / à Ameaça 10 | 4 / 8 |
+| Alcançar o nível 40 | 5 |
+| 10.000 inimigos / 100 mini-chefes / 100 moedas no total | 6 / 6 / 5 |
+| Concluir uma fase com 5 personagens diferentes | 8 |
+| Concluir uma fase sem fogueiras / usando só uma arma | 5 / 6 |
+| Derrotar um chefão final em menos de 45 s | 5 |
 
 ## Inimigos
 
@@ -142,6 +154,8 @@ Todos andam um pouco mais devagar que o seu personagem.
 | **Golem de Pedra** | Muita vida e armadura, lento, começa com Tremor | Mais dano quanto menor a vida (até +120%) |
 | **Mercenário** | Ágil, começa com a Metralhadora (balas que ricocheteiam) | +10% de dano a cada chefão derrotado |
 | **Berserker** (bárbaro) | Resistente e lento, começa com o Espadão (giro de dano altíssimo) | Cada nível aumenta em 5% toda a cura |
+| **Arqueira Élfica** | Rápida, começa com o Arco Caçador | +1 projétil a cada 8 níveis |
+| **Necromante** | Começa com as Caveiras Espectrais (teleguiadas, explodem em área) | Cada 100 abates dão +4% de dano (até +60%) |
 
 ## Passivas
 

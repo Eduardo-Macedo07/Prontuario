@@ -7,6 +7,8 @@ SPRITES = [
     ("golem", "golem", "Golem de Pedra", "personagem", 4, (160, 160)),
     ("mercenario", "mercenario", "Mercenário", "personagem", 4, (160, 160)),
     ("berserker", "berserker", "Berserker", "personagem", 4, (160, 160)),
+    ("arqueira", "arqueira", "Arqueira Élfica", "personagem", 4, (160, 160)),
+    ("necromante", "necromante", "Necromante", "personagem", 4, (160, 160)),
     ("esqueleto", "skeleton", "Esqueleto", "inimigo", 4, (72, 72)),
     ("cavaleiro", "skelknight", "Cavaleiro Esqueleto", "inimigo", 4, (102, 102)),
     ("mumia", "mummy", "Múmia", "inimigo", 4, (84, 84)),
