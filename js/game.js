@@ -740,6 +740,7 @@
     if (!diffUnlocked(run.stage, run.diff)) { run.stage = 'cemiterio'; run.diff = 0; }
     run.revives = 0;
     run.items = {};
+    run.adapt = 1;
     run.keys = 0;
     run.chestOpened = 0;
     run.nearChest = null;
@@ -1310,6 +1311,7 @@
       ['Redução de dano', pct(bladeReduction())],
       ['Regeneração', `${effRegen().toFixed(1)}/s`],
       ['Sorte (raridade, baús, ímãs, corações e moedas)', +effLuck().toFixed(1)],
+      ['Adaptação dos inimigos', 'x' + fmtNum(run.adapt)],
       ['XP e chance de moedas', `${pct(player.xpMul)} · ${pct(player.coinMul)}`],
       ['Espaços', `armas ${Object.keys(weapons).length}/${weaponSlots()} · passivas ${Object.keys(passiveLevels).length}/${passiveSlots()}`],
     ];
@@ -1464,7 +1466,8 @@
       unlockMsg = msgs.map((m) => `<p class="new">${m}!</p>`).join('');
     }
     $('resultTitle').textContent = won ? 'Fase concluída!' : 'Você morreu';
-    const threatRow = run.cleared ? `<div><span>Ameaça alcançada</span><b>${threat()}</b></div>` : '';
+    const threatRow = (run.cleared ? `<div><span>Ameaça alcançada</span><b>${threat()}</b></div>` : '')
+      + `<div><span>Adaptação dos inimigos</span><b>x${fmtNum(run.adapt)}</b></div>`;
     $('resultTitle').className = won ? 'victory' : 'danger';
     $('stats').innerHTML = `
       <div><span>Fase</span><b>${STAGES[run.stage].name} · ${DIFFS[run.diff].name}</b></div>`
@@ -2079,24 +2082,47 @@
     return { x: player.x + Math.cos(a) * d, y: player.y + Math.sin(a) * d };
   }
 
+  // ============================================================
+  // Adaptação: os inimigos acompanham a força da sua build.
+  // A cada mini-chefe ou chefão derrotado, compara o tempo que ele levou para morrer
+  // com um tempo-alvo. Matou rápido demais -> a adaptação sobe; sofreu -> desce (mínimo 1).
+  // ============================================================
+  const ADAPT_MAX = 20;
+  const TTK_TARGET = { elite: 3, boss: 22, final: 38 };
+  // fases mais avançadas começam um pouco mais duras
+  const STAGE_TIER = { cemiterio: 1, vulcao: 1.1, neve: 1.15, pantano: 1.22, deserto: 1.3 };
+
+  function adaptFeedback(e) {
+    if (!e.firstHit) return;
+    const ttk = Math.max(0.15, time - e.firstHit);
+    const target = e.final ? TTK_TARGET.final : e.boss ? TTK_TARGET.boss : TTK_TARGET.elite;
+    // passos suaves para não dar saltos de dificuldade
+    const step = clamp(Math.pow(target / ttk, 0.3), 0.85, e.boss ? 1.45 : 1.18);
+    run.adapt = clamp(run.adapt * step, 1, ADAPT_MAX);
+  }
+
+  // Vida extra pela adaptação: chefões e mini-chefes sentem tudo, os comuns só parte.
+  const adaptHp = (kind) => (kind === 'normal' ? Math.pow(run.adapt, 0.65) : run.adapt);
+
   function spawnEnemy(type, x, y, hpMul) {
     const T = ENEMY_TYPES[type];
     if (x === undefined) ({ x, y } = spawnPoint());
-    // Fica mais forte com o tempo (7 min = 8x a vida) e com a dificuldade.
+    // Fica mais forte com o tempo (7 min = 8x a vida), com a dificuldade, a fase e a adaptação.
     const D = DIFFS[run.diff];
     const m = time / 60;
-    const hp = T.hp * (1 + m * 0.7 + m * m * 0.04) * D.hp * threatHp() * (hpMul || 1);
+    const hp = T.hp * (1 + m * 0.7 + m * m * 0.04) * D.hp * threatHp() * (STAGE_TIER[run.stage] || 1)
+      * adaptHp(T.boss ? 'boss' : 'normal') * (hpMul || 1);
     const base = CHARACTERS[player.char].speed;
     const e = {
       type, x, y, r: T.r, hp, maxHp: hp,
       // fica sempre abaixo de 60% da velocidade base do personagem
       speed: base * Math.min(0.6, T.speed * (1 + Math.min(time / 600, 0.1))),
-      dmg: T.dmg * (1 + m * 0.14) * D.dmg * threatDmg(),
+      dmg: T.dmg * (1 + m * 0.14) * D.dmg * threatDmg() * (1 + (run.adapt - 1) * 0.2),
       xp: T.xp, color: T.color, boss: !!T.boss, final: !!T.final, armor: T.armor || 1,
       flash: 0, kbx: 0, kby: 0, orbitCd: 0, phase: rand(0, TAU), summonT: 3, dead: false,
       lungeCd: rand(1, 3), windup: 0, dashT: 0, dashX: 0, dashY: 0, missileT: 2.5,
       slamT: 2.5, slamWind: 0, fireT: 3, bornAt: time, elite: false,
-      fuse: 0, throwT: rand(2, 5), waveT: 3, starT: 2.5, rainT: 4,
+      fuse: 0, throwT: rand(2, 5), waveT: 3, starT: 2.5, rainT: 4, firstHit: 0, burst: 0, shieldT: 0,
     };
     enemies.push(e);
     return e;
@@ -2104,7 +2130,7 @@
 
   // Mini-chefe: versão maior e dourada de um inimigo comum, com bem mais vida.
   function spawnElite(type) {
-    const e = spawnEnemy(type || pickEnemyType(), undefined, undefined, 5);
+    const e = spawnEnemy(type || pickEnemyType(), undefined, undefined, 5 * run.adapt / adaptHp('normal'));
     e.elite = true;
     e.r = Math.round(e.r * 1.4);
     e.dmg *= 1.5;
@@ -2233,6 +2259,18 @@
     let dmg = base * effDmgMul() * e.armor;
     const crit = Math.random() < player.crit;
     if (crit) dmg *= player.critMul;
+    if (!e.firstHit) e.firstHit = time;
+    if (e.boss) {
+      // Resistência de chefão: ele não perde mais que ~9% da vida por segundo (6% o final).
+      // O que passar disso só causa 3% do dano. Assim nenhum chefão evapora em 1 segundo.
+      const cap = e.maxHp * (e.final ? 0.06 : 0.09);
+      if (e.burst + dmg > cap) {
+        const free = Math.max(0, cap - e.burst);
+        dmg = free + (dmg - free) * 0.03;
+        e.shieldT = 0.25;
+      }
+      e.burst += dmg;
+    }
     dmg = Math.max(1, Math.round(dmg));
     e.hp -= dmg;
     e.flash = 0.1;
@@ -2252,6 +2290,7 @@
 
   function killEnemy(e) {
     e.dead = true;
+    if (e.elite || e.boss) adaptFeedback(e);
     kills++;
     Sound.play(e.boss ? 'bossdeath' : 'kill');
     burst(e.x, e.y, e.color, e.boss ? 40 : 7, e.boss ? 280 : 150);
@@ -2354,6 +2393,11 @@
     player.invuln = 0.6;
     run.bestHitless = Math.max(run.bestHitless, time - run.lastHurt);
     run.lastHurt = time;
+    // apanhando muito com pouca vida: os inimigos aliviam um pouco
+    if (player.hp < player.maxHp * 0.35 && time - (run.adaptEase || 0) > 2) {
+      run.adaptEase = time;
+      run.adapt = Math.max(1, run.adapt * 0.94);
+    }
     shake = Math.max(shake, 7);
     hurtFlash = 1;
     Sound.play('hurt');
@@ -2717,6 +2761,10 @@
       e.kbx -= e.kbx * decay;
       e.kby -= e.kby * decay;
       e.flash -= dt;
+      if (e.boss) {
+        e.burst *= Math.exp(-dt);
+        e.shieldT -= dt;
+      }
       e.orbitCd -= dt;
       e.phase += dt;
 
@@ -3747,6 +3795,14 @@
       ctx.stroke();
       ctx.restore();
     }
+    if (e.shieldT > 0) {
+      // resistência ativa: escudo azul em volta do chefão
+      ctx.strokeStyle = `rgba(150,220,255,${0.4 + Math.sin(time * 30) * 0.2})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, e.r * 1.25, 0, TAU);
+      ctx.stroke();
+    }
     if (e.rootT > 0) {
       // ratoeira presa no pé
       ctx.strokeStyle = '#c8ccd4';
@@ -4641,7 +4697,8 @@
     const sb = run.cleared
       ? `☠ Ameaça ${threat()} · inimigos +${Math.round((threatHp() - 1) * 100)}% vida · sobe em ${fmtTime(30 - ((time - run.clearTime) % 30))}`
       : run.finalSpawned ? 'Derrote o chefão final!' : `Chefão final em ${fmtTime(Math.max(0, left))} · ou invoque no Altar Maior`;
-    if ($('stagebar').textContent !== sb) $('stagebar').textContent = sb;
+    const sbFull = run.adapt > 1.05 ? `${sb} · inimigos adaptados x${fmtNum(run.adapt)}` : sb;
+    if ($('stagebar').textContent !== sbFull) $('stagebar').textContent = sbFull;
     $('stagebar').classList.toggle('alert', run.finalSpawned || left < 30);
     // medidor de Ameaça: enche até subir de nível
     $('threatbar').classList.toggle('hidden', !run.cleared);
@@ -4740,6 +4797,7 @@
     get save() { return save; },
     get lanes() { return lanes; },
     get run() { return run; },
+    killEnemy,
     get time() { return time; },
     get lowQuality() { return lowQuality; },
     get zoom() { return zoom; },

@@ -36,6 +36,14 @@ crescem com o tempo (aos 7 minutos têm cerca de 8x a vida do começo).
 | **Pântano Venenoso** (lodo) | Sapo gigante, zumbi do pântano, bruxa (lança maldições), múmias | Hidra do Pântano: 3 faixas de veneno e chuva de veneno |
 | **Deserto Amaldiçoado** (areia e ruínas) | Escorpião (rápido), verme da areia (investida), guerreiro chacal (armadura), lobisomens | Faraó Amaldiçoado: ondas de areia em cruz e invoca múmias |
 
+**Adaptação dos inimigos:** os inimigos acompanham a força da sua build. A cada mini-chefe ou chefão
+derrotado, o jogo compara quanto tempo ele levou para morrer com um tempo-alvo (mini-chefe 3 s, chefão 22 s,
+chefão final 38 s). Matou rápido demais, a adaptação sobe (até x20); se você estiver apanhando com pouca vida,
+ela desce (nunca abaixo de x1). Chefões e mini-chefes ganham toda a vida extra; os inimigos comuns, parte dela.
+Além disso, nenhum chefão perde mais que ~9% da vida por segundo (6% o final): o excesso só causa 3% do dano
+e aparece um escudo azul. O valor atual aparece embaixo do relógio, no pause e na tela final. Fases mais
+avançadas também começam um pouco mais duras (até +30% de vida no Deserto).
+
 Depois de vencer o chefão final aparece um **portal** para a dificuldade seguinte da mesma fase: fique dentro
 dele e você muda de dificuldade na hora, **mantendo armas, passivas, bênçãos e nível**. O relógio do chefão
 final recomeça (7 minutos ou Altar Maior).
